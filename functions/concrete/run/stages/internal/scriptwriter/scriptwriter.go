@@ -87,6 +87,8 @@ func (b *Builder) buildBashScript(lines []string) string {
 			continue
 		}
 
+		lineCheck := exitCodeCheckSuffix(line, checkErr)
+
 		firstLine, _, multiline := strings.Cut(line, "\n")
 		if multiline && b.ScriptSections {
 			sectionName := fmt.Sprintf("%s_%d", b.stepName, i)
@@ -99,7 +101,7 @@ func (b *Builder) buildBashScript(lines []string) string {
 				`printf "section_end:%%s:%s\r\033[0K" "$(date +%%s)"`,
 				sectionName,
 			) + "\n")
-			body.WriteString(line + checkErr + "\n")
+			body.WriteString(line + lineCheck + "\n")
 			continue
 		}
 
@@ -109,7 +111,7 @@ func (b *Builder) buildBashScript(lines []string) string {
 			body.WriteString("echo " + shellEscape("\033[32;1m$ "+line+"\033[0m") + "\n")
 		}
 
-		body.WriteString(line + checkErr + "\n")
+		body.WriteString(line + lineCheck + "\n")
 	}
 
 	var buf strings.Builder
@@ -134,6 +136,29 @@ func (b *Builder) buildBashScript(lines []string) string {
 	buf.WriteString("exit 0\n")
 
 	return buf.String()
+}
+
+// exitCodeCheckSuffix returns the post-command exit-code check for lines that may
+// carry it, and "" for lines that must not (see exitCodeCheckApplies). The check
+// reads $? as the result of the line it follows, so it is appended per line rather
+// than unconditionally. See gitlab-runner#39634.
+func exitCodeCheckSuffix(line, checkErr string) string {
+	if !exitCodeCheckApplies(line) {
+		return ""
+	}
+	return checkErr
+}
+
+// exitCodeCheckApplies reports whether the post-command exit-code check may be
+// appended after line. It must not be after a bare "else" (where the check runs
+// as the first statement of the else branch and $? still holds the failed
+// if-condition's status) nor after a negated command "! cmd" (where $? is the
+// negation's non-zero result). "set -o errexit" does not abort in either case,
+// so neither must the check. Other block keywords (then/do/elif) are safe: their
+// body runs only when the preceding condition succeeded, so $? is 0 there.
+// See gitlab-runner#39634.
+func exitCodeCheckApplies(line string) bool {
+	return line != "else" && !strings.HasPrefix(line, "! ")
 }
 
 func (b *Builder) buildPwshScript(lines []string) string {

@@ -302,7 +302,6 @@ func TestBashScript_Execute(t *testing.T) {
 			opts:     []func(*Builder){withExitCodeCheck},
 			contains: []string{"ELSE_RAN", "AFTER_FI"},
 			excludes: []string{"THEN_RAN"},
-			skip:     "known gap gitlab-runner#39634: FF_ENABLE_BASH_EXIT_CODE_CHECK re-raises the failed if-condition's status at the top of the else branch",
 		},
 		"elif branch runs to completion": {
 			lines: []string{
@@ -326,7 +325,6 @@ func TestBashScript_Execute(t *testing.T) {
 			lines:    negationLines,
 			opts:     []func(*Builder){withExitCodeCheck},
 			contains: []string{"AFTER_NEGATION"},
-			skip:     "known gap gitlab-runner#39634: FF_ENABLE_BASH_EXIT_CODE_CHECK re-raises the negated command's non-zero status",
 		},
 		// errexit must still propagate a plain failing command...
 		"failing command still aborts the script": {
