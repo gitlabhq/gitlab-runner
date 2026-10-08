@@ -33,7 +33,8 @@ type machineDetails struct {
 	// Zero means the field wasn't set (e.g. machine recovered from on-disk
 	// state across a runner-manager restart); finalizeRemoval falls back to
 	// defaultMaxRemovalAttempts in that case.
-	maxRemovalAttempts int `yaml:"-"`
+	maxRemovalAttempts int  `yaml:"-"`
+	removeWithoutStop  bool `yaml:"-"`
 
 	// inFlight is closed when the async create/remove goroutine mutating
 	// this machine finishes. create() and remove() set it before spawning

@@ -360,6 +360,35 @@ func TestMachineCreationAndRemoval(t *testing.T) {
 	assert.Equal(t, machineStateRemoving, d3.State)
 }
 
+func TestMachineRemovalWithoutStop(t *testing.T) {
+	provisionRetryInterval = 0
+
+	tests := map[string]struct {
+		removeWithoutStop bool
+		expectStops       int
+	}{
+		"default stops before removing":      {removeWithoutStop: false, expectStops: 1},
+		"RemoveWithoutStop removes directly": {removeWithoutStop: true, expectStops: 0},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			config := createMachineConfig(t, 0, 0)
+			config.Machine.RemoveWithoutStop = tt.removeWithoutStop
+
+			p, m := testMachineProvider()
+			d, errCh := p.create(config, machineStateIdle, false, nil)
+			require.NoError(t, <-errCh)
+
+			require.NoError(t, p.remove(d.Name))
+			<-d.inFlight
+			<-m.Removed
+
+			assert.Len(t, m.Stopped, tt.expectStops)
+		})
+	}
+}
+
 func TestMachineCreationRegistersHeartbeat(t *testing.T) {
 	provisionRetryInterval = 0
 

@@ -512,6 +512,8 @@ type DockerMachine struct {
 
 	MaxRemovalAttempts int `toml:"MaxRemovalAttempts,omitzero" long:"max-removal-attempts" env:"MACHINE_MAX_REMOVAL_ATTEMPTS" description:"Maximum attempts at removing a machine before giving up (defaults to 30)"`
 
+	RemoveWithoutStop bool `toml:"RemoveWithoutStop,omitzero" long:"remove-without-stop" env:"MACHINE_REMOVE_WITHOUT_STOP" description:"(Experimental) Remove machines without running 'docker-machine stop' first (default: false)"`
+
 	HeartbeatInterval time.Duration `toml:"HeartbeatInterval,omitzero" long:"heartbeat-interval" env:"MACHINE_HEARTBEAT_INTERVAL" description:"How often to refresh a provider-side liveness label on each tracked machine (e.g. '30m'), so external cleanup can tell tracked machines from orphaned ones. 0 disables it (default)"`
 
 	WarmupIdleFraction  float64       `toml:"WarmupIdleFraction,omitzero" long:"warmup-idle-fraction" env:"MACHINE_WARMUP_IDLE_FRACTION" description:"(Experimental) Fraction of IdleCount to build as the idle target during warm-up, regardless of IdleScaleFactor. Between 0 and 1; 0 disables warm-up (default)"`

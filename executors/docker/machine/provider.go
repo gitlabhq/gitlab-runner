@@ -208,6 +208,7 @@ func (m *machineProvider) create(
 		State:              machineStateCreating,
 		pendingUse:         pendingUse,
 		maxRemovalAttempts: config.Machine.MaxRemovalAttempts,
+		removeWithoutStop:  config.Machine.RemoveWithoutStop,
 		inFlight:           done,
 	}
 	m.lock.Lock()
@@ -469,6 +470,7 @@ func (m *machineProvider) removeMachine(details *machineDetails) (err error) {
 	details.Lock()
 	logger := details.logger()
 	info := details.info()
+	removeWithoutStop := details.removeWithoutStop
 	details.Unlock()
 
 	ctx, ctxCancelFn := context.WithTimeout(context.Background(), machineExistCommandTimeout)
@@ -485,17 +487,19 @@ func (m *machineProvider) removeMachine(details *machineDetails) (err error) {
 		defer m.stuckRemoveLock.Unlock()
 	}
 
-	logger.Warningln("Stopping machine")
-	stopCtx, stopCtxCancelFn := context.WithTimeout(context.Background(), machineStopCommandTimeout)
-	defer stopCtxCancelFn()
+	if !removeWithoutStop {
+		logger.Warningln("Stopping machine")
+		stopCtx, stopCtxCancelFn := context.WithTimeout(context.Background(), machineStopCommandTimeout)
+		defer stopCtxCancelFn()
 
-	err = runHistogramCountedOperation(m.stoppingHistogram, func() error {
-		return m.machine.Stop(stopCtx, details.Name)
-	})
-	if err != nil {
-		logger.
-			WithError(err).
-			Warningln("Error while stopping machine")
+		err = runHistogramCountedOperation(m.stoppingHistogram, func() error {
+			return m.machine.Stop(stopCtx, details.Name)
+		})
+		if err != nil {
+			logger.
+				WithError(err).
+				Warningln("Error while stopping machine")
+		}
 	}
 
 	logger.Warningln("Removing machine")
@@ -633,6 +637,7 @@ func (m *machineProvider) updateMachines(
 		details.Lock()
 		details.LastSeen = time.Now()
 		details.missedListings = 0
+		details.removeWithoutStop = config.Machine.RemoveWithoutStop
 		info := details.info()
 		details.Unlock()
 
