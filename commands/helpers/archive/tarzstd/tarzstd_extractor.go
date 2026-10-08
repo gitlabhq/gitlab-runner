@@ -2,11 +2,13 @@ package tarzstd
 
 import (
 	"archive/tar"
+	"cmp"
 	"context"
-	"fmt"
 	"io"
+	"maps"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 
@@ -39,6 +41,15 @@ func (e *extractor) Extract(ctx context.Context) error {
 
 	tr := tar.NewReader(zr)
 
+	if err := os.MkdirAll(e.dir, 0777); err != nil {
+		return err
+	}
+	root, err := os.OpenRoot(e.dir)
+	if err != nil {
+		return err
+	}
+	defer root.Close()
+
 	deferred := map[string]*tar.Header{}
 	for {
 		hdr, err := tr.Next()
@@ -54,16 +65,12 @@ func (e *extractor) Extract(ctx context.Context) error {
 			continue
 		}
 
-		var path string
-		path, err = filepath.Abs(filepath.Join(e.dir, hdr.Name))
+		path, err := filepath.Rel(e.dir, filepath.Join(e.dir, hdr.Name))
 		if err != nil {
 			return err
 		}
-		if !strings.HasPrefix(path, e.dir+string(filepath.Separator)) && path != e.dir {
-			return fmt.Errorf("%s cannot be extracted outside of chroot (%s)", path, e.dir)
-		}
 
-		if err := os.MkdirAll(filepath.Dir(path), 0777); err != nil {
+		if err := root.MkdirAll(filepath.Dir(path), 0777); err != nil {
 			return err
 		}
 
@@ -79,13 +86,13 @@ func (e *extractor) Extract(ctx context.Context) error {
 		case fi.Mode().IsDir():
 			deferred[path] = hdr
 
-			err := os.Mkdir(path, 0777)
+			err := root.Mkdir(path, 0777)
 			if err != nil && !os.IsExist(err) {
 				return err
 			}
 
 		case fi.Mode().IsRegular():
-			f, err := os.Create(path)
+			f, err := root.Create(path)
 			if err != nil {
 				return err
 			}
@@ -98,30 +105,57 @@ func (e *extractor) Extract(ctx context.Context) error {
 				return err
 			}
 
-			if err := e.updateFileMetadata(path, hdr); err != nil {
+			if err := e.updateFileMetadata(filepath.Join(e.dir, path), hdr); err != nil {
 				return err
 			}
 		}
 	}
 
-	for path, hdr := range deferred {
+	// Deepest first: creating a symlink updates its parent directory's times,
+	// and a parent is always shallower, so its metadata is applied afterwards.
+	paths := slices.Collect(maps.Keys(deferred))
+	slices.SortFunc(paths, func(a, b string) int {
+		return cmp.Or(cmp.Compare(depth(b), depth(a)), strings.Compare(a, b))
+	})
+
+	for _, path := range paths {
+		hdr := deferred[path]
 		fi := hdr.FileInfo()
 		if fi.Mode()&os.ModeSymlink == 0 && !fi.Mode().IsDir() {
 			continue
 		}
 
 		if fi.Mode()&os.ModeSymlink != 0 {
-			if err := os.Symlink(hdr.Linkname, path); err != nil {
+			if err := root.Symlink(hdr.Linkname, path); err != nil {
 				return err
 			}
 		}
 
-		if err := e.updateFileMetadata(path, hdr); err != nil {
+		// Metadata is applied by path and follows a symlinked directory, so
+		// refuse one that escapes the root.
+		if fi.Mode().IsDir() {
+			if _, err := root.Stat(path); err != nil {
+				return err
+			}
+		}
+
+		if err := e.updateFileMetadata(filepath.Join(e.dir, path), hdr); err != nil {
 			return err
 		}
 	}
 
 	return nil
+}
+
+// depth returns how many directories path is nested in, with the root itself
+// shallowest. path must be clean and relative, as returned by filepath.Rel;
+// otherwise elements such as "./" are counted and the depth is wrong.
+func depth(path string) int {
+	if path == "." {
+		return -1
+	}
+
+	return strings.Count(path, string(filepath.Separator))
 }
 
 func (e *extractor) updateFileMetadata(path string, hdr *tar.Header) error {

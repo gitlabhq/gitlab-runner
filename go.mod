@@ -69,6 +69,7 @@ require (
 	github.com/samber/lo v1.53.0
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.3
 	github.com/saracen/fastzip v0.2.0
+	github.com/saracen/zipextra v0.0.0-20250129175152-f1aa42d25216
 	github.com/sirupsen/logrus v1.10.2
 	github.com/sourcegraph/conc v0.3.0
 	github.com/stretchr/testify v1.12.1
@@ -248,7 +249,6 @@ require (
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/ryanuber/go-glob v1.0.0 // indirect
 	github.com/ryszard/goskiplist v0.0.0-20150312221310-2dfbae5fcf46 // indirect
-	github.com/saracen/zipextra v0.0.0-20250129175152-f1aa42d25216 // indirect
 	github.com/secure-systems-lab/go-securesystemslib v0.10.0 // indirect
 	github.com/sergi/go-diff v1.4.0 // indirect
 	github.com/shibumi/go-pathspec v1.3.0 // indirect
