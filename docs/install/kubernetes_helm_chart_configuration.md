@@ -426,14 +426,17 @@ Use [the workaround described in the issue](https://gitlab.com/gitlab-org/charts
 
 ## Switch to the Ubuntu-based `gitlab-runner` Docker image
 
-By default, the GitLab Runner Helm chart uses the Alpine version of the `gitlab/gitlab-runner` image,
+By default, the GitLab Runner Helm chart uses the Alpine version of the `gitlab-org/gitlab-runner` image,
 which uses `musl libc`. You might need to switch to the Ubuntu-based image, which uses `glibc`.
 
 To do this, specify the image your `values.yaml` file with the following values:
 
 ```yaml
 # Specify the Ubuntu image, and set the version. You can also use the `ubuntu` or `latest` tags.
-image: gitlab/gitlab-runner:v17.3.0
+# `registry` is omitted, so it defaults to `registry.gitlab.com`.
+image:
+  repository: gitlab-org/gitlab-runner
+  tag: v17.3.0
 
 # Update the security context values to the user ID in the Ubuntu image
 securityContext:
@@ -453,7 +456,7 @@ To use them, change the GitLab Runner and GitLab Runner Helper images in `values
 ```yaml
 image:
   registry: registry.gitlab.com
-  image: gitlab-org/ci-cd/gitlab-runner-ubi-images/gitlab-runner-ocp
+  repository: gitlab-org/ci-cd/gitlab-runner-ubi-images/gitlab-runner-ocp
   tag: v16.11.0
 
 securityContext:
@@ -481,7 +484,7 @@ and the Helper image in `values.yaml`:
 ```yaml
 image:
   registry: docker.io
-  image: gitlab/gitlab-runner
+  repository: gitlab/gitlab-runner
   tag: ubi-fips
 
 runners:

@@ -36,7 +36,7 @@ The following example shows a complete Helm chart `values.yaml` for the GitLab R
 ```yaml
 image:
   registry: registry.gitlab.com
-  image: gitlab-org/gitlab-runner
+  repository: gitlab-org/gitlab-runner
   tag: alpine-v16.11.0
 
 useTini: false
