@@ -149,6 +149,12 @@ func (m *manager) GetDockerImage(
 
 	m.logger.Println(fmt.Sprintf("Using effective pull policy of %s for container %s", pullPolicies, imageName))
 
+	// Parsed once rather than per pull policy, so its warning isn't repeated.
+	platform, err := ParsePlatform(options.Platform, m.logger)
+	if err != nil {
+		return nil, &common.BuildError{Inner: err, FailureReason: common.ConfigurationError}
+	}
+
 	var imageErr error
 	for idx, pullPolicy := range pullPolicies {
 		attempt := 1 + idx
@@ -157,7 +163,7 @@ func (m *manager) GetDockerImage(
 		}
 
 		var img *image.InspectResponse
-		img, imageErr = m.getImageUsingPullPolicy(imageName, options, pullPolicy)
+		img, imageErr = m.getImageUsingPullPolicy(imageName, options, platform, pullPolicy)
 		if imageErr != nil {
 			m.logger.Warningln(fmt.Sprintf("Failed to pull image with policy %q: %v", pullPolicy, imageErr))
 			continue
@@ -203,11 +209,11 @@ func (m *manager) markImageAsUsed(imageName string, image *image.InspectResponse
 	}
 }
 
-// parsePlatform converts the user-provided platform string (e.g. "linux/arm64")
-// into an OCI platform spec, or returns nil if none was specified. This lets
-// image pull/inspect calls disambiguate between platform variants stored
-// under the same image reference.
-func parsePlatform(rawPlatform string, logger pullLogger) (*ocispec.Platform, error) {
+// ParsePlatform converts a platform string (e.g. "linux/arm64") into an OCI
+// platform spec, or nil if none was given. A nil logger skips the warning
+// about a normalized OS, for callers parsing a platform already warned about.
+// Exported so the docker executor can reuse it too.
+func ParsePlatform(rawPlatform string, logger pullLogger) (*ocispec.Platform, error) {
 	if rawPlatform == "" {
 		return nil, nil
 	}
@@ -218,14 +224,44 @@ func parsePlatform(rawPlatform string, logger pullLogger) (*ocispec.Platform, er
 	}
 
 	if normalized := normalizeContainerOS(platform.OS); normalized != platform.OS {
-		logger.Warningln(fmt.Sprintf(
-			"Platform OS %q in %q is not a valid container OS; using %q instead",
-			platform.OS, rawPlatform, normalized,
-		))
+		if logger != nil {
+			logger.Warningln(fmt.Sprintf(
+				"Platform OS %q in %q is not a valid container OS; using %q instead",
+				platform.OS, rawPlatform, normalized,
+			))
+		}
 		platform.OS = normalized
 	}
 
 	return &platform, nil
+}
+
+// PlatformMatchesImage treats a component the request left empty as matching
+// anything, since it asks for no particular value. Exported so the docker
+// executor can reuse it too.
+func PlatformMatchesImage(platform *ocispec.Platform, image *image.InspectResponse) bool {
+	if platform.OS != image.Os || platform.Architecture != image.Architecture {
+		return false
+	}
+	if platform.Variant != "" && platform.Variant != image.Variant {
+		return false
+	}
+	if platform.OSVersion != "" && platform.OSVersion != image.OsVersion {
+		return false
+	}
+
+	return true
+}
+
+// FormatImagePlatform formats image's platform as an "os/arch[/variant]"
+// specifier. Exported so the docker executor can reuse it too.
+func FormatImagePlatform(image *image.InspectResponse) string {
+	return platforms.FormatAll(ocispec.Platform{
+		Architecture: image.Architecture,
+		OS:           image.Os,
+		OSVersion:    image.OsVersion,
+		Variant:      image.Variant,
+	})
 }
 
 // normalizeContainerOS corrects a quirk of platforms.Parse: given a bare,
@@ -264,20 +300,22 @@ func (m *manager) inspectOptions(imageName string, platform *ocispec.Platform) [
 }
 
 func (m *manager) getImageUsingPullPolicy(
-	imageName string, options spec.ImageDockerOptions,
+	imageName string, options spec.ImageDockerOptions, platform *ocispec.Platform,
 	pullPolicy common.DockerPullPolicy,
 ) (*image.InspectResponse, error) {
 	m.logger.Debugln("Looking for image", imageName, "...")
 
-	platform, err := parsePlatform(options.Platform, m.logger)
-	if err != nil {
-		return nil, &common.BuildError{Inner: err, FailureReason: common.ConfigurationError}
-	}
+	inspectOptions := m.inspectOptions(imageName, platform)
+	existingImage, _, err := m.client.ImageInspectWithRaw(m.context, imageName, inspectOptions...)
 
-	existingImage, _, err := m.client.ImageInspectWithRaw(m.context, imageName, m.inspectOptions(imageName, platform)...)
+	// A platform-aware inspect only finds an image for the requested platform.
+	// Without one (below minPlatformAwareInspectAPIVersion), the local image
+	// can be another platform's, and reusing it would run the job on that one.
+	wrongPlatform := err == nil && platform != nil && len(inspectOptions) == 0 &&
+		!PlatformMatchesImage(platform, &existingImage)
 
 	// Return early if we already used that image
-	if err == nil && m.wasImageUsed(imageName, existingImage.ID) {
+	if err == nil && !wrongPlatform && m.wasImageUsed(imageName, existingImage.ID) {
 		return &existingImage, nil
 	}
 
@@ -294,8 +332,15 @@ func (m *manager) getImageUsingPullPolicy(
 
 		// If not-present is specified
 		if pullPolicy == common.PullPolicyIfNotPresent {
-			m.logger.Println(fmt.Sprintf("Using locally found image version due to %q pull policy", pullPolicy))
-			return &existingImage, err
+			if !wrongPlatform {
+				m.logger.Println(fmt.Sprintf("Using locally found image version due to %q pull policy", pullPolicy))
+				return &existingImage, err
+			}
+
+			m.logger.Println(fmt.Sprintf(
+				"Locally found image is for platform %s, not the requested %q; pulling it despite %q pull policy",
+				FormatImagePlatform(&existingImage), options.Platform, pullPolicy,
+			))
 		}
 	}
 

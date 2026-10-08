@@ -788,6 +788,10 @@ type dockerConfigurationTestFakeDockerClient struct {
 
 	cce containerConfigExpectations
 	t   *testing.T
+
+	// createdPlatform records the platform of the last ContainerCreate call,
+	// for tests asserting on what the daemon is asked to run.
+	createdPlatform *v1.Platform
 }
 
 func (c *dockerConfigurationTestFakeDockerClient) ContainerCreate(
@@ -798,7 +802,10 @@ func (c *dockerConfigurationTestFakeDockerClient) ContainerCreate(
 	platform *v1.Platform,
 	containerName string,
 ) (container.CreateResponse, error) {
-	c.cce(c.t, config, hostConfig, networkingConfig)
+	c.createdPlatform = platform
+	if c.cce != nil {
+		c.cce(c.t, config, hostConfig, networkingConfig)
+	}
 	return container.CreateResponse{ID: "abc"}, nil
 }
 
@@ -4179,6 +4186,305 @@ func TestNetworkConfigLegacyMacAddressWarning(t *testing.T) {
 		require.NoError(t, err)
 		assert.NotContains(t, buffer.String(), "mac_address is configured")
 	})
+}
+
+// TestPlatformForImage guards against https://gitlab.com/gitlab-org/gitlab-runner/-/issues/38514:
+// a requested platform being silently dropped when the image tag resolves to
+// a different one.
+func TestPlatformForImage(t *testing.T) {
+	newExecutorWithBuffer := func(t *testing.T) (*executor, *bytes.Buffer) {
+		buffer := new(bytes.Buffer)
+		logger, _ := logrustest.NewNullLogger()
+
+		e := &executor{}
+		e.AbstractExecutor.BuildLogger = buildlogger.New(
+			&common.Trace{Writer: buffer}, logger.WithField("test", t.Name()), buildlogger.Options{},
+		)
+
+		return e, buffer
+	}
+
+	// A bare architecture takes its OS from the host (normalized to linux on
+	// hosts that aren't a container OS, e.g. macOS), so this expects windows
+	// on a Windows host. Neither request may log anything: platformForImage
+	// leaves the normalization warning to the pull manager.
+	bareArchOS := "linux"
+	if runtime.GOOS == helperimage.OSTypeWindows {
+		bareArchOS = helperimage.OSTypeWindows
+	}
+
+	for name, tc := range map[string]struct {
+		requested  string
+		expectedOS string
+	}{
+		"mixed-case request resolves to the inspected platform": {
+			requested:  "Linux/ARM64",
+			expectedOS: "linux",
+		},
+		"bare architecture request resolves to the inspected platform": {
+			requested:  "arm64",
+			expectedOS: bareArchOS,
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			e, buffer := newExecutorWithBuffer(t)
+
+			platform := e.platformForImage(
+				&image.InspectResponse{Architecture: "arm64", Os: tc.expectedOS},
+				spec.ImageDockerOptions{Platform: tc.requested},
+			)
+
+			require.NotNil(t, platform)
+			assert.Equal(t, "arm64", platform.Architecture)
+			assert.Equal(t, tc.expectedOS, platform.OS)
+			assert.Empty(t, buffer.String())
+		})
+	}
+
+	t.Run("no platform requested returns nil", func(t *testing.T) {
+		e, buffer := newExecutorWithBuffer(t)
+
+		platform := e.platformForImage(
+			&image.InspectResponse{Architecture: "arm64", Os: "linux"},
+			spec.ImageDockerOptions{},
+		)
+
+		assert.Nil(t, platform)
+		assert.Empty(t, buffer.String())
+	})
+
+	t.Run("nil image returns nil", func(t *testing.T) {
+		e, buffer := newExecutorWithBuffer(t)
+
+		platform := e.platformForImage(nil, spec.ImageDockerOptions{Platform: "linux/amd64"})
+
+		assert.Nil(t, platform)
+		assert.Empty(t, buffer.String())
+	})
+
+	t.Run("requested platform matches the platform resolved by image inspection: no warning", func(t *testing.T) {
+		e, buffer := newExecutorWithBuffer(t)
+
+		platform := e.platformForImage(
+			&image.InspectResponse{Architecture: "amd64", Os: "linux"},
+			spec.ImageDockerOptions{Platform: "linux/amd64"},
+		)
+
+		require.NotNil(t, platform)
+		assert.Equal(t, "amd64", platform.Architecture)
+		assert.Equal(t, "linux", platform.OS)
+		assert.Empty(t, buffer.String())
+	})
+
+	t.Run("requested platform differs from the platform resolved by image inspection: requests what was asked for and warns", func(t *testing.T) {
+		e, buffer := newExecutorWithBuffer(t)
+
+		platform := e.platformForImage(
+			&image.InspectResponse{Architecture: "arm64", Os: "linux"},
+			spec.ImageDockerOptions{Platform: "linux/amd64"},
+		)
+
+		require.NotNil(t, platform)
+		assert.Equal(t, "amd64", platform.Architecture)
+		assert.Equal(t, "linux", platform.OS)
+		assert.Contains(t, buffer.String(), "Requested platform")
+		assert.Contains(t, buffer.String(), "does not match")
+	})
+
+	t.Run("platform details left implicit by the request are taken from image inspection", func(t *testing.T) {
+		e, buffer := newExecutorWithBuffer(t)
+
+		platform := e.platformForImage(
+			&image.InspectResponse{
+				Architecture: "amd64",
+				Os:           "windows",
+				OsVersion:    "10.0.17763.1234",
+			},
+			spec.ImageDockerOptions{Platform: "windows/amd64"},
+		)
+
+		require.NotNil(t, platform)
+		assert.Equal(t, "amd64", platform.Architecture)
+		assert.Equal(t, "windows", platform.OS)
+		assert.Equal(t, "10.0.17763.1234", platform.OSVersion)
+		assert.Empty(t, buffer.String())
+	})
+
+	t.Run("variant left implicit by the request is taken from image inspection", func(t *testing.T) {
+		e, buffer := newExecutorWithBuffer(t)
+
+		platform := e.platformForImage(
+			&image.InspectResponse{Architecture: "arm", Os: "linux", Variant: "v7"},
+			spec.ImageDockerOptions{Platform: "linux/arm"},
+		)
+
+		require.NotNil(t, platform)
+		assert.Equal(t, "arm", platform.Architecture)
+		assert.Equal(t, "linux", platform.OS)
+		assert.Equal(t, "v7", platform.Variant)
+		assert.Empty(t, buffer.String())
+	})
+
+	// v7 is the default arm variant, so the case above can't tell whether
+	// "linux/arm" was left without a variant or was given v7.
+	t.Run("non-default variant left implicit by the request is taken from image inspection", func(t *testing.T) {
+		e, buffer := newExecutorWithBuffer(t)
+
+		platform := e.platformForImage(
+			&image.InspectResponse{Architecture: "arm", Os: "linux", Variant: "v6"},
+			spec.ImageDockerOptions{Platform: "linux/arm"},
+		)
+
+		require.NotNil(t, platform)
+		assert.Equal(t, "arm", platform.Architecture)
+		assert.Equal(t, "linux", platform.OS)
+		assert.Equal(t, "v6", platform.Variant)
+		assert.Empty(t, buffer.String())
+	})
+
+	t.Run("requested variant differs from the one resolved by image inspection: keeps the requested one and warns", func(t *testing.T) {
+		e, buffer := newExecutorWithBuffer(t)
+
+		platform := e.platformForImage(
+			&image.InspectResponse{Architecture: "arm", Os: "linux", Variant: "v7"},
+			spec.ImageDockerOptions{Platform: "linux/arm/v6"},
+		)
+
+		require.NotNil(t, platform)
+		assert.Equal(t, "arm", platform.Architecture)
+		assert.Equal(t, "linux", platform.OS)
+		assert.Equal(t, "v6", platform.Variant)
+		assert.Contains(t, buffer.String(), "does not match")
+	})
+
+	t.Run("requested OS version differs from the one resolved by image inspection: keeps the requested one and warns", func(t *testing.T) {
+		e, buffer := newExecutorWithBuffer(t)
+
+		platform := e.platformForImage(
+			&image.InspectResponse{
+				Architecture: "amd64",
+				Os:           "windows",
+				OsVersion:    "10.0.17763.1234",
+			},
+			spec.ImageDockerOptions{Platform: "windows(10.0.20348.5678)/amd64"},
+		)
+
+		require.NotNil(t, platform)
+		assert.Equal(t, "amd64", platform.Architecture)
+		assert.Equal(t, "windows", platform.OS)
+		assert.Equal(t, "10.0.20348.5678", platform.OSVersion)
+		assert.Contains(t, buffer.String(), "does not match")
+	})
+
+	t.Run("mismatched platform does not inherit the inspected image's OS version", func(t *testing.T) {
+		e, buffer := newExecutorWithBuffer(t)
+
+		platform := e.platformForImage(
+			&image.InspectResponse{
+				Architecture: "arm64",
+				Os:           "windows",
+				OsVersion:    "10.0.17763.1234",
+				Variant:      "v8",
+			},
+			spec.ImageDockerOptions{Platform: "windows/amd64"},
+		)
+
+		require.NotNil(t, platform)
+		assert.Equal(t, "amd64", platform.Architecture)
+		assert.Equal(t, "windows", platform.OS)
+		assert.Empty(t, platform.OSVersion)
+		assert.Empty(t, platform.Variant)
+		assert.Contains(t, buffer.String(), "does not match")
+	})
+
+	t.Run("normalized platform OS is not warned about again", func(t *testing.T) {
+		e, buffer := newExecutorWithBuffer(t)
+
+		platform := e.platformForImage(
+			&image.InspectResponse{Architecture: "arm64", Os: "linux"},
+			spec.ImageDockerOptions{Platform: "darwin/arm64"},
+		)
+
+		require.NotNil(t, platform)
+		assert.Equal(t, "linux", platform.OS)
+		assert.Equal(t, "arm64", platform.Architecture)
+		assert.Empty(t, buffer.String())
+	})
+
+	// Unreachable in a job, since the pull manager fails it on an unparsable
+	// platform first, but must not request the inspected platform instead.
+	t.Run("malformed platform returns nil", func(t *testing.T) {
+		e, _ := newExecutorWithBuffer(t)
+
+		platform := e.platformForImage(
+			&image.InspectResponse{Architecture: "arm64", Os: "linux"},
+			spec.ImageDockerOptions{Platform: "linux/amd64/v8/extra"},
+		)
+
+		assert.Nil(t, platform)
+	})
+}
+
+// TestCreateContainerPassesRequestedPlatform complements TestPlatformForImage,
+// which only covers the returned value: here the platform the job asked for
+// must actually reach the daemon, even though image inspection resolved the
+// tag to a different one. Without the fix ContainerCreate gets amd64.
+func TestCreateContainerPassesRequestedPlatform(t *testing.T) {
+	tests := map[string]struct {
+		platform  string
+		variables spec.Variables
+	}{
+		"literal platform": {
+			platform: "linux/arm64",
+		},
+		// The platform must be expanded as it is for the pull; unexpanded,
+		// it fails to parse and never reaches ContainerCreate.
+		"platform from a variable": {
+			platform:  "${PLATFORM}",
+			variables: spec.Variables{{Key: "PLATFORM", Value: "linux/arm64"}},
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			c, e := createExecutorForTestDockerConfiguration(t, &common.DockerConfig{}, nil)
+			e.Build.Variables = append(e.Build.Variables, tc.variables...)
+
+			c.On("ImageInspectWithRaw", mock.Anything, "alpine", mock.Anything).
+				Return(image.InspectResponse{
+					ID:           "123",
+					Os:           "linux",
+					Architecture: "amd64",
+					RepoDigests:  []string{"alpine@sha256:abc"},
+				}, []byte{}, nil).Twice()
+			c.On("ImagePullBlocking", mock.Anything, "alpine:latest", mock.Anything).
+				Return(nil).Once()
+			c.On("NetworkList", mock.Anything, mock.Anything).
+				Return([]network.Summary{}, nil).Once()
+			c.On("ContainerRemove", mock.Anything, mock.Anything, mock.Anything).
+				Return(nil).Once()
+			c.On("ContainerInspect", mock.Anything, "abc").
+				Return(container.InspectResponse{}, nil).Once()
+
+			require.NoError(t, e.createVolumesManager())
+			require.NoError(t, e.createPullManager())
+
+			imageConfig := spec.Image{
+				Name: "alpine",
+				ExecutorOptions: spec.ImageExecutorOptions{
+					Docker: spec.ImageDockerOptions{Platform: tc.platform},
+				},
+			}
+			cfgTor := newDefaultContainerConfigurator(e, buildContainerType, imageConfig, []string{"/bin/sh"}, []string{})
+
+			_, err := e.createContainer(buildContainerType, imageConfig, []string{}, cfgTor)
+			require.NoError(t, err)
+
+			require.NotNil(t, c.createdPlatform, "ContainerCreate must receive a platform")
+			assert.Equal(t, "linux", c.createdPlatform.OS)
+			assert.Equal(t, "arm64", c.createdPlatform.Architecture)
+		})
+	}
 }
 
 func TestIsContainerNotRunning(t *testing.T) {
