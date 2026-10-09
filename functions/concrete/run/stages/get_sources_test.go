@@ -301,11 +301,12 @@ func TestGetSources_ClearWorktree(t *testing.T) {
 
 func TestGetSources_SetupExternalGitConfig(t *testing.T) {
 	tests := map[string]struct {
-		gs               GetSources
-		expectInsteadOf  bool
-		expectBundleURI  bool
-		expectGitaly     bool
-		expectCredHelper bool
+		gs                GetSources
+		expectInsteadOf   bool
+		expectBundleURI   bool
+		expectPackfileURI bool
+		expectGitaly      bool
+		expectCredHelper  bool
 	}{
 		"repo with creds": {
 			gs:              GetSources{RepoURL: "https://gitlab-ci-token:mytoken@example.com/project/repo.git"},
@@ -329,6 +330,22 @@ func TestGetSources_SetupExternalGitConfig(t *testing.T) {
 				UseBundleURIs: true,
 			},
 			expectBundleURI: true,
+		},
+		"with packfile URIs": {
+			gs: GetSources{
+				RepoURL:         "https://example.com/project/repo.git",
+				UsePackfileURIs: true,
+			},
+			expectPackfileURI: true,
+		},
+		"with both bundle and packfile URIs": {
+			gs: GetSources{
+				RepoURL:         "https://example.com/project/repo.git",
+				UseBundleURIs:   true,
+				UsePackfileURIs: true,
+			},
+			expectBundleURI:   true,
+			expectPackfileURI: true,
 		},
 		"with port": {
 			gs:              GetSources{RepoURL: "https://gitlab-ci-token:mytoken@example.com:3443/project/repo.git"},
@@ -405,6 +422,12 @@ func TestGetSources_SetupExternalGitConfig(t *testing.T) {
 				assert.Contains(t, text, "bundleURI = true")
 			} else {
 				assert.NotContains(t, text, "bundleURI")
+			}
+
+			if tc.expectPackfileURI {
+				assert.Contains(t, text, "uriProtocols = https")
+			} else {
+				assert.NotContains(t, text, "uriProtocols")
 			}
 
 			if tc.expectGitaly {

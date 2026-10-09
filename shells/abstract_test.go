@@ -4269,6 +4269,7 @@ func expectSetupExternalGitConfig(w *MockShellWriter, extConfFile string, withCr
 		w.EXPECT().RmFile(extConfFile).Once(),
 
 		w.EXPECT().CommandArgExpand("git", "config", "-f", extConfFile, "transfer.bundleURI", "true").Maybe(),
+		w.EXPECT().CommandArgExpand("git", "config", "-f", extConfFile, "fetch.uriProtocols", "https").Maybe(),
 		w.EXPECT().CommandArgExpand("git", "config", "-f", extConfFile, "http.extraHeader", "X-Gitaly-Correlation-ID: foobar").Maybe(),
 		w.EXPECT().Noticef("Gitaly correlation ID: %s", "foobar").Maybe(),
 	}
@@ -4892,6 +4893,76 @@ func TestSetupExternalConfigFile(t *testing.T) {
 					}
 				})
 			}
+		})
+	}
+}
+
+// TestSetupExternalGitConfig_URIs pins the two URI-related git config writes
+// to what gates them (FF_USE_GIT_BUNDLE_URIS and the use_git_packfile_uris
+// runner setting), and to their defaults.
+// The shared expectSetupExternalGitConfig helper registers both as .Maybe(),
+// which passes whether or not the line is emitted, so the gating itself
+// is asserted here instead.
+func TestSetupExternalGitConfig_URIs(t *testing.T) {
+	const extConfigFile = "some/ext/config/file"
+
+	tests := map[string]struct {
+		bundleURIs   bool
+		packfileURIs bool
+		// useDefaults leaves both the bundle URI flag and the packfile URI
+		// setting unset, so the flag's DefaultValue in
+		// helpers/featureflags/flags.go and the setting's nil handling decide.
+		// This row fails if either default is flipped without updating it.
+		useDefaults bool
+	}{
+		"both off":      {bundleURIs: false, packfileURIs: false},
+		"bundle only":   {bundleURIs: true, packfileURIs: false},
+		"packfile only": {bundleURIs: false, packfileURIs: true},
+		"both on":       {bundleURIs: true, packfileURIs: true},
+		"defaults": {
+			useDefaults:  true,
+			bundleURIs:   true,
+			packfileURIs: false,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			shell := AbstractShell{}
+
+			build := &common.Build{Runner: &common.RunnerConfig{}}
+			build.GitInfo.RepoURL = "https://gitlab.example.com/group/project.git"
+			// Both flags below are pinned rather than left to their defaults so
+			// this fixture's scope can't shift under an unrelated default flip:
+			// UseGitalyCorrelationId would add an http.extraHeader write, and
+			// GitURLsWithoutTokens a credential helper. With those off, a repo
+			// URL carrying no credentials, and no insteadOfs configured, RmFile
+			// plus the URI writes are everything this path emits.
+			build.Runner.FeatureFlags = map[string]bool{
+				featureflags.UseGitalyCorrelationId: false,
+				featureflags.GitURLsWithoutTokens:   false,
+			}
+			if !tc.useDefaults {
+				build.Runner.FeatureFlags[featureflags.UseGitBundleURIs] = tc.bundleURIs
+				build.Runner.UseGitPackfileURIs = &tc.packfileURIs
+			}
+
+			w := NewMockShellWriter(t)
+			w.EXPECT().RmFile(extConfigFile).Once()
+
+			// Only the enabled writes are registered: the mock is strict, so an
+			// unregistered write from a disabled option fails the test. If a new
+			// write to this path turns every row red, register it explicitly —
+			// a catch-all .Maybe() would silently un-assert the disabled cases.
+			if tc.bundleURIs {
+				w.EXPECT().CommandArgExpand("git", "config", "-f", extConfigFile, "transfer.bundleURI", "true").Once()
+			}
+			if tc.packfileURIs {
+				w.EXPECT().CommandArgExpand("git", "config", "-f", extConfigFile, "fetch.uriProtocols", "https").Once()
+			}
+
+			_, err := shell.setupExternalGitConfig(w, build, extConfigFile)
+			require.NoError(t, err)
 		})
 	}
 }

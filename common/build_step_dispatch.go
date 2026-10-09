@@ -155,6 +155,7 @@ func stagesToConcreteStep(ctx context.Context, executor Executor) ([]schema.Step
 				return build.GetGitStrategy() != GitNone
 			}
 		}()),
+		builder.WithPackfileURIs(build.Runner.IsGitPackfileURIsEnabled()),
 		builder.WithGitalyCorrelationID(func() string {
 			if !build.IsFeatureFlagOn(featureflags.UseGitalyCorrelationId) {
 				return ""
