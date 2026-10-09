@@ -209,6 +209,9 @@ func awaitStepRunnerReady(
 		}
 		var containerErr *podContainerError
 		if errors.As(err, &containerErr) {
+			if containerErr.reason == containerOOMKilledReason {
+				return "", podContainerBuildError(err)
+			}
 			if containerErr.exitCode != 0 {
 				return "", &common.BuildError{
 					Inner:    err,

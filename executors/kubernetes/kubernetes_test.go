@@ -7430,6 +7430,352 @@ func TestRunAttachCheckPodStatus(t *testing.T) {
 	}
 }
 
+func TestContainerOOMKilledExitCode(t *testing.T) {
+	terminated := func(reason string) api.ContainerState {
+		return api.ContainerState{Terminated: &api.ContainerStateTerminated{Reason: reason, ExitCode: 137}}
+	}
+
+	tests := map[string]struct {
+		pod           *api.Pod
+		containerName string
+		expected      bool
+	}{
+		"nil pod": {
+			pod:           nil,
+			containerName: helperContainerName,
+			expected:      false,
+		},
+		"no container statuses": {
+			pod:           &api.Pod{},
+			containerName: helperContainerName,
+			expected:      false,
+		},
+		"helper OOM-killed in current state": {
+			pod: &api.Pod{Status: api.PodStatus{ContainerStatuses: []api.ContainerStatus{
+				{Name: buildContainerName, State: api.ContainerState{Running: &api.ContainerStateRunning{}}},
+				{Name: helperContainerName, State: terminated(containerOOMKilledReason)},
+			}}},
+			containerName: helperContainerName,
+			expected:      true,
+		},
+		"helper OOM-killed in last termination state": {
+			pod: &api.Pod{Status: api.PodStatus{ContainerStatuses: []api.ContainerStatus{
+				{
+					Name:                 helperContainerName,
+					State:                api.ContainerState{Waiting: &api.ContainerStateWaiting{Reason: "CrashLoopBackOff"}},
+					LastTerminationState: terminated(containerOOMKilledReason),
+				},
+			}}},
+			containerName: helperContainerName,
+			expected:      true,
+		},
+		"helper terminated for another reason": {
+			pod: &api.Pod{Status: api.PodStatus{ContainerStatuses: []api.ContainerStatus{
+				{Name: helperContainerName, State: terminated("Error")},
+			}}},
+			containerName: helperContainerName,
+			expected:      false,
+		},
+		"another container OOM-killed": {
+			pod: &api.Pod{Status: api.PodStatus{ContainerStatuses: []api.ContainerStatus{
+				{Name: buildContainerName, State: terminated(containerOOMKilledReason)},
+				{Name: helperContainerName, State: api.ContainerState{Running: &api.ContainerStateRunning{}}},
+			}}},
+			containerName: helperContainerName,
+			expected:      false,
+		},
+	}
+
+	for tn, tt := range tests {
+		t.Run(tn, func(t *testing.T) {
+			exitCode, oomKilled := containerOOMKilledExitCode(tt.pod, tt.containerName)
+
+			assert.Equal(t, tt.expected, oomKilled)
+			if tt.expected {
+				assert.Equal(t, 137, exitCode)
+			} else {
+				assert.Zero(t, exitCode)
+			}
+		})
+	}
+}
+
+func TestContainerOOMKilledErrorMessage(t *testing.T) {
+	inner := errors.New(`unable to upgrade connection: container not found ("helper")`)
+
+	tests := map[string]struct {
+		containerName    string
+		expectedContains []string
+	}{
+		"helper": {
+			containerName: helperContainerName,
+			expectedContains: []string{
+				"helper container was OOM-killed (memory limit exceeded).",
+				containerMemoryDocsURL,
+				"Original error: " + inner.Error(),
+			},
+		},
+		"build": {
+			containerName: buildContainerName,
+			expectedContains: []string{
+				"build container was OOM-killed (memory limit exceeded).",
+				containerMemoryDocsURL,
+				"Original error: " + inner.Error(),
+			},
+		},
+		"service": {
+			containerName: "svc-0",
+			expectedContains: []string{
+				"svc-0 container was OOM-killed (memory limit exceeded).",
+				containerMemoryDocsURL,
+				"Original error: " + inner.Error(),
+			},
+		},
+	}
+
+	for tn, tt := range tests {
+		t.Run(tn, func(t *testing.T) {
+			err := &containerOOMKilledError{containerName: tt.containerName, inner: inner}
+
+			for _, s := range tt.expectedContains {
+				assert.Contains(t, err.Error(), s)
+			}
+			assert.ErrorIs(t, err, inner)
+		})
+	}
+}
+
+func TestPodContainerErrorOOMKilledHint(t *testing.T) {
+	oom := &podContainerError{containerName: helperContainerName, exitCode: 137, reason: containerOOMKilledReason}
+	assert.Contains(t, oom.Error(), "Error in container helper: exit code: 137, reason: 'OOMKilled'")
+	assert.Contains(t, oom.Error(), containerMemoryDocsURL)
+
+	other := &podContainerError{containerName: helperContainerName, exitCode: 1, reason: "Error"}
+	assert.Equal(t, "Error in container helper: exit code: 1, reason: 'Error'", other.Error())
+}
+
+func TestClassifyOOMKilledError(t *testing.T) {
+	version, codec := testVersionAndCodec()
+
+	notFoundErr := errors.New(`unable to upgrade connection: container not found ("helper")`)
+	otherErr := errors.New("some other attach error")
+	exit137Err := exec.CodeExitError{Err: errors.New("command terminated with exit code 137"), Code: 137}
+	exit1Err := exec.CodeExitError{Err: errors.New("command terminated with exit code 1"), Code: 1}
+
+	podWithHelperState := func(state api.ContainerState) *api.Pod {
+		return &api.Pod{
+			ObjectMeta: metav1.ObjectMeta{Name: "pod", Namespace: "namespace"},
+			Status: api.PodStatus{
+				Phase: api.PodRunning,
+				ContainerStatuses: []api.ContainerStatus{
+					{Name: buildContainerName, State: api.ContainerState{Running: &api.ContainerStateRunning{}}},
+					{Name: helperContainerName, State: state},
+				},
+			},
+		}
+	}
+
+	tests := map[string]struct {
+		err           error
+		containerName string
+		pod           *api.Pod
+		getErr        error
+		expectPodGet  bool
+		verifyErr     func(t *testing.T, err error)
+	}{
+		"nil error is passed through": {
+			err:          nil,
+			expectPodGet: false,
+			verifyErr: func(t *testing.T, err error) {
+				assert.NoError(t, err)
+			},
+		},
+		"unrelated error is passed through without querying the pod": {
+			err:           otherErr,
+			containerName: helperContainerName,
+			expectPodGet:  false,
+			verifyErr: func(t *testing.T, err error) {
+				assert.Same(t, otherErr, err)
+			},
+		},
+		"container not found and helper OOM-killed": {
+			err:           notFoundErr,
+			containerName: helperContainerName,
+			pod: podWithHelperState(api.ContainerState{
+				Terminated: &api.ContainerStateTerminated{Reason: containerOOMKilledReason, ExitCode: 137},
+			}),
+			expectPodGet: true,
+			verifyErr: func(t *testing.T, err error) {
+				var oomErr *containerOOMKilledError
+				require.ErrorAs(t, err, &oomErr)
+				var buildErr *common.BuildError
+				require.ErrorAs(t, err, &buildErr)
+				assert.Equal(t, common.ConfigurationError, buildErr.FailureReason)
+				assert.Equal(t, 137, buildErr.ExitCode)
+				assert.Equal(t, helperContainerName, oomErr.containerName)
+				assert.ErrorIs(t, err, notFoundErr)
+				assert.Contains(t, err.Error(), "helper container was OOM-killed")
+				assert.Contains(t, err.Error(), containerMemoryDocsURL)
+			},
+		},
+		"container not found but helper terminated for another reason": {
+			err:           notFoundErr,
+			containerName: helperContainerName,
+			pod: podWithHelperState(api.ContainerState{
+				Terminated: &api.ContainerStateTerminated{Reason: "Error", ExitCode: 1},
+			}),
+			expectPodGet: true,
+			verifyErr: func(t *testing.T, err error) {
+				assert.Same(t, notFoundErr, err)
+			},
+		},
+		"exit code 137 and helper OOM-killed": {
+			err:           exit137Err,
+			containerName: helperContainerName,
+			pod: podWithHelperState(api.ContainerState{
+				Terminated: &api.ContainerStateTerminated{Reason: containerOOMKilledReason, ExitCode: 137},
+			}),
+			expectPodGet: true,
+			verifyErr: func(t *testing.T, err error) {
+				var buildErr *common.BuildError
+				require.ErrorAs(t, err, &buildErr)
+				assert.Equal(t, common.ConfigurationError, buildErr.FailureReason)
+				assert.Equal(t, 137, buildErr.ExitCode)
+
+				var oomErr *containerOOMKilledError
+				require.ErrorAs(t, err, &oomErr)
+				assert.Equal(t, helperContainerName, oomErr.containerName)
+
+				var exitErr exec.CodeExitError
+				require.ErrorAs(t, err, &exitErr)
+				assert.Equal(t, 137, exitErr.ExitStatus())
+			},
+		},
+		"exit code 137 but helper not OOM-killed": {
+			err:           exit137Err,
+			containerName: helperContainerName,
+			pod: podWithHelperState(api.ContainerState{
+				Terminated: &api.ContainerStateTerminated{Reason: "Error", ExitCode: 137},
+			}),
+			expectPodGet: true,
+			verifyErr: func(t *testing.T, err error) {
+				assert.Equal(t, exit137Err, err)
+			},
+		},
+		"exit code other than 137 is passed through without querying the pod": {
+			err:           exit1Err,
+			containerName: helperContainerName,
+			expectPodGet:  false,
+			verifyErr: func(t *testing.T, err error) {
+				assert.Equal(t, exit1Err, err)
+			},
+		},
+		"container not found but pod lookup fails": {
+			err:           notFoundErr,
+			containerName: helperContainerName,
+			getErr:        errors.New("api server unavailable"),
+			expectPodGet:  true,
+			verifyErr: func(t *testing.T, err error) {
+				assert.Same(t, notFoundErr, err)
+			},
+		},
+	}
+
+	for tn, tt := range tests {
+		t.Run(tn, func(t *testing.T) {
+			podGetCalled := false
+			fakeClient := fake.CreateHTTPClient(func(req *http.Request) (*http.Response, error) {
+				switch p, m := req.URL.Path, req.Method; {
+				case p == "/api/v1/namespaces/namespace/pods/pod" && m == http.MethodGet:
+					podGetCalled = true
+					if tt.getErr != nil {
+						return nil, tt.getErr
+					}
+					return &http.Response{
+						StatusCode: http.StatusOK,
+						Header:     map[string][]string{common.ContentType: {"application/json"}},
+						Body:       objBody(codec, tt.pod),
+					}, nil
+				default:
+					return nil, fmt.Errorf("unexpected request: %s %s", m, p)
+				}
+			})
+
+			e := newExecutor()
+			e.Config.Kubernetes = &common.KubernetesConfig{}
+			e.kubeClient = testKubernetesClient(version, fakeClient)
+			e.pod = &api.Pod{ObjectMeta: metav1.ObjectMeta{Name: "pod", Namespace: "namespace"}}
+
+			err := e.classifyOOMKilledError(t.Context(), tt.containerName, tt.err)
+
+			tt.verifyErr(t, err)
+			assert.Equal(t, tt.expectPodGet, podGetCalled)
+		})
+	}
+}
+
+func TestPodContainerBuildError(t *testing.T) {
+	oomErr := &podContainerError{containerName: helperContainerName, exitCode: 137, reason: containerOOMKilledReason}
+	otherContainerErr := &podContainerError{containerName: helperContainerName, exitCode: 1, reason: "Error"}
+	alreadyClassified := &common.BuildError{Inner: errors.New("classified"), FailureReason: common.ScriptFailure}
+	unrelated := errors.New("unrelated")
+
+	tests := map[string]struct {
+		err       error
+		verifyErr func(t *testing.T, err error)
+	}{
+		"OOM-killed container is a configuration error with its exit code": {
+			err: oomErr,
+			verifyErr: func(t *testing.T, err error) {
+				var buildErr *common.BuildError
+				require.ErrorAs(t, err, &buildErr)
+				assert.Equal(t, common.ConfigurationError, buildErr.FailureReason)
+				assert.Equal(t, 137, buildErr.ExitCode)
+				assert.ErrorIs(t, err, oomErr)
+			},
+		},
+		"wrapped OOM-killed container is classified too": {
+			err: fmt.Errorf("pod status: %w", oomErr),
+			verifyErr: func(t *testing.T, err error) {
+				var buildErr *common.BuildError
+				require.ErrorAs(t, err, &buildErr)
+				assert.Equal(t, common.ConfigurationError, buildErr.FailureReason)
+				assert.Equal(t, 137, buildErr.ExitCode)
+			},
+		},
+		"container terminated for another reason is returned as is": {
+			err: otherContainerErr,
+			verifyErr: func(t *testing.T, err error) {
+				assert.Same(t, otherContainerErr, err)
+			},
+		},
+		"already classified build error is returned as is": {
+			err: alreadyClassified,
+			verifyErr: func(t *testing.T, err error) {
+				assert.Same(t, alreadyClassified, err)
+			},
+		},
+		"unrelated error is returned as is": {
+			err: unrelated,
+			verifyErr: func(t *testing.T, err error) {
+				assert.Same(t, unrelated, err)
+			},
+		},
+		"nil error is returned as is": {
+			err: nil,
+			verifyErr: func(t *testing.T, err error) {
+				assert.NoError(t, err)
+			},
+		},
+	}
+
+	for tn, tt := range tests {
+		t.Run(tn, func(t *testing.T) {
+			tt.verifyErr(t, podContainerBuildError(tt.err))
+		})
+	}
+}
+
 func fakeKubeDeleteResponse(status int) *http.Response {
 	_, codec := testVersionAndCodec()
 

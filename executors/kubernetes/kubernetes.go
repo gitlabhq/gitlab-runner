@@ -246,8 +246,156 @@ type podContainerError struct {
 	reason        string
 }
 
-func (p *podContainerError) Error() string {
-	return fmt.Sprintf("Error in container %s: exit code: %d, reason: '%s'", p.containerName, p.exitCode, p.reason)
+func (e *podContainerError) Error() string {
+	if e.reason == containerOOMKilledReason {
+		return fmt.Sprintf("Error in container %s: exit code: %d, reason: '%s'\n%s", e.containerName, e.exitCode, e.reason, containerMemoryDocsURL)
+	}
+	return fmt.Sprintf("Error in container %s: exit code: %d, reason: '%s'", e.containerName, e.exitCode, e.reason)
+}
+
+// podContainerBuildError classifies a podContainerError that reports an OOM
+// kill as a configuration error, keeping the container's exit code so that
+// allow_failure: exit_codes still matches. An error that is already a
+// *common.BuildError has been classified and is returned as is.
+func podContainerBuildError(err error) error {
+	var buildErr *common.BuildError
+	if errors.As(err, &buildErr) {
+		return err
+	}
+
+	var containerErr *podContainerError
+	if errors.As(err, &containerErr) && containerErr.reason == containerOOMKilledReason {
+		return &common.BuildError{
+			Inner:         err,
+			ExitCode:      common.NormalizeExitCode(containerErr.exitCode),
+			FailureReason: common.ConfigurationError,
+		}
+	}
+
+	return err
+}
+
+const (
+	containerOOMKilledReason = "OOMKilled"
+
+	// oomKilledExitStatus is the exit status a process killed by the OOM
+	// killer leaves behind (128 + SIGKILL).
+	oomKilledExitStatus = 137
+
+	// containerNotFoundErrorFragment matches the error the API server returns
+	// when attaching to or exec'ing into a container that is no longer
+	// running. client-go surfaces it from the SPDY upgrade as, for example:
+	//
+	//	unable to upgrade connection: container not found ("helper")
+	//
+	// It is not a typed error, so it can only be recognised by its message.
+	containerNotFoundErrorFragment = "container not found"
+
+	containerMemoryDocsURL = "https://docs.gitlab.com/runner/executors/kubernetes/#memory-requests-and-limits"
+)
+
+// containerOOMKilledError wraps an attach/exec failure that turned out to be
+// caused by the target container having been OOM-killed. The inner error is
+// either the API server's "container not found" or the exec's exit status
+// 137, neither of which names the cause, so the message states it and links
+// to the memory limits documentation.
+type containerOOMKilledError struct {
+	containerName string
+	inner         error
+}
+
+func (e *containerOOMKilledError) Error() string {
+	return fmt.Sprintf(
+		"%s container was OOM-killed (memory limit exceeded). See: %s\nOriginal error: %v",
+		e.containerName,
+		containerMemoryDocsURL,
+		e.inner,
+	)
+}
+
+func (e *containerOOMKilledError) Unwrap() error {
+	return e.inner
+}
+
+// containerOOMKilledExitCode reports whether the named container in pod is,
+// or was last, terminated with reason OOMKilled, and if so the exit code it
+// terminated with.
+func containerOOMKilledExitCode(pod *api.Pod, containerName string) (int, bool) {
+	if pod == nil {
+		return 0, false
+	}
+
+	for _, cs := range pod.Status.ContainerStatuses {
+		if cs.Name != containerName {
+			continue
+		}
+
+		if t := cs.State.Terminated; t != nil && t.Reason == containerOOMKilledReason {
+			return int(t.ExitCode), true
+		}
+		if t := cs.LastTerminationState.Terminated; t != nil && t.Reason == containerOOMKilledReason {
+			return int(t.ExitCode), true
+		}
+	}
+
+	return 0, false
+}
+
+// classifyOOMKilledError checks whether an attach/exec error was caused by the
+// target container being OOM-killed. It looks the pod up when the API server
+// reports the container as gone ("container not found"), or when the command
+// exited with status 137, which is all an OOM kill leaves behind in legacy
+// exec mode where nothing watches the pod while a stage runs.
+//
+// If the container was OOM-killed, the error is wrapped in a
+// containerOOMKilledError inside a common.BuildError classified as a
+// configuration error and carrying the container's exit code. Any other error,
+// or a failure to look up the pod, is returned unchanged.
+//
+// The exit-137 check is best-effort: the pod is fetched right after the exec
+// returns, and the kubelet may not have recorded the container as terminated
+// yet, in which case the OOM kill is not detected and the original error is
+// returned.
+func (s *executor) classifyOOMKilledError(ctx context.Context, containerName string, err error) error {
+	if err == nil {
+		return nil
+	}
+
+	isNotFound := strings.Contains(err.Error(), containerNotFoundErrorFragment)
+
+	var exitErr exec.CodeExitError
+	isOOMExitCode := errors.As(err, &exitErr) && exitErr.ExitStatus() == oomKilledExitStatus
+
+	if !isNotFound && !isOOMExitCode {
+		return err
+	}
+
+	var pod *api.Pod
+	getErr := retry.WithFn(s, func() error {
+		var innerErr error
+		// kubeAPI: pods, get
+		pod, innerErr = s.kubeClient.CoreV1().
+			Pods(s.pod.Namespace).Get(ctx, s.pod.Name, metav1.GetOptions{})
+		return innerErr
+	}).Run()
+	if getErr != nil {
+		s.BuildLogger.Debugln(fmt.Sprintf(
+			"Could not get pod %q to check whether container %q was OOM-killed: %v",
+			s.pod.Name, containerName, getErr,
+		))
+		return err
+	}
+
+	exitCode, oomKilled := containerOOMKilledExitCode(pod, containerName)
+	if !oomKilled {
+		return err
+	}
+
+	return &common.BuildError{
+		Inner:         &containerOOMKilledError{containerName: containerName, inner: err},
+		ExitCode:      common.NormalizeExitCode(exitCode),
+		FailureReason: common.ConfigurationError,
+	}
 }
 
 type kubernetesOptions struct {
@@ -907,6 +1055,11 @@ func (s *executor) runWithExecLegacy(cmd common.ExecutorCommand) error {
 	select {
 	case err := <-s.runInContainerWithExec(ctx, containerName, containerCommand, cmd.Script, stdout, stderr):
 		s.BuildLogger.Debugln(fmt.Sprintf("Container %q exited with error: %v", containerName, err))
+		// Already classified (for example an OOM kill): don't turn it into a script failure.
+		var buildErr *common.BuildError
+		if errors.As(err, &buildErr) {
+			return err
+		}
 		var exitError exec.CodeExitError
 		if err != nil && errors.As(err, &exitError) {
 			return &common.BuildError{Inner: err, ExitCode: common.NormalizeExitCode(exitError.ExitStatus()), FailureReason: common.ScriptFailure}
@@ -1479,7 +1632,7 @@ func (s *executor) forwardLogLine(w io.Writer, line string) {
 func getExitCode(err error) int {
 	var exitErr exec.CodeExitError
 	if errors.As(err, &exitErr) {
-		return exitErr.Code
+		return exitErr.ExitStatus()
 	}
 	return unknownLogProcessorExitCode
 }
@@ -1526,6 +1679,11 @@ func (s *executor) saveScriptOnEmptyDir(ctx context.Context, scriptName, contain
 		stderr,
 	):
 		s.BuildLogger.Debugln(fmt.Sprintf("Container %q exited with error: %v", containerName, err))
+		// Already classified (for example an OOM kill): return as is.
+		var buildErr *common.BuildError
+		if errors.As(err, &buildErr) {
+			return err
+		}
 		var exitError exec.CodeExitError
 		if err != nil && errors.As(err, &exitError) {
 			return &common.BuildError{Inner: err, ExitCode: common.NormalizeExitCode(exitError.ExitStatus())}
@@ -3339,7 +3497,7 @@ func (s *executor) watchPodStatus(ctx context.Context, extendedStatusFunc podSta
 			case <-t.C:
 				err := s.checkPodStatus(ctx, extendedStatusFunc)
 				if err != nil {
-					ch <- err
+					ch <- podContainerBuildError(err)
 					return
 				}
 			}
@@ -3438,7 +3596,7 @@ func (s *executor) runInContainer(
 		})
 
 		if err := kubeRequest.Run(); err != nil {
-			errCh <- err
+			errCh <- s.classifyOOMKilledError(ctx, name, err)
 		}
 
 		exitStatus := <-s.remoteProcessTerminated
@@ -3483,7 +3641,7 @@ func (s *executor) runInContainerWithExec(
 			Context: ctx,
 		}
 
-		errCh <- retry.WithFn(s, exec.Run).Run()
+		errCh <- s.classifyOOMKilledError(ctx, name, retry.WithFn(s, exec.Run).Run())
 	}()
 
 	return errCh
@@ -3823,6 +3981,11 @@ func (s *executor) waitForServices(ctx context.Context) error {
 	select {
 	case err := <-s.runInContainerWithExec(ctx, healthCheckContainer, s.BuildShell.DockerCommand, command, stdout, stderr):
 		s.BuildLogger.Debugln(fmt.Sprintf("Container helper exited with error: %v", err))
+		// Already classified (for example an OOM kill): return as is.
+		var buildErr *common.BuildError
+		if errors.As(err, &buildErr) {
+			return err
+		}
 		var exitError exec.CodeExitError
 		if err != nil && errors.As(err, &exitError) {
 			return &common.BuildError{Inner: err, ExitCode: common.NormalizeExitCode(exitError.ExitStatus())}
