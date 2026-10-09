@@ -131,6 +131,10 @@ func (m *manager) Cleanup(ctx context.Context) error {
 	return nil
 }
 
+// Adopt records an existing network as the build's network. If mode is a
+// user-defined network it is inspected to verify it still exists; otherwise
+// the mode is recorded as-is. Used by the suspend/resume flow to attach to a
+// network created by a prior job.
 func (m *manager) Adopt(ctx context.Context, mode container.NetworkMode) error {
 	// On Windows, IsHost() always returns false and IsUserDefined() does
 	// not exclude "host". In practice, Windows containers cannot use host networking.
