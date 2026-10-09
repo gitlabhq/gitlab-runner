@@ -16,6 +16,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -741,7 +742,7 @@ func TestDockerCommandTwoServicesFromOneImage(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			var buffer bytes.Buffer
 
-			build.Variables = tt.variables
+			build.Variables = slices.Concat(successfulBuild.Variables, tt.variables)
 			err = build.Run(context.Background(), &common.Config{}, &common.Trace{Writer: &buffer})
 			assert.NoError(t, err)
 			str := buffer.String()
@@ -802,7 +803,7 @@ func TestDockerCommandServiceNameEmpty(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			var buffer bytes.Buffer
 
-			build.Variables = tt.variables
+			build.Variables = slices.Concat(successfulBuild.Variables, tt.variables)
 			err = build.Run(context.Background(), &common.Config{}, &common.Trace{Writer: &buffer})
 
 			str := buffer.String()
@@ -2287,7 +2288,7 @@ func Test_CaptureServiceLogs(t *testing.T) {
 			build.Services = append(build.Services, spec.Image{Name: "postgres:14.4", Alias: "db"})
 			build.Services = append(build.Services, spec.Image{Name: "redis:7.0", Alias: "cache"})
 
-			build.Variables = tt.buildVars
+			build.Variables = append(build.Variables, tt.buildVars...)
 			out, err := buildtest.RunBuildReturningOutput(t, &build)
 			tt.assert(t, out, err)
 		})

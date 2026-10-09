@@ -294,6 +294,31 @@ To execute the tests run:
 make test
 ```
 
+### Fixture repositories
+
+Tests that run jobs clone fixture repositories from GitLab.com. To serve them
+locally instead, run the `git-server` image from
+[`base-images`](https://gitlab.com/gitlab-org/ci-cd/runner-tools/base-images)
+and point the tests at it:
+
+```shell
+docker run --detach --publish 8080:8080 --name runner-test-git-server \
+  registry.gitlab.com/gitlab-org/ci-cd/runner-tools/base-images/git-server:development
+export RUNNER_TEST_GIT_SERVER_URL=http://localhost:8080
+```
+
+Tests that run jobs in containers, such as the Docker executor tests, must
+reach the server at an address the containers can use. On Linux and
+Docker Desktop that is `http://172.17.0.1:8080`.
+
+Without a server, tests that use the local fixture clone the repository that
+`make development_setup` places under `tmp/gitlab-test`, and clone from
+GitLab.com when that is missing too.
+
+`RUNNER_IMAGES_VERSION` selects the version of the test images, such as
+`git-server` and `liveness`, and defaults to the `development` tag.
+CI pins it in `.gitlab/ci/_common.gitlab-ci.yml`.
+
 ### Kubernetes Integration tests
 
 To run correctly, some Kubernetes integration tests require specific configuration or runtime

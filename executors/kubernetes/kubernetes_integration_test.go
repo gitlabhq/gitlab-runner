@@ -3712,7 +3712,7 @@ func Test_CaptureServiceLogs(t *testing.T) {
 			build := getTestBuildWithServices(t, common.GetRemoteSuccessfulBuild, "postgres:14.4", "redis:7.0")
 			build.Services[0].Alias = "db"
 			build.Services[1].Alias = "cache"
-			build.Variables = tt.buildVars
+			build.Variables = append(build.Variables, tt.buildVars...)
 			build.Variables = append(build.Variables, spec.Variable{
 				Key:    "POSTGRES_PASSWORD",
 				Value:  "password",

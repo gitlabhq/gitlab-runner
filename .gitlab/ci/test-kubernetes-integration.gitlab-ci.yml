@@ -15,8 +15,19 @@
   variables:
     KUBERNETES_SERVICE_ACCOUNT_OVERWRITE: "k8s-runner-integration-tests-runner-$CI_PIPELINE_ID"
   retry: !reference [.retry_flaky_integration, retry]
+
+.integration kubernetes tests:
+  extends:
+    - .integration kubernetes
+  services:
+    # Serves the fixture repositories (see base-images, dockerfiles/tests) so
+    # the build pods clone locally instead of from gitlab.com. Those pods run
+    # outside this one, so they reach the service through this pod's address;
+    # a service alias would resolve to loopback here and to nothing there.
+    - name: ${RUNNER_IMAGES_REGISTRY}/git-server:${RUNNER_IMAGES_VERSION}
   before_script:
     - go install gotest.tools/gotestsum@latest
+    - export RUNNER_TEST_GIT_SERVER_URL="http://$(hostname -i):8080"
   script:
     # Note: We use hide-summary=output due to https://github.com/gotestyourself/gotestsum/issues/423
     - >
@@ -44,7 +55,7 @@ provision integration kubernetes:
 
 integration kubernetes exec legacy:
   extends:
-    - .integration kubernetes
+    - .integration kubernetes tests
   resource_group: "$CI_COMMIT_REF_SLUG-k8s-integration-exec-legacy"
   variables:
     CI_RUNNER_TEST_FEATURE_FLAG: "FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY"
@@ -53,7 +64,7 @@ integration kubernetes exec legacy:
 
 integration kubernetes attach:
   extends:
-    - .integration kubernetes
+    - .integration kubernetes tests
   resource_group: "$CI_COMMIT_REF_SLUG-k8s-integration-attach"
   variables:
     CI_RUNNER_TEST_FEATURE_FLAG: "FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY"
@@ -62,7 +73,7 @@ integration kubernetes attach:
 
 integration kubernetes concrete:
   extends:
-    - .integration kubernetes
+    - .integration kubernetes tests
   resource_group: "$CI_COMMIT_REF_SLUG-k8s-integration-concrete"
   variables:
     CI_RUNNER_TEST_FEATURE_FLAG: "FF_CONCRETE"
@@ -71,7 +82,7 @@ integration kubernetes concrete:
 
 integration kubernetes:
   extends:
-    - .integration kubernetes
+    - .integration kubernetes tests
   resource_group: "$CI_COMMIT_REF_SLUG-k8s-integration"
   variables:
     EXTRA_GO_TEST_FLAGS: "-skip=TestRunIntegrationTestsWithFeatureFlag"
