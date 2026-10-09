@@ -25,7 +25,7 @@ CI/CD 파이프라인은 단순하거나 복잡한 DevOps 자동화 작업에 �
 
 - 악의적 코드가 포함된 리포지토리의 작업은 임시 저장이 아닌 러너가 서비스하는 다른 리포지토리의 보안을 손상시킬 수 있습니다.
 - 실행기에 따라 작업은 러너가 호스팅되는 가상 머신에 악의적 코드를 설치할 수 있습니다.
-- 손상된 환경에서 실행 중인 작업에 노출된 비밀 변수는 `CI_JOB_TOKEN`을(를) 포함하되 이에 국한되지 않는 도용될 수 있습니다.
+- 손상된 환경에서 실행 중인 작업에 노출된 비밀 변수는 `CI_JOB_TOKEN`을 포함하되 이에 국한되지 않고 도용될 수 있습니다.
 - 개발자 역할을 가진 사용자는 프로젝트와 관련된 부분 모듈에 액세스할 수 있습니다. 부분 모듈의 업스트림 프로젝트에 액세스할 수 없는 경우에도 마찬가지입니다.
 
 ## 다양한 실행기의 보안 위험 {#security-risks-for-different-executors}
@@ -34,18 +34,18 @@ CI/CD 파이프라인은 단순하거나 복잡한 DevOps 자동화 작업에 �
 
 ### Shell 실행기의 사용 {#usage-of-shell-executor}
 
-**`shell` 실행기로 빌드를 실행할 때 러너 호스트 및 네트워크에 높은 보안 위험이 존재합니다**. 작업은 GitLab Runner 사용자의 권한으로 실행되며 이 서버에서 실행되는 다른 프로젝트의 코드를 도용할 수 있습니다. 신뢰할 수 있는 빌드를 실행할 때만 사용하세요.
+**`shell` 실행기로 빌드를 실행할 때 러너 호스트 및 네트워크에 높은 보안 위험이 존재합니다**. 작업은 러너 사용자의 권한으로 실행되며 이 서버에서 실행되는 다른 프로젝트의 코드를 도용할 수 있습니다. 신뢰할 수 있는 빌드를 실행할 때만 사용하세요.
 
 ### Docker 실행기의 사용 {#usage-of-docker-executor}
 
-**Docker can be considered safe when running in non-privileged mode**. 이러한 구성을 더 안전하게 하려면 비활성화된 `sudo`, 삭제된 `SETUID` 및 `SETGID` 기능을 갖춘 Docker 컨테이너에서 루트가 아닌 사용자로 작업을 실행하세요.
+**Docker는 비특권 모드에서 실행할 때 안전한 것으로 간주할 수 있습니다**. 이러한 구성을 더 안전하게 하려면 비활성화된 `sudo`, 삭제된 `SETUID` 및 `SETGID` 기능을 갖춘 Docker 컨테이너에서 루트가 아닌 사용자로 작업을 실행하세요.
 
 더 세밀한 권한은 `cap_add`/`cap_drop` 설정을 통해 권한이 없는 모드에서 구성할 수 있습니다.
 
 > [!warning]
-> Docker의 권한이 있는 컨테이너는 호스트 VM의 모든 루트 기능을 갖습니다. 자세한 내용은 [Runtime privilege and Linux capabilities](https://docs.docker.com/engine/containers/run/#runtime-privilege-and-linux-capabilities)에 대한 공식 Docker 문서를 확인하세요. 마찬가지로 호스트 PID 네임스페이스에서 컨테이너를 실행하면 컨테이너 격리가 손상되어 안전하지 않습니다.
+> Docker의 권한이 있는 컨테이너는 호스트 VM의 모든 루트 기능을 갖습니다. 자세한 내용은 [런타임 권한 및 Linux 기능](https://docs.docker.com/engine/containers/run/#runtime-privilege-and-linux-capabilities)에 관한 공식 Docker 문서를 참조하십시오. 마찬가지로 컨테이너를 호스트 PID 네임스페이스에서 실행하면 컨테이너 격리가 손상되어 안전하지 않습니다.
 
-**not advised** 특권 모드에서 컨테이너를 실행하거나 `--pid=host` 플래그를 사용하는 것은.
+특권 모드에서 컨테이너를 실행하거나 `--pid=host` 플래그를 사용하는 것은 **권장되지 않습니다**.
 
 권한이 있는 모드를 사용하면 CI/CD 작업을 실행하는 사용자는 러너의 호스트 시스템에 대한 완전한 루트 액세스, 볼륨을 마운트 및 분리할 수 있는 권한, 중첩된 컨테이너를 실행할 수 있습니다.
 
@@ -55,7 +55,7 @@ Docker Machine 실행기를 사용하는 경우 `MaxBuilds = 1` 설정을 사용
 
 ### `if-not-present` 풀 정책을 사용하는 프라이빗 Docker 이미지의 사용 {#usage-of-private-docker-images-with-if-not-present-pull-policy}
 
-[고급 구성: 프라이빗 컨테이너 레지스트리 사용](../configuration/advanced-configuration.md#use-a-private-container-registry)에서 설명하는 프라이빗 Docker 이미지 지원을 사용할 때 `always`을(를) `pull_policy` 값으로 사용해야 합니다. 특히 Docker 또는 Kubernetes 실행기를 사용하여 공용 인스턴스 러너를 호스팅하는 경우 `always` 풀 정책을 사용해야 합니다.
+[고급 구성: 프라이빗 컨테이너 레지스트리 사용](../configuration/advanced-configuration.md#use-a-private-container-registry)에서 설명하는 프라이빗 Docker 이미지 지원을 사용할 때 `always`를 `pull_policy` 값으로 사용해야 합니다. 특히 Docker 또는 Kubernetes 실행기를 사용하여 공용 인스턴스 러너를 호스팅하는 경우 `always` 풀 정책을 사용해야 합니다.
 
 풀 정책이 `if-not-present`로 설정된 예제를 고려해 보겠습니다:
 
@@ -63,38 +63,46 @@ Docker Machine 실행기를 사용하는 경우 `MaxBuilds = 1` 설정을 사용
 1. 사용자 A가 인스턴스 러너에서 빌드를 시작합니다:  빌드는 레지스트리 자격 증명을 수신하고 레지스트리에서 인증 후 이미지를 끌어옵니다.
 1. 이미지는 인스턴스 러너의 호스트에 저장됩니다.
 1. 사용자 B는 `registry.example.com/image/name`의 프라이빗 이미지에 액세스할 수 없습니다.
-1. 사용자 B는 사용자 A와 동일한 인스턴스 러너에서 이 이미지를 사용하는 빌드를 시작합니다:  러너는 로컬 버전의 이미지를 찾고 **even if the image could not be pulled because of missing credentials**.
+1. 사용자 B는 사용자 A와 동일한 인스턴스 러너에서 이 이미지를 사용하는 빌드를 시작합니다:  러너는 **자격 증명이 누락되어 이미지를 가져올 수 없는 경우**에도 이미지의 로컬 버전을 찾아 사용합니다.
 
-따라서 다양한 사용자 및 다양한 프로젝트(혼합된 프라이빗 및 공용 액세스 수준 포함)에서 사용할 수 있는 러너를 호스팅하는 경우 `if-not-present`을(를) 풀 정책 값으로 사용하지 않아야 하며 대신 다음을 사용해야 합니다:
+따라서 다양한 사용자 및 다양한 프로젝트(혼합된 프라이빗 및 공용 액세스 수준 포함)에서 사용할 수 있는 러너를 호스팅하는 경우 `if-not-present`를 풀 정책 값으로 사용하지 않아야 하며 대신 다음을 사용해야 합니다:
 
 - `never` - 사용자가 미리 다운로드한 이미지만 사용하도록 제한하려는 경우입니다.
 - `always` - 사용자에게 모든 레지스트리에서 이미지를 다운로드할 수 있는 가능성을 제공하려는 경우입니다.
 
-`if-not-present` 풀 정책은 신뢰할 수 있는 빌드 및 사용자가 사용하는 특정 러너에 대해 **only** 사용해야 합니다.
+`if-not-present` 풀 정책은 신뢰할 수 있는 빌드 및 사용자가 사용하는 특정 러너 **전용**으로만 사용해야 합니다.
 
 자세한 내용은 [풀 정책 설명서](../executors/docker.md#configure-how-runners-pull-images)를 읽어보세요.
 
+### Docker 자격 증명 도우미 사용 {#usage-of-docker-credential-helpers}
+
+작업의 `DOCKER_AUTH_CONFIG` 변수로 참조되는 Docker 자격 증명 도우미는 작업 환경이 아닌 러너 관리자 호스트에서 바이너리로 실행됩니다. 임의의 `docker-credential-*` 바이너리를 실행할 수 있는 작업은 해당 호스트의 ID로 이미지를 가져올 수 있습니다. Cloud SDK 및 Docker Desktop은 자격 증명 도우미를 부작용으로 설치하므로 도우미를 구성한 적이 없어도 도우미가 있을 수 있습니다.
+
+기본적으로 러너는 작업에서 제공된 `DOCKER_AUTH_CONFIG`로 참조되는 자격 증명 도우미를 실행하지 않습니다. 자격 증명 도우미를 사용하려면 신뢰할 수 있는 도우미와 도우미가 제공할 수 있는 레지스트리를 [`allowed_docker_credential_helpers` 설정](../configuration/advanced-configuration.md#restrict-docker-credential-helpers)으로 나열합니다.
+
+이 설정은 러너 호스트의 `~/.docker/config.json` 및 `~/.dockercfg` 파일을 제한하지 않습니다. 이들이 제공하는 모든 자격 증명은 러너가 실행하는 모든 작업에서 사용 가능합니다. 공유 러너에서는 러너 사용자로 `docker login`을 실행하지 마세요. 러너 사용자의 홈 디렉터리에 Docker 구성 파일을 보관하지 마세요.
+
 ### SSH 실행기의 사용 {#usage-of-ssh-executor}
 
-**SSH executors are susceptible to MITM attack (man-in-the-middle)**. 누락된 `StrictHostKeyChecking` 옵션 때문입니다. 이는 향후 릴리스 중 하나에서 수정될 예정입니다.
+누락된 `StrictHostKeyChecking` 옵션으로 인해 **SSH 실행기는 MITM(중간자) 공격에 취약합니다.** 이는 향후 릴리스 중 하나에서 수정될 예정입니다.
 
 ### Parallels 실행기의 사용 {#usage-of-parallels-executor}
 
-**Parallels executor is the safest possible option**. 전체 시스템 가상화를 사용하고 격리 모드에서 실행하도록 구성된 VM 머신을 사용하고 격리 모드에서 실행하도록 구성된 VM 머신을 사용하기 때문입니다. 모든 주변 기기 및 공유 폴더에 대한 액세스를 차단합니다.
+전체 시스템 가상화를 사용하고, 격리된 가상화 환경에서 실행되도록 구성된 VM 머신과 격리 모드에서 실행되도록 구성된 VM 머신을 사용하기 때문에 **Parallels 실행기는 가장 안전한 옵션**입니다. 모든 주변 기기 및 공유 폴더에 대한 액세스를 차단합니다.
 
 ## 러너 복제 {#cloning-a-runner}
 
 러너는 토큰을 사용하여 GitLab 서버에 식별합니다. 러너를 복제하면 복제된 러너가 해당 토큰에 대해 동일한 작업을 가져올 수 있습니다. 이는 러너 작업을 "도용"하기 위한 가능한 공격 벡터입니다.
 
-## 공유 환경에서 `GIT_STRATEGY: fetch`을(를) 사용할 때의 보안 위험 {#security-risks-when-using-git_strategy-fetch-on-shared-environments}
+## 공유 환경에서 `GIT_STRATEGY: fetch`를 사용할 때의 보안 위험 {#security-risks-when-using-git_strategy-fetch-on-shared-environments}
 
-[`GIT_STRATEGY`](https://docs.gitlab.com/ci/runners/configure_runners/#git-strategy)을(를) `fetch`로 설정하면 러너는 Git 리포지토리의 로컬 작업 복사본을 재사용하려고 합니다.
+[`GIT_STRATEGY`](https://docs.gitlab.com/ci/runners/configure_runners/#git-strategy)를 `fetch`로 설정하면 러너는 Git 리포지토리의 로컬 작업 복사본을 재사용하려고 합니다.
 
 로컬 복사본을 사용하면 CI/CD 작업의 성능을 향상시킬 수 있습니다. 그러나 재사용 가능한 복사본에 액세스할 수 있는 모든 사용자는 다른 사용자의 파이프라인에서 실행되는 코드를 추가할 수 있습니다.
 
-Git은 부분 모듈(다른 리포지토리 내에 포함된 리포지토리)의 내용을 상위 리포지토리의 Git reflog에 저장합니다. 따라서 프로젝트의 부분 모듈이 처음 복제된 후 후속 작업은 스크립트에서 `git submodule update`을(를) 실행하여 부분 모듈의 내용에 액세스할 수 있습니다. 이는 부분 모듈이 삭제되었고 작업을 시작한 사용자가 부분 모듈 프로젝트에 액세스할 수 없는 경우에도 적용됩니다.
+Git은 부분 모듈(다른 리포지토리 내에 포함된 리포지토리)의 내용을 상위 리포지토리의 Git reflog에 저장합니다. 따라서 프로젝트의 부분 모듈이 처음 복제된 후 후속 작업은 스크립트에서 `git submodule update`를 실행하여 부분 모듈의 내용에 액세스할 수 있습니다. 이는 부분 모듈이 삭제되었고 작업을 시작한 사용자가 부분 모듈 프로젝트에 액세스할 수 없는 경우에도 적용됩니다.
 
-공유 환경에 액세스할 수 있는 모든 사용자를 신뢰할 때만 `GIT_STRATEGY: fetch`을(를) 사용하세요.
+공유 환경에 액세스할 수 있는 모든 사용자를 신뢰할 때만 `GIT_STRATEGY: fetch`를 사용하세요.
 
 ## 보안 강화 옵션 {#security-hardening-options}
 
@@ -107,7 +115,7 @@ Docker의 `--privileged` 플래그 사용이 필요한 CI/CD 작업을 실행해
 
 ### 네트워크 분할 {#network-segmentation}
 
-GitLab Runner는 사용자 제어 스크립트를 실행하도록 설계되었습니다. 작업이 악의적인 경우 공격 표면을 줄이려면 자신의 네트워크 세그먼트에서 실행하는 것을 고려할 수 있습니다. 이것은 다른 인프라 및 서비스로부터 네트워크를 분리할 것입니다.
+러너는 사용자 제어 스크립트를 실행하도록 설계되었습니다. 작업이 악의적인 경우 공격 표면을 줄이려면 자신의 네트워크 세그먼트에서 실행하는 것을 고려할 수 있습니다. 이것은 다른 인프라 및 서비스로부터 네트워크를 분리할 것입니다.
 
 모든 요구 사항이 고유하지만 클라우드 환경의 경우 다음을 포함할 수 있습니다:
 
@@ -129,4 +137,4 @@ CI 작업의 컨텍스트에서 실행되는 악의적 코드는 호스트를 �
 
 정적 호스트를 러너에 사용하는 경우 `FF_ENABLE_JOB_CLEANUP` [기능 플래그](../configuration/feature-flags.md)를 활성화하여 추가 보안 계층을 구현할 수 있습니다.
 
-`FF_ENABLE_JOB_CLEANUP`을(를) 활성화하면 러너가 호스트에서 사용하는 빌드 디렉토리가 각 빌드 후 정리됩니다.
+`FF_ENABLE_JOB_CLEANUP`을 활성화하면 러너가 호스트에서 사용하는 빌드 디렉토리가 각 빌드 후 정리됩니다.
