@@ -29,6 +29,7 @@ type options struct {
 	safeDirectoryCheckout            bool
 	isFeatureFlagOn                  func(name string) bool
 	gitCleanConfig                   bool
+	usePackfileURIs                  bool
 	isSharedEnv                      bool
 	userAgent                        string
 	gitalyCorrelationID              string
@@ -196,6 +197,13 @@ func WithPostCloneScript(script []string) Option {
 func WithGitCleanConfig(enabled bool) Option {
 	return func(o *options) error {
 		o.gitCleanConfig = enabled
+		return nil
+	}
+}
+
+func WithPackfileURIs(enabled bool) Option {
+	return func(o *options) error {
+		o.usePackfileURIs = enabled
 		return nil
 	}
 }

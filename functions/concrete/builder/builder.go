@@ -174,6 +174,7 @@ func (b *builder) buildGetSources() (stages.GetSources, error) {
 		ClearWorktreeOnRetry:  true,
 		UseNativeClone:        b.isFeatureFlagOn(featureflags.UseGitNativeClone),
 		UseBundleURIs:         b.isFeatureFlagOn(featureflags.UseGitBundleURIs),
+		UsePackfileURIs:       b.opts.usePackfileURIs,
 		SafeDirectoryCheckout: b.opts.safeDirectoryCheckout,
 		CleanGitConfig:        b.opts.gitCleanConfig,
 		UseProactiveAuth:      b.isFeatureFlagOn(featureflags.UseGitProactiveAuth),

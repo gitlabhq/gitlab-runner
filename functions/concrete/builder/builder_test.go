@@ -247,6 +247,14 @@ func TestBuild_GetSources(t *testing.T) {
 		assert.True(t, config.GetSources.UseProactiveAuth)
 	})
 
+	t.Run("packfile URIs", func(t *testing.T) {
+		config := buildConfig(t, baseJob(), newTestVars(t, nil))
+		assert.False(t, config.GetSources.UsePackfileURIs)
+
+		config = buildConfig(t, baseJob(), newTestVars(t, nil), WithPackfileURIs(true))
+		assert.True(t, config.GetSources.UsePackfileURIs)
+	})
+
 	t.Run("pre/post clone scripts", func(t *testing.T) {
 		ff := func(name string) bool { return name == featureflags.UseLegacyBashEval }
 		config := buildConfig(t, baseJob(), newTestVars(t, nil),

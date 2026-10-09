@@ -1475,6 +1475,7 @@ type RunnerSettings struct {
 	DebugTraceDisabled bool           `toml:"debug_trace_disabled,omitempty" json:"debug_trace_disabled" long:"debug-trace-disabled" env:"RUNNER_DEBUG_TRACE_DISABLED" description:"When set to true Runner will disable the possibility of using the CI_DEBUG_TRACE feature"`
 
 	SafeDirectoryCheckout *bool `toml:"safe_directory_checkout,omitempty" json:"safe_directory_checkout,omitempty" long:"safe-directory-checkout" env:"RUNNER_SAFE_DIRECTORY_CHECKOUT" description:"When set to true, Git global configuration will get a safe.directory directive pointing the job's working directory'"`
+	UseGitPackfileURIs    *bool `toml:"use_git_packfile_uris,omitempty" json:"use_git_packfile_uris,omitempty" long:"use-git-packfile-uris" env:"RUNNER_USE_GIT_PACKFILE_URIS" description:"When set to true, Git fetch.uriProtocols is set to https, allowing the Git client to download packfiles the server offers as URIs. Defaults to false"`
 	CleanGitConfig        *bool `toml:"clean_git_config,omitempty" json:"clean_git_config,omitempty" long:"clean-git-config" env:"RUNNER_CLEAN_GIT_CONFIG" description:"Clean git configuration before and after the build. Defaults to true, except the shell executor is used or the git strategy is \"none\""`
 
 	Shell          string              `toml:"shell,omitempty" json:"shell" long:"shell" env:"RUNNER_SHELL" description:"Select bash, sh, cmd, pwsh or powershell" jsonschema:"enum=bash,enum=sh,enum=cmd,enum=pwsh,enum=powershell,enum="`
@@ -2624,6 +2625,14 @@ func (c *RunnerConfig) GetVariables() spec.Variables {
 func (c *RunnerConfig) IsProxyExec() bool {
 	if c.ProxyExec != nil {
 		return *c.ProxyExec
+	}
+
+	return false
+}
+
+func (c *RunnerConfig) IsGitPackfileURIsEnabled() bool {
+	if c.UseGitPackfileURIs != nil {
+		return *c.UseGitPackfileURIs
 	}
 
 	return false

@@ -342,6 +342,47 @@ func TestGitalyCorrelationID_GatedOnFeatureFlag(t *testing.T) {
 	}
 }
 
+// TestUseGitPackfileURIs_FromRunnerConfig verifies that the
+// use_git_packfile_uris runner setting reaches the get_sources stage, and
+// that it is off when unset.
+func TestUseGitPackfileURIs_FromRunnerConfig(t *testing.T) {
+	boolPtr := func(b bool) *bool { return &b }
+
+	cases := []struct {
+		name    string
+		setting *bool
+		want    bool
+	}{
+		{"unset -> off", nil, false},
+		{"false -> off", boolPtr(false), false},
+		{"true -> on", boolPtr(true), true},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			build := buildForCleanGitConfig(t, "docker", GitFetch, nil)
+			build.Runner.UseGitPackfileURIs = tc.setting
+
+			executor := NewMockExecutor(t)
+			executor.EXPECT().Shell().RunAndReturn(func() *ShellScriptInfo {
+				return &ShellScriptInfo{Shell: "bash", Build: build, Type: NormalShell}
+			})
+
+			schema, err := stagesToConcreteStep(t.Context(), executor)
+			require.NoError(t, err)
+			require.Len(t, schema, 1)
+
+			var cfg struct {
+				GetSources struct {
+					UsePackfileURIs bool `json:"use_packfile_uris"`
+				} `json:"get_sources"`
+			}
+			require.NoError(t, json.Unmarshal([]byte(schema[0].Inputs["config"].(string)), &cfg))
+			require.Equal(t, tc.want, cfg.GetSources.UsePackfileURIs)
+		})
+	}
+}
+
 func buildForCleanGitConfig(t *testing.T, executor string, strategy GitStrategy, override *bool) *Build {
 	t.Helper()
 	build := &Build{

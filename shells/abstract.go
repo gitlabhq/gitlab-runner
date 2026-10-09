@@ -1064,6 +1064,15 @@ func (b *AbstractShell) setupExternalGitConfig(w ShellWriter, build *common.Buil
 		w.CommandArgExpand("git", "config", "-f", extConfigFile, "transfer.bundleURI", "true")
 	}
 
+	// Keep in sync with the concrete path in
+	// functions/concrete/run/stages/get_sources.go.
+	// Packfile URIs: let the server hand back packfiles as URIs for the client to
+	// download directly. Git ignores such an offer unless the protocol is allowlisted
+	// here, so an empty fetch.uriProtocols (git's default) disables the feature.
+	if build.Runner.IsGitPackfileURIsEnabled() {
+		w.CommandArgExpand("git", "config", "-f", extConfigFile, "fetch.uriProtocols", "https")
+	}
+
 	if build.IsSharedEnv() {
 		b.writeGitSSLConfig(w, build, []string{"-f", extConfigFile})
 	}
@@ -1336,11 +1345,10 @@ func (b *AbstractShell) setupTokenlessGitConfig(w ShellWriter, build *common.Bui
 }
 
 // setupCredHelperOnly writes a minimal extConfigFile containing only the
-// credential helper. Used when GIT_STRATEGY is none or empty, where the full
-// setupExternalGitConfig path (insteadOf rewrites, Gitaly correlation header,
-// bundleURI, SSL) does not apply because no git checkout is performed, but
-// user-script git commands still need the helper reachable via the seed file's
-// include chain.
+// credential helper. Used when GIT_STRATEGY is none or empty, where the rest of
+// the setupExternalGitConfig path does not apply because no git checkout is
+// performed, but user-script git commands still need the helper reachable via
+// the seed file's include chain.
 func (b *AbstractShell) setupCredHelperOnly(w ShellWriter, build *common.Build, extConfigFile string) error {
 	w.RmFile(extConfigFile)
 	remoteHost, err := b.getRemoteHost(build)

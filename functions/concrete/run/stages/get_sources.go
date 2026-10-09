@@ -82,6 +82,7 @@ type GetSources struct {
 
 	UseNativeClone        bool `json:"use_native_clone,omitempty"`
 	UseBundleURIs         bool `json:"use_bundled_uris,omitempty"`
+	UsePackfileURIs       bool `json:"use_packfile_uris,omitempty"`
 	SafeDirectoryCheckout bool `json:"safe_directory_checkout,omitempty"`
 
 	UserAgent           string `json:"user_agent,omitempty"`
@@ -438,6 +439,16 @@ func (s GetSources) setupExternalGitConfig(ctx context.Context, e *env.Env, gitE
 
 	if s.UseBundleURIs {
 		if err := setConfig("transfer.bundleURI", "true", "bundle URI config"); err != nil {
+			return "", cleanup, err
+		}
+	}
+
+	// Keep in sync with the legacy shell path in shells/abstract.go.
+	// Packfile URIs: let the server hand back packfiles as URIs for the client to
+	// download directly. Git ignores such an offer unless the protocol is allowlisted
+	// here, so an empty fetch.uriProtocols (git's default) disables the feature.
+	if s.UsePackfileURIs {
+		if err := setConfig("fetch.uriProtocols", "https", "packfile URI config"); err != nil {
 			return "", cleanup, err
 		}
 	}
