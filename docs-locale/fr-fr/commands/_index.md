@@ -121,7 +121,7 @@ sudo kill -SIGQUIT <main_runner_pid>
 ```
 
 > [!warning]
-> N'utilisez **pas** `killall` ou `pkill` pour les arrêts gracieux si vous utilisez des exécuteurs `shell` ou `docker`. Cela peut entraîner une gestion incorrecte des signaux en raison de la suppression des sous-processus également. Utilisez-le uniquement sur le processus principal gérant les jobs.
+N'utilisez pas `killall` ou `pkill` pour les arrêts gracieux si vous utilisez des exécuteurs `shell` ou `docker`. Cela peut entraîner une gestion incorrecte des signaux en raison de la suppression des sous-processus également. Utilisez-le uniquement sur le processus principal gérant les jobs.
 
 Certains systèmes d'exploitation sont configurés pour redémarrer automatiquement les services en cas d'échec (ce qui est le comportement par défaut sur certaines plateformes). Si votre système d'exploitation possède cette configuration, il peut redémarrer automatiquement le runner s'il est arrêté par les signaux ci-dessus.
 
@@ -208,7 +208,7 @@ Vous pouvez enregistrer un runner :
 - de manière non interactive.
 
 > [!note]
-> Les runners peuvent être enregistrés directement en utilisant l'[API Runners](https://docs.gitlab.com/api/runners/) GitLab, mais la configuration n'est pas générée automatiquement.
+Les runners peuvent être enregistrés directement en utilisant l'[API Runners](https://docs.gitlab.com/api/runners/) GitLab, mais la configuration n'est pas générée automatiquement.
 
 #### Enregistrement interactif {#interactive-registration}
 
@@ -254,7 +254,7 @@ gitlab-runner register
 ```
 
 > [!note]
-> Les paramètres booléens doivent être transmis dans la ligne de commande avec `--key={true|false}`.
+Les paramètres booléens doivent être transmis dans la ligne de commande avec `--key={true|false}`.
 
 #### Fichier de modèle de configuration `[[runners]]` {#runners-configuration-template-file}
 
@@ -270,6 +270,22 @@ Des options supplémentaires peuvent être configurées lors de l'enregistrement
 
 Cette commande liste tous les runners enregistrés dans le [fichier de configuration](#configuration-file).
 
+### `gitlab-runner lint` {#gitlab-runner-lint}
+
+Cette commande valide un [fichier de configuration](#configuration-file) sans démarrer le runner. Elle signale :
+
+- Les erreurs de syntaxe TOML.
+- Les erreurs sémantiques détectées par la validation intégrée du schéma JSON.
+- Les clés inconnues ou mal orthographiées (par exemple, `buids_dir` au lieu de `builds_dir`, ou `[[runner.kubernetes...]]` au lieu de `[[runners.kubernetes...]]`), que le décodeur TOML ignore sinon silencieusement.
+
+La commande se termine avec un statut non nul si elle détecte l'un des problèmes mentionnés précédemment, ou si le fichier de configuration n'existe pas. Contrairement à `run` et `register`, `lint` traite l'absence de fichier de configuration comme une erreur bloquante.
+
+Utilisez `lint` pour valider une configuration avant de redémarrer le runner, ou dans la CI :
+
+```shell
+gitlab-runner lint --config /etc/gitlab-runner/config.toml
+```
+
 ### `gitlab-runner verify` {#gitlab-runner-verify}
 
 Cette commande vérifie que les runners enregistrés peuvent se connecter à GitLab. Cependant, elle ne vérifie pas si les runners sont utilisés par le service GitLab Runner. Un exemple de sortie est :
@@ -281,10 +297,19 @@ Verifying runner... is alive                        runner=826f687f
 Verifying runner... is alive                        runner=32773c0f
 ```
 
+Utilisez le flag `--token` pour vérifier un seul runner au lieu de tous les runners enregistrés. Combinez `--token` avec `--url` pour également faire correspondre l'URL de l'instance GitLab du runner :
+
+```shell
+gitlab-runner verify --url "https://gitlab.example.com" --token my-authentication-token
+```
+
+> [!note]
+Contrairement aux autres commandes GitLab Runner, les flags `--url` et `--token` de `verify` ne lisent pas les variables d'environnement `CI_SERVER_URL` et `CI_SERVER_TOKEN`. Définissez ces flags sur la ligne de commande pour sélectionner un runner.
+
 Pour supprimer les anciens runners qui ont été retirés de GitLab, exécutez la commande suivante.
 
 > [!warning]
-> Cette opération est irréversible. Elle met à jour le fichier de configuration, alors assurez-vous d'avoir une sauvegarde de `config.toml` avant de l'exécuter.
+Cette opération est irréversible. Elle met à jour le fichier de configuration, alors assurez-vous d'avoir une sauvegarde de `config.toml` avant de l'exécuter.
 
 ```shell
 gitlab-runner verify --delete
@@ -302,7 +327,7 @@ Elle attend soit :
 Avec l'option `--all-runners`, elle désenregistre tous les runners associés.
 
 > [!note]
-> Les runners peuvent être désenregistrés avec l'[API Runners](https://docs.gitlab.com/api/runners/#delete-a-runner) GitLab, mais la configuration n'est pas modifiée pour l'utilisateur.
+Les runners peuvent être désenregistrés avec l'[API Runners](https://docs.gitlab.com/api/runners/#delete-a-runner) GitLab, mais la configuration n'est pas modifiée pour l'utilisateur.
 
 - Si le runner a été créé avec un jeton d'enregistrement de runner, `gitlab-runner unregister` avec le jeton d'authentification du runner supprime le runner.
 - Si le runner a été créé dans l'interface utilisateur GitLab ou avec l'API Runners, `gitlab-runner unregister` avec le jeton d'authentification du runner supprime le gestionnaire de runner, mais pas le runner. Pour supprimer complètement le runner, [supprimez le runner dans la page d'administration des runners](https://docs.gitlab.com/ci/runners/runners_scope/#delete-instance-runners) ou utilisez le point de terminaison de l'API REST [`DELETE /runners`](https://docs.gitlab.com/api/runners/#delete-a-runner).
@@ -316,7 +341,7 @@ test-runner     Executor=shell Token=t0k3n URL=http://gitlab.example.com
 Utilisez ensuite ces informations pour le désenregistrer, en utilisant l'une des commandes suivantes.
 
 > [!warning]
-> Cette opération est irréversible. Elle met à jour le fichier de configuration, alors assurez-vous d'avoir une sauvegarde de `config.toml` avant de l'exécuter.
+Cette opération est irréversible. Elle met à jour le fichier de configuration, alors assurez-vous d'avoir une sauvegarde de `config.toml` avant de l'exécuter.
 
 #### Par URL et jeton {#by-url-and-token}
 
@@ -331,7 +356,7 @@ gitlab-runner unregister --name test-runner
 ```
 
 > [!note]
-> S'il y a plus d'un runner avec le nom donné, seul le premier est supprimé.
+S'il y a plus d'un runner avec le nom donné, seul le premier est supprimé.
 
 #### Tous les runners {#all-runners}
 
@@ -368,7 +393,7 @@ gitlab-runner reset-token --url "https://gitlab.example.com/" --id 12345 --pat P
 #### Tous les runners {#all-runners-1}
 
 ```shell
-gitlab-runners reset-token --all-runners
+gitlab-runner reset-token --all-runners
 ```
 
 ## Commandes liées aux services {#service-related-commands}
