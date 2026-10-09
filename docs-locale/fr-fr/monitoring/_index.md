@@ -41,9 +41,13 @@ Pour obtenir la liste complète de toutes les métriques disponibles, utilisez `
 ```shell
 $ curl -s "http://localhost:9252/metrics" | grep -E "# HELP"
 
-# HELP gitlab_runner_api_request_statuses_total The total number of api requests, partitioned by runner, endpoint and status.
+# HELP gitlab_runner_api_request_attempts_total The total number of HTTP attempts made by GitLab Runner while completing API requests, including retried attempts, partitioned by runner, runner_name, system_id, endpoint, status and method. Attempts that got no HTTP response have status="error".
+# HELP gitlab_runner_api_request_statuses_total The total number of API requests made by GitLab Runner, partitioned by runner, runner_name, system_id, endpoint, status and method.
+# HELP gitlab_runner_autoscaling_idle_target The number of available machines the autoscaler aims to keep after applying IdleScaleFactor and IdleCountMin.
 # HELP gitlab_runner_autoscaling_machine_creation_duration_seconds Histogram of machine creation time.
+# HELP gitlab_runner_autoscaling_machine_creation_phase_duration_seconds Histogram of machine creation time for each Docker Machine phase.
 # HELP gitlab_runner_autoscaling_machine_states The current number of machines per state in this provider.
+# HELP gitlab_runner_autoscaling_max_growth_rate The maximum number of machines that can be in the creation state at once (0 = unlimited).
 # HELP gitlab_runner_concurrent The current value of concurrent setting
 # HELP gitlab_runner_errors_total The number of caught errors.
 # HELP gitlab_runner_limit The current value of limit setting
@@ -66,7 +70,7 @@ Vous pouvez en savoir plus sur l'utilisation de `pprof` dans sa [documentation](
 ## Configuration du serveur HTTP de métriques {#configuration-of-the-metrics-http-server}
 
 > [!note]
-> Le serveur de métriques exporte des données sur l'état interne du processus GitLab Runner et ne doit pas être accessible publiquement !
+Le serveur de métriques exporte des données sur l'état interne du processus GitLab Runner et ne doit pas être accessible publiquement !
 
 Configurez le serveur HTTP de métriques en utilisant l'une des méthodes suivantes :
 

@@ -101,28 +101,30 @@ Vous pouvez soit :
 - Définir `rbac.create` sur `true`.
 - Spécifier un compte de service `serviceAccount.name: <service_account_name>` avec les permissions suivantes dans le fichier `values.yml`.
 
-<!-- `k8s_api_permissions_list_start` -->
+<!-- k8s_api_permissions_list_start -->
 
 | Ressource | Verbe (Fonctionnalité/Indicateurs de configuration facultatifs) |
 |----------|-------------------------------|
 | apps/deployments | create (`kubernetes.autoscaler`), delete (`kubernetes.autoscaler`), get (`kubernetes.autoscaler`), list (`kubernetes.autoscaler`), update (`kubernetes.autoscaler`) |
-| events | list (`print_pod_warning_events=true`), watch (`FF_PRINT_POD_EVENTS=true`) |
-| namespaces | create (`kubernetes.NamespacePerJob=true`), delete (`kubernetes.NamespacePerJob=true`) |
-| poddisruptionbudgets | create (`pod_disruption_budget=true`), get (`pod_disruption_budget=true`) |
+| configmaps | create (`FF_SUSPENDABLE_ENVIRONMENTS=true`), delete (`FF_SUSPENDABLE_ENVIRONMENTS=true`), get (`FF_SUSPENDABLE_ENVIRONMENTS=true`), update (`FF_SUSPENDABLE_ENVIRONMENTS=true`) |
+| events | list (`hostUsers=false`, `print_pod_warning_events=true`), watch (`FF_PRINT_POD_EVENTS=true`) |
+| namespaces | create (`kubernetes.NamespacePerJob=true`), delete (`kubernetes.NamespacePerJob=true`), get (`FF_SUSPENDABLE_ENVIRONMENTS=true`) |
+| persistentvolumeclaims | create (`FF_SUSPENDABLE_ENVIRONMENTS=true`), delete (`FF_SUSPENDABLE_ENVIRONMENTS=true`) |
 | pods | create, delete, get, list ([avec Informers](#informers) ), watch ([avec Informers](#informers), `FF_KUBERNETES_HONOR_ENTRYPOINT=true`, `FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false`) |
 | pods/attach | create (`FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false`), delete (`FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false`), get (`FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false`), patch (`FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false`) |
 | pods/exec | create, delete, get, patch |
-| pods/log | get (`FF_KUBERNETES_HONOR_ENTRYPOINT=true`, `FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false`, `FF_WAIT_FOR_POD_TO_BE_REACHABLE=true`), list (`FF_KUBERNETES_HONOR_ENTRYPOINT=true`, `FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false`) |
+| pods/log | get (`FF_CONCRETE=true`, `FF_KUBERNETES_HONOR_ENTRYPOINT=true`, `FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false`, `FF_WAIT_FOR_POD_TO_BE_REACHABLE=true`), list (`FF_KUBERNETES_HONOR_ENTRYPOINT=true`, `FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false`) |
+| policy/poddisruptionbudgets | create (`pod_disruption_budget=true`), get (`pod_disruption_budget=true`) |
 | scheduling.k8s.io/priorityclasses | create (`kubernetes.autoscaler`), get (`kubernetes.autoscaler`) |
 | secrets | create, delete, get, update |
 | serviceaccounts | get |
 | services | create, get |
 
-<!-- `k8s_api_permissions_list_end` -->
+<!-- k8s_api_permissions_list_end -->
 
 Vous pouvez utiliser la définition de rôle YAML suivante pour créer un rôle avec les permissions requises.
 
-<!-- `k8s_api_permissions_role_yaml_start` -->
+<!-- k8s_api_permissions_role_yaml_start -->
 
 ```yaml
 apiVersion: rbac.authorization.k8s.io/v1
@@ -140,20 +142,28 @@ rules:
   - "list" # Required when `kubernetes.autoscaler`
   - "update" # Required when `kubernetes.autoscaler`
 - apiGroups: [""]
+  resources: ["configmaps"]
+  verbs:
+  - "create" # Required when `FF_SUSPENDABLE_ENVIRONMENTS=true`
+  - "delete" # Required when `FF_SUSPENDABLE_ENVIRONMENTS=true`
+  - "get" # Required when `FF_SUSPENDABLE_ENVIRONMENTS=true`
+  - "update" # Required when `FF_SUSPENDABLE_ENVIRONMENTS=true`
+- apiGroups: [""]
   resources: ["events"]
   verbs:
-  - "list" # Required when `print_pod_warning_events=true`
+  - "list" # Required when `hostUsers=false`, `print_pod_warning_events=true`
   - "watch" # Required when `FF_PRINT_POD_EVENTS=true`
 - apiGroups: [""]
   resources: ["namespaces"]
   verbs:
   - "create" # Required when `kubernetes.NamespacePerJob=true`
   - "delete" # Required when `kubernetes.NamespacePerJob=true`
-- apiGroups: ["policy"]
-  resources: ["poddisruptionbudgets"]
+  - "get" # Required when `FF_SUSPENDABLE_ENVIRONMENTS=true`
+- apiGroups: [""]
+  resources: ["persistentvolumeclaims"]
   verbs:
-  - "create" # Required when `pod_disruption_budget=true`
-  - "get" # Required when `pod_disruption_budget=true`
+  - "create" # Required when `FF_SUSPENDABLE_ENVIRONMENTS=true`
+  - "delete" # Required when `FF_SUSPENDABLE_ENVIRONMENTS=true`
 - apiGroups: [""]
   resources: ["pods"]
   verbs:
@@ -179,8 +189,13 @@ rules:
 - apiGroups: [""]
   resources: ["pods/log"]
   verbs:
-  - "get" # Required when `FF_KUBERNETES_HONOR_ENTRYPOINT=true`, `FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false`, `FF_WAIT_FOR_POD_TO_BE_REACHABLE=true`
+  - "get" # Required when `FF_CONCRETE=true`, `FF_KUBERNETES_HONOR_ENTRYPOINT=true`, `FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false`, `FF_WAIT_FOR_POD_TO_BE_REACHABLE=true`
   - "list" # Required when `FF_KUBERNETES_HONOR_ENTRYPOINT=true`, `FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false`
+- apiGroups: ["policy"]
+  resources: ["poddisruptionbudgets"]
+  verbs:
+  - "create" # Required when `pod_disruption_budget=true`
+  - "get" # Required when `pod_disruption_budget=true`
 - apiGroups: ["scheduling.k8s.io"]
   resources: ["priorityclasses"]
   verbs:
@@ -204,7 +219,7 @@ rules:
   - "get"
 ```
 
-<!-- `k8s_api_permissions_role_yaml_end` -->
+<!-- k8s_api_permissions_role_yaml_end -->
 
 Informations complémentaires :
 
@@ -247,7 +262,7 @@ Utilisez les paramètres suivants dans le fichier `config.toml` pour configurer 
 | `pod_cpu_request_overwrite_max_allowed`     | La quantité maximale que la requête d'allocation CPU peut être écrite pour le pod de build. Lorsque vide, désactive la fonctionnalité de réécriture de la requête CPU. |
 
 > [!note]
-> Les spécifications de ressources au niveau du pod ont été introduites en tant que fonctionnalités alpha dans [Kubernetes v1.32](https://v1-32.docs.kubernetes.io/blog/2024/12/11/kubernetes-v1-32-release/#pod-level-resource-specifications) et ont atteint le statut bêta dans [Kubernetes v1.34](https://kubernetes.io/blog/2025/09/22/kubernetes-v1-34-pod-level-resources/).
+Les spécifications de ressources au niveau du pod ont été introduites en tant que fonctionnalités alpha dans [Kubernetes v1.32](https://v1-32.docs.kubernetes.io/blog/2024/12/11/kubernetes-v1-32-release/#pod-level-resource-specifications) et ont atteint le statut bêta dans [Kubernetes v1.34](https://kubernetes.io/blog/2025/09/22/kubernetes-v1-34-pod-level-resources/).
 
 ### Requêtes et limites de mémoire {#memory-requests-and-limits}
 
@@ -370,6 +385,8 @@ Cette approche permet aux développeurs d'optimiser l'utilisation des ressources
 | `service_account_overwrite_allowed`           | Expression régulière pour valider le contenu de la variable d'environnement de réécriture du compte de service. Lorsque vide, désactive la fonctionnalité de réécriture du compte de service. |
 | `services`                                    | Liste de [services](https://docs.gitlab.com/ci/services/) attachés au conteneur de build en utilisant le [modèle sidecar](https://learn.microsoft.com/en-us/azure/architecture/patterns/sidecar). En savoir plus sur [l'utilisation des services](#define-a-list-of-services). |
 | `use_service_account_image_pull_secrets`      | Lorsqu'activé, le pod créé par l'exécuteur ne possède pas de `imagePullSecrets`. Cela entraîne la création du pod en utilisant les [`imagePullSecrets` du compte de service](https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/#add-image-pull-secret-to-service-account), si défini. |
+| `suspend_pvc_size`                            | Taille du PVC créé pour les environnements de job suspendables. Le PVC stocke la couche supérieure overlayfs, le répertoire de builds et tous les répertoires de données des conteneurs de service configurés avec `suspend_data_path`. La valeur par défaut est `20Gi`. |
+| `suspend_pvc_storage_class`                   | Nom `StorageClass` pour le PVC créé par `suspend_pvc_size`. Lorsque ce champ est vide, le PVC utilise la `StorageClass` par défaut du cluster. |
 | `terminationGracePeriodSeconds`               | Durée après laquelle les processus s'exécutant dans le pod reçoivent un signal de terminaison et le moment où les processus sont arrêtés de force par un signal kill. [Déprécié en faveur de `cleanup_grace_period_seconds` et `pod_termination_grace_period_seconds`](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/28165). |
 | `volumes`                                     | Configuré via le fichier de configuration, la liste des volumes montés dans le conteneur de build. [En savoir plus sur l'utilisation des volumes](#configure-volume-types). |
 | `pod_spec`                                    | Ce paramètre est une expérimentation. Écrase la spécification de pod générée par le gestionnaire de runner avec une liste de configurations définies sur le pod utilisé pour exécuter le job CI. Toutes les propriétés listées dans `Kubernetes Pod Specification` peuvent être définies. Pour plus d'informations, voir [Écraser les spécifications de pod générées (expérimentation)](#overwrite-generated-pod-specifications). |
@@ -378,7 +395,7 @@ Cette approche permet aux développeurs d'optimiser l'utilisation des ressources
 | `retry_limits`                                | Le nombre de fois que chaque erreur de requête doit être réessayée. |
 | `logs_base_dir`                               | Répertoire de base à ajouter au chemin généré pour stocker les journaux de build. Pour plus d'informations, voir [Modifier le répertoire de base pour les journaux et scripts de build](#change-the-base-directory-for-build-logs-and-scripts). |
 | `scripts_base_dir`                            | Répertoire de base à ajouter au chemin généré pour stocker les scripts de build. Pour plus d'informations, voir [Modifier le répertoire de base pour les journaux et scripts de build](#change-the-base-directory-for-build-logs-and-scripts). |
-| `print_pod_warning_events`                    | Lorsqu'activé, cette fonctionnalité récupère tous les événements d'avertissement associés au pod lorsque les jobs échouent. Cette fonctionnalité est activée par défaut et nécessite un compte de service avec au minimum [les permissions `events: list`](#configure-runner-api-permissions). |
+| `print_pod_warning_events`                    | Contrôle si le runner affiche les messages d'avertissement Kubernetes pour le pod du job, aussi bien pendant le démarrage du pod (par exemple, les échecs de planification) que lors de la récupération des événements d'avertissement après l'échec d'un job. Activés par défaut. La récupération des événements d'échec de job nécessite un compte de service disposant au minimum des [autorisations `events: list`](#configure-runner-api-permissions). |
 | `pod_disruption_budget`                       | Lorsqu'activé, un [`PodDisruptionBudget`](https://kubernetes.io/docs/tasks/run-application/configure-pdb/) est créé pour chaque pod de job afin d'éviter l'éviction lors de perturbations volontaires telles que les vidanges de nœuds et les mises à niveau du cluster. Désactivé par défaut. Nécessite un compte de service avec [les permissions `poddisruptionbudgets`](#configure-runner-api-permissions). |
 
 ### Exemple de configuration {#configuration-example}
@@ -546,7 +563,7 @@ Pour utiliser les pods de pause, configurez des permissions supplémentaires pou
 ```
 
 > [!note]
-> `PriorityClass` est une ressource à portée de cluster. Un `Role` et `RoleBinding` avec espace de nommage ne peuvent pas accorder les permissions `scheduling.k8s.io/priorityclasses`. Utilisez plutôt `ClusterRole` et `ClusterRoleBinding`.
+`PriorityClass` est une ressource à portée de cluster. Un `Role` et `RoleBinding` avec espace de nommage ne peuvent pas accorder les permissions `scheduling.k8s.io/priorityclasses`. Utilisez plutôt `ClusterRole` et `ClusterRoleBinding`.
 
 ## Configurer le compte de service de l'exécuteur {#configure-the-executor-service-account}
 
@@ -559,7 +576,7 @@ Vous pouvez configurer les pods et les conteneurs pour contrôler la façon dont
 ### Labels par défaut pour les pods de job {#default-labels-for-job-pods}
 
 > [!warning]
-> Vous ne pouvez pas remplacer ces labels via la configuration du runner ou les fichiers `.gitlab-ci.yml`. Toute tentative de définir ou de modifier des labels dans l'espace de nommage `runner.gitlab.com` est ignorée et enregistrée comme message de débogage.
+Vous ne pouvez pas remplacer ces labels via la configuration du runner ou les fichiers `.gitlab-ci.yml`. Toute tentative de définir ou de modifier des labels dans l'espace de nommage `runner.gitlab.com` est ignorée et enregistrée comme message de débogage.
 
 | Clé                                        | Description |
 |--------------------------------------------|-------------|
@@ -567,7 +584,8 @@ Vous pouvez configurer les pods et les conteneurs pour contrôler la façon dont
 | `project.runner.gitlab.com/name`           | Le nom du projet. |
 | `project.runner.gitlab.com/namespace-id`   | L'ID de l'espace de nommage du projet. |
 | `project.runner.gitlab.com/namespace`      | Le nom de l'espace de nommage du projet. |
-| `project.runner.gitlab.com/root-namespace` | L'ID de l'espace de nommage racine du projet. Par exemple, `/gitlab-org/group-a/subgroup-a/project`, où l'espace de nommage racine est `gitlab-org` |
+| `project.runner.gitlab.com/root-namespace` | Le nom de l'espace de nommage racine du projet. Par exemple, `/gitlab-org/group-a/subgroup-a/project`, où l'espace de nommage racine est `gitlab-org` |
+| `project.runner.gitlab.com/root-namespace-id` | L'ID de l'espace de nommage racine du projet. |
 | `manager.runner.gitlab.com/name`           | Le nom de la configuration du runner qui a lancé ce job. |
 | `manager.runner.gitlab.com/id-short`       | L'ID de la configuration du runner qui a lancé le job. |
 | `job.runner.gitlab.com/pod`                | Label interne utilisé par l'exécuteur Kubernetes. |
@@ -597,7 +615,7 @@ Le [cycle de vie d'un pod](https://kubernetes.io/docs/reference/kubernetes-api/w
 - L'activation du [feature flag `FF_USE_POD_ACTIVE_DEADLINE_SECONDS`](../../configuration/feature-flags.md). Lorsqu'activé et que le job expire, le pod exécutant le job CI/CD est marqué comme échoué et tous les conteneurs associés sont arrêtés. Pour que le job expire d'abord sur GitLab, `activeDeadlineSeconds` est défini sur `configured timeout + 1 second`.
 
 > [!note]
-> Si vous activez le feature flag `FF_USE_POD_ACTIVE_DEADLINE_SECONDS` et définissez `pod_termination_grace_period_seconds` sur une valeur non nulle, le pod de job CI/CD n'est pas terminé immédiatement. Le `terminationGracePeriods` du pod garantit que le pod n'est terminé qu'à son expiration.
+Si vous activez le feature flag `FF_USE_POD_ACTIVE_DEADLINE_SECONDS` et définissez `pod_termination_grace_period_seconds` sur une valeur non nulle, le pod de job CI/CD n'est pas terminé immédiatement. Le `terminationGracePeriods` du pod garantit que le pod n'est terminé qu'à son expiration.
 
 ### Protéger les pods de job contre l'éviction {#protect-job-pods-from-eviction}
 
@@ -623,7 +641,7 @@ Le `PodDisruptionBudget` :
 - Nécessite des permissions RBAC supplémentaires. Pour plus de détails, voir [Configurer les permissions API du runner](#configure-runner-api-permissions).
 
 > [!warning]
-> L'activation de `PodDisruptionBudget` peut entraîner le blocage des vidanges de nœuds si un job est en cours d'exécution. Assurez-vous que votre stratégie de mise à niveau du cluster tient compte des retards potentiels de vidange de nœuds, ou utilisez des délais d'expiration de job pour limiter la durée d'exécution d'un job.
+L'activation de `PodDisruptionBudget` peut entraîner le blocage des vidanges de nœuds si un job est en cours d'exécution. Assurez-vous que votre stratégie de mise à niveau du cluster tient compte des retards potentiels de vidange de nœuds, ou utilisez des délais d'expiration de job pour limiter la durée d'exécution d'un job.
 
 ### Écraser les tolérances de pod {#overwrite-pod-tolerations}
 
@@ -666,7 +684,7 @@ Pour écraser les labels de pod Kubernetes pour chaque job CI/CD :
     ```
 
 > [!warning]
-> Les labels dans l'espace de nommage `runner.gitlab.com` sont en lecture seule. GitLab ignore toute tentative d'ajout, de modification ou de suppression de ces labels internes à GitLab.
+Les labels dans l'espace de nommage `runner.gitlab.com` sont en lecture seule. GitLab ignore toute tentative d'ajout, de modification ou de suppression de ces labels internes à GitLab.
 
 ### Écraser les annotations de pod {#overwrite-pod-annotations}
 
@@ -1187,7 +1205,7 @@ Lorsque vous spécifiez les capacités :
 Configurez les utilisateurs et les groupes exécutés par les conteneurs avec la configuration du contexte de sécurité Kubernetes. Les administrateurs peuvent contrôler la sécurité des conteneurs et permettre aux jobs de spécifier des utilisateurs pour des types de conteneurs spécifiques.
 
 > [!note]
-> La définition de `runAsUser`, `runAsGroup` ou `image:user` dans la définition de job pour Windows n'est pas prise en charge. Il est recommandé d'utiliser à la place [runAsUserName](https://kubernetes.io/docs/tasks/configure-pod-container/configure-runasusername/) via [FF_USE_ADVANCED_POD_SPEC_CONFIGURATION](#overwrite-generated-pod-specifications).
+La définition de `runAsUser`, `runAsGroup` ou `image:user` dans la définition de job pour Windows n'est pas prise en charge. Il est recommandé d'utiliser à la place [runAsUserName](https://kubernetes.io/docs/tasks/configure-pod-container/configure-runasusername/) via [FF_USE_ADVANCED_POD_SPEC_CONFIGURATION](#overwrite-generated-pod-specifications).
 
 #### Priorité de configuration {#configuration-precedence}
 
@@ -1450,7 +1468,28 @@ check_interval = 30
       entrypoint = ["entrypoint.sh"]
       command = ["executable","param1","param2"]
       environment = ["ENV=value1", "ENV2=value2"]
+    [[runners.kubernetes.services]]
+      name = "redis:7"
+      alias = "cache"
+      suspend_data_path = "/data"  # persists Redis data across suspend/resume cycles
 ```
+
+Chaque entrée `[[runners.kubernetes.services]]` prend en charge les champs suivants :
+
+| Champ | Description |
+|---|---|
+| `name` | Chemin de l'image pour le service (obligatoire). |
+| `alias` | Alias séparés par des espaces ou des virgules, utilisés comme nom de conteneur et nom DNS. |
+| `entrypoint` | Remplace le point d'entrée de l'image. |
+| `command` | Remplace la commande de l'image. |
+| `environment` | Liste des variables d'environnement `KEY=value` injectées dans le conteneur de service. |
+| `suspend_data_path` | Chemin à l'intérieur du conteneur de service où les données persistantes sont écrites (par exemple, `/data` pour Redis ou `/var/lib/postgresql/data` pour PostgreSQL). |
+
+Le comportement de `suspend_data_path` dépend de votre configuration :
+
+- Sur un job suspendable (`FF_SUSPENDABLE_ENVIRONMENTS` activé) sans `command` ni `entrypoint` défini, le runner monte un sous-répertoire du PVC de suspension à ce chemin afin que les données survivent aux cycles de suspension et de reprise.
+- Si `command` ou `entrypoint` est défini, le runner conserve l'intégralité du conteneur de service à la place, de sorte que ce paramètre n'a aucun effet.
+- Lorsque ce champ est vide et qu'aucun `command` ni `entrypoint` n'est défini, le conteneur de service ne dispose d'aucun stockage persistant.
 
 Si l'environnement du service inclut `HEALTHCHECK_TCP_PORT`, GitLab Runner attend que le service réponde sur ce port avant de démarrer les scripts CI utilisateur. Vous pouvez également configurer la variable d'environnement `HEALTHCHECK_TCP_PORT` dans une section `services` du fichier `.gitlab-ci.yml`.
 
@@ -1754,7 +1793,7 @@ job:
 Définissez une liste d'[affinités de nœuds](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#node-affinity) à ajouter à une spécification de pod au moment du build.
 
 > [!note]
-> `node_affinities` ne détermine pas le système d'exploitation avec lequel un build doit s'exécuter, uniquement `node_selectors`. Pour plus d'informations, consultez [Système d'exploitation, architecture et version du noyau Windows](#operating-system-architecture-and-windows-kernel-version). Exemple de configuration dans le `config.toml` :
+`node_affinities` ne détermine pas le système d'exploitation avec lequel un build doit s'exécuter, uniquement `node_selectors`. Pour plus d'informations, consultez [Système d'exploitation, architecture et version du noyau Windows](#operating-system-architecture-and-windows-kernel-version). Exemple de configuration dans le `config.toml` :
 
 ```toml
 concurrent = 1
@@ -1863,7 +1902,7 @@ concurrent = 1
 ```
 
 > [!note]
-> `match_label_keys` et `mismatch_label_keys` nécessitent Kubernetes 1.31 ou version ultérieure. Sur les clusters alpha ou version bêta antérieurs, activez la feature gate `MatchLabelKeysInPodAffinity`. Sur les clusters qui ne prennent pas en charge la feature gate, le serveur API ignore ces champs et la contrainte ne s'applique pas.
+`match_label_keys` et `mismatch_label_keys` nécessitent Kubernetes 1.31 ou version ultérieure. Sur les clusters alpha ou version bêta antérieurs, activez la feature gate `MatchLabelKeysInPodAffinity`. Sur les clusters qui ne prennent pas en charge la feature gate, le serveur API ignore ces champs et la contrainte ne s'applique pas.
 
 ## Réseau {#networking}
 
@@ -1917,7 +1956,7 @@ Utilisez les paramètres suivants pour configurer chaque hook de cycle de vie :
 
 | Option         | Type                                    | Obligatoire | Description |
 |----------------|-----------------------------------------|----------|-------------|
-| `port`         | `int`                                   | Oui      | Le numéro du port à accéder sur le conteneur. |
+| `port`         | `int`                                   | Oui      | Le numéro du port auquel accéder sur le conteneur. |
 | `host`         | string                                  | Non       | Le nom d'hôte auquel se connecter, par défaut l'IP du pod (facultatif). |
 | `path`         | string                                  | Non       | Le chemin à accéder sur le serveur HTTP (facultatif). |
 | `scheme`       | string                                  | Non       | Le schéma utilisé pour la connexion à l'hôte. Par défaut HTTP (facultatif). |
@@ -2155,7 +2194,7 @@ Chaque clé du `configMap` est transformée en fichier et stockée dans le chemi
 Pour modifier le stockage par défaut des clés et des valeurs, utilisez l'option `items`. Si vous utilisez l'option `items`, **seules les clés spécifiées** sont ajoutées aux volumes et toutes les autres clés sont ignorées.
 
 > [!note]
-> Si vous utilisez une clé qui n'existe pas, le job échoue à l'étape de création du pod.
+Si vous utilisez une clé qui n'existe pas, le job échoue à l'étape de création du pod.
 
 #### Volume `secret` {#secret-volume}
 
@@ -2180,7 +2219,7 @@ Chaque clé du `secret` sélectionné est transformée en fichier stocké dans l
 Pour modifier le stockage par défaut des clés et des valeurs, utilisez l'option `items`. Si vous utilisez l'option `items`, **seules les clés spécifiées** sont ajoutées aux volumes et toutes les autres clés sont ignorées.
 
 > [!note]
-> Si vous utilisez une clé qui n'existe pas, le job échoue à l'étape de création du pod.
+Si vous utilisez une clé qui n'existe pas, le job échoue à l'étape de création du pod.
 
 #### Volume `emptyDir` {#emptydir-volume}
 
@@ -2280,7 +2319,7 @@ Dans cet exemple, créez vous-même les PersistentVolumeClaims nommés `build-pv
 Après avoir défini la politique de sécurité, l'[image d'aide](../../configuration/advanced-configuration.md#helper-image) doit s'y conformer. L'image ne reçoit pas les privilèges du groupe root, vous devez donc vous assurer que l'ID utilisateur fait partie du groupe root.
 
 > [!note]
-> Si vous avez uniquement besoin de l'environnement `nonroot`, vous pouvez utiliser les images de plateforme de conteneurs OpenShift [GitLab Runner UBI](https://gitlab.com/gitlab-org/ci-cd/gitlab-runner-ubi-images/container_registry/1766421) au lieu d'une image d'aide. Vous pouvez également utiliser les images de plateforme de conteneurs OpenShift [GitLab Runner Helper UBI](https://gitlab.com/gitlab-org/ci-cd/gitlab-runner-ubi-images/container_registry/1766433).
+Si vous avez uniquement besoin de l'environnement `nonroot`, vous pouvez utiliser les images de plateforme de conteneurs OpenShift [GitLab Runner UBI](https://gitlab.com/gitlab-org/ci-cd/gitlab-runner-ubi-images/container_registry/1766421) au lieu d'une image d'aide. Vous pouvez également utiliser les images de plateforme de conteneurs OpenShift [GitLab Runner Helper UBI](https://gitlab.com/gitlab-org/ci-cd/gitlab-runner-ubi-images/container_registry/1766433).
 
 L'exemple suivant crée un utilisateur et un groupe appelés `nonroot` et configure l'image d'aide pour s'exécuter en tant que cet utilisateur.
 
@@ -2313,7 +2352,7 @@ Pour configurer le client afin qu'il utilise TCP pour contacter le daemon Docker
 - `DOCKER_HOST=tcp://docker:2375` pour une connexion sans TLS.
 - `DOCKER_HOST=tcp://docker:2376` pour une connexion TLS.
 
-Dans Docker 19.03 et versions ultérieures, TLS est activé par défaut, mais vous devez mapper les certificats à votre client. Vous pouvez activer une connexion non-TLS pour Docker-in-Docker ou monter des certificats. Pour plus d'informations, voir [Utiliser l'exécuteur Docker avec Docker-in-Docker](https://docs.gitlab.com/ci/docker/using_docker_build/#use-the-docker-executor-with-docker-in-docker).
+Dans Docker 19.03 et versions ultérieures, TLS est activé par défaut, mais vous devez mapper les certificats à votre client. Vous pouvez activer une connexion non-TLS pour Docker-in-Docker ou monter des certificats. Pour plus d'informations, consultez [Utiliser Docker-in-Docker](https://docs.gitlab.com/ci/docker/docker_in_docker/#use-with-docker-executor).
 
 ### Prévenir l'exposition du noyau hôte {#prevent-host-kernel-exposure}
 
@@ -2429,7 +2468,7 @@ Pour réessayer une erreur entièrement différente, telle que `exceeded quota`,
 ### Problèmes connus du point d'entrée des conteneurs {#container-entrypoint-known-issues}
 
 > [!note]
-> Dans GitLab 15.1 et versions ultérieures, le point d'entrée défini dans une image Docker est utilisé avec l'exécuteur Kubernetes lorsque `FF_KUBERNETES_HONOR_ENTRYPOINT` est défini.
+Dans GitLab 15.1 et versions ultérieures, le point d'entrée défini dans une image Docker est utilisé avec l'exécuteur Kubernetes lorsque `FF_KUBERNETES_HONOR_ENTRYPOINT` est défini.
 
 Le point d'entrée du conteneur présente les problèmes connus suivants :
 
@@ -2437,7 +2476,7 @@ Le point d'entrée du conteneur présente les problèmes connus suivants :
 
   - Pour ouvrir un shell, le système transmet la commande en tant que [`args`](https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#entrypoint) pour le conteneur de build.
 - Les [variables CI/CD de type fichier](https://docs.gitlab.com/ci/variables/#use-file-type-cicd-variables) ne sont pas écrites sur le disque lors de l'exécution du point d'entrée. Le fichier est uniquement accessible dans le job pendant l'exécution du script.
-- Les variables CI/CD suivantes ne sont pas accessibles dans le point d'entrée. Vous pouvez utiliser [`before_script`](https://docs.gitlab.com/ci/yaml/#beforescript) pour effectuer toute configuration préalable avant d'exécuter les commandes de script :
+- Les variables CI/CD suivantes ne sont pas accessibles dans le point d'entrée. Vous pouvez utiliser [`before_script`](https://docs.gitlab.com/ci/yaml/#before_script) pour effectuer des modifications de configuration avant d'exécuter les commandes de script :
   - [Variables CI/CD définies dans les paramètres](https://docs.gitlab.com/ci/variables/#define-a-cicd-variable-in-the-ui).
   - [Variables CI/CD masquées](https://docs.gitlab.com/ci/variables/#mask-a-cicd-variable).
 
@@ -2512,7 +2551,7 @@ variables:
 ```
 
 > [!note]
-> Cette variable ne crée pas d'espace de nommage dans votre cluster. Assurez-vous que l'espace de nommage existe avant d'exécuter le job.
+Cette variable ne crée pas d'espace de nommage dans votre cluster. Assurez-vous que l'espace de nommage existe avant d'exécuter le job.
 
 Pour n'utiliser que les paces de nommage désignés lors des exécutions CI, dans le fichier `config.toml`, définissez une expression régulière pour `namespace_overwrite_allowed` :
 

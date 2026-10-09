@@ -31,7 +31,7 @@ Les shells pris en charge sont :
 | `bash`       | Entièrement pris en charge | Bash (Bourne Again Shell). Toutes les commandes sont exécutées dans le contexte Bash (par défaut pour tous les systèmes Unix). |
 | `sh`         | Entièrement pris en charge | Sh (Bourne shell). Toutes les commandes sont exécutées dans le contexte Sh (alternative à `bash` pour tous les systèmes Unix). |
 | `powershell` | Entièrement pris en charge | Script PowerShell. Toutes les commandes sont exécutées dans le contexte PowerShell Desktop. Shell par défaut pour les jobs sur Windows avec les exécuteurs `kubernetes` et `docker-windows`. |
-| `pwsh`       | Entièrement pris en charge | Script PowerShell. Toutes les commandes sont exécutées dans le contexte PowerShell Core. Shell par défaut pour les nouveaux enregistrements de runner sur Windows, et pour les jobs avec l'exécuteur `shell`. |
+| `pwsh`       | Entièrement pris en charge | Script PowerShell. Toutes les commandes sont exécutées dans le contexte PowerShell Core. Shell par défaut pour les nouvelles inscriptions de runner sur Windows, et pour les jobs avec l'exécuteur `shell`. |
 
 Si vous souhaitez sélectionner un shell particulier autre que celui par défaut, vous devez [spécifier le shell](../executors/shell.md#selecting-your-shell) dans votre fichier `config.toml`.
 
@@ -76,7 +76,7 @@ Exécuteurs qui chargent les profils shell :
 
 ## PowerShell {#powershell}
 
-PowerShell Core est le shell par défaut pour les nouveaux enregistrements de runner sur Windows. Cependant, cette valeur par défaut d'inscription s'applique uniquement lorsque vous définissez explicitement une valeur `shell` dans `config.toml`. Lorsqu'aucun `shell` n'est configuré :
+PowerShell Core est le shell par défaut pour les nouvelles inscriptions de runner sur Windows. Cependant, cette valeur par défaut d'inscription s'applique uniquement lorsque vous définissez explicitement une valeur `shell` dans `config.toml`. Lorsqu'aucun `shell` n'est configuré :
 
 - Les exécuteurs `docker-windows` et `kubernetes` utilisent PowerShell Desktop par défaut à l'exécution.
 - L'exécuteur `shell` utilise PowerShell Core par défaut.
@@ -100,7 +100,7 @@ Le script PowerShell généré est exécuté en enregistrant son contenu dans un
 Voici un exemple de script PowerShell :
 
 ```powershell
-$ErrorActionPreference = "Continue" # This will be set to 'Stop' when targetting PowerShell Core
+$ErrorActionPreference = "Continue" # This will be set to 'Stop' when targeting PowerShell Core
 
 echo "Running on $([Environment]::MachineName)..."
 
@@ -145,7 +145,13 @@ echo "Running on $([Environment]::MachineName)..."
   if( (Get-Command -Name Remove-Item2 -Module NTFSSecurity -ErrorAction SilentlyContinue) -and (Test-Path "C:\GitLab-Runner\builds\0\project-1" -PathType Container) ) {
     Remove-Item2 -Force -Recurse "C:\GitLab-Runner\builds\0\project-1"
   } elseif(Test-Path "C:\GitLab-Runner\builds\0\project-1") {
-    Remove-Item -Force -Recurse "C:\GitLab-Runner\builds\0\project-1"
+    $item = Get-Item -Force "C:\GitLab-Runner\builds\0\project-1"
+    if ($item.LinkType -or -not $item.PSIsContainer) {
+      Remove-Item -Force "C:\GitLab-Runner\builds\0\project-1" -ErrorAction Stop
+    } else {
+      Get-ChildItem -Path "C:\GitLab-Runner\builds\0\project-1" -Force -Recurse -ErrorAction Stop | Sort-Object { $_.FullName.Length } -Descending | Remove-Item -Force -ErrorAction Stop
+      Remove-Item -Force "C:\GitLab-Runner\builds\0\project-1" -ErrorAction Stop
+    }
   }
 
   & "git" "clone" "https://gitlab.com/group/project.git" "Z:\Gitlab\tests\test\builds\0\project-1"

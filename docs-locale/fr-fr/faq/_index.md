@@ -70,14 +70,14 @@ En d'autres termes, le runner est un agent isolé qui demande des jobs au `coord
 ## Activer le mode de journalisation de débogage {#enable-debug-logging-mode}
 
 > [!warning]
-> La journalisation de débogage peut constituer un risque de sécurité sérieux. La sortie contient le contenu de toutes les variables et autres secrets disponibles pour le job. Vous devez désactiver toute agrégation de journaux susceptible de transmettre des secrets à des tiers. L'utilisation de variables masquées permet de protéger les secrets dans la sortie du job log, mais pas dans les journaux de conteneurs.
+La journalisation de débogage peut constituer un risque de sécurité sérieux. La sortie contient le contenu de toutes les variables et autres secrets disponibles pour le job. Vous devez désactiver toute agrégation de journaux susceptible de transmettre des secrets à des tiers. L'utilisation de variables masquées permet de protéger les secrets dans la sortie du job log, mais pas dans les journaux de conteneurs.
 
 ### Dans la ligne de commande {#in-the-command-line}
 
 Depuis un terminal, connecté en tant que root, exécutez ce qui suit.
 
 > [!warning]
-> Cette opération ne doit pas être effectuée sur des runners avec l'[exécuteur Shell](../executors/shell.md), car elle redéfinit le service `systemd` et exécute tous les jobs en tant que root. Cela pose des risques de sécurité et des modifications de propriété de fichiers qui rendent difficile le retour à un compte sans privilèges.
+Cette opération ne doit pas être effectuée sur des runners avec l'[exécuteur Shell](../executors/shell.md), car elle redéfinit le service `systemd` et exécute tous les jobs en tant que root. Cela pose des risques de sécurité et des modifications de propriété de fichiers qui rendent difficile le retour à un compte sans privilèges.
 
 ```shell
 gitlab-runner stop
@@ -169,7 +169,7 @@ Cette erreur concerne le provisionnement des machines et peut être due aux rais
 - Le nom d'hôte est plus long que la longueur prise en charge par la machine provisionnée. Par exemple, les machines Ubuntu ont une limite de 64 caractères pour `HOST_NAME_MAX`. Le nom d'hôte est indiqué par `docker-machine ls`. Vérifiez le `MachineName` dans la configuration du runner et réduisez la longueur du nom d'hôte si nécessaire.
 
 > [!note]
-> Cette erreur a pu se produire avant que Docker ne soit installé sur la machine.
+Cette erreur a pu se produire avant que Docker ne soit installé sur la machine.
 
 ## `dialing environment connection: ssh: rejected: connect failed (open failed)` {#dialing-environment-connection-ssh-rejected-connect-failed-open-failed}
 
@@ -177,7 +177,7 @@ Cette erreur se produit lorsque l'autoscaler Docker ne peut pas atteindre le dé
 
 ## Ajouter un profil d'instance AWS à vos runners en autoscaling {#adding-an-aws-instance-profile-to-your-autoscaled-runners}
 
-Après avoir créé un rôle AWS IAM, dans votre console IAM, le rôle possède un **Role ARN** et un **Instance Profile ARNs**. Vous devez utiliser le nom du **Instance Profile**, **et non** le **Role Name**.
+Après avoir créé un rôle AWS IAM, dans votre console IAM, le rôle possède un **Role ARN** et un **Instance Profile ARNs**. Vous devez utiliser le nom du **profil d'instance**, et non le **nom du rôle**.
 
 Ajoutez la valeur suivante à votre section `[runners.machine]` : `"amazonec2-iam-instance-profile=<instance-profile-name>",`
 
@@ -207,7 +207,7 @@ Pour permettre le téléversement des artefacts, assurez-vous que tous les compo
 Par défaut, le téléverseur d'artefacts enregistre l'URL de téléversement et le code de statut HTTP de la réponse de téléversement. Ces informations ne suffisent pas à comprendre quel système a causé une erreur ou bloqué les téléversements d'artefacts. Pour résoudre les problèmes de téléversement d'artefacts, [activez la journalisation de débogage](https://docs.gitlab.com/ci/variables/variables_troubleshooting/#enable-debug-logging) pour les tentatives de téléversement afin de consulter les en-têtes et le corps de la réponse au téléversement.
 
 > [!note]
-> La longueur du corps de réponse pour la journalisation de débogage des téléversements d'artefacts est limitée à 512 octets. Activez la journalisation uniquement pour le débogage, car des données sensibles peuvent être exposées dans les journaux.
+La longueur du corps de réponse pour la journalisation de débogage des téléversements d'artefacts est limitée à 512 octets. Activez la journalisation uniquement pour le débogage, car des données sensibles peuvent être exposées dans les journaux.
 
 Si les téléversements atteignent GitLab mais échouent avec un code de statut d'erreur (par exemple, un code de statut de réponse non réussi), examinez l'instance GitLab elle-même. Pour les problèmes courants de téléversement d'artefacts, consultez la [documentation GitLab](https://docs.gitlab.com/administration/cicd/job_artifacts_troubleshooting/#job-artifact-upload-fails-with-error-500).
 

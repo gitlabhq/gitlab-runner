@@ -29,13 +29,13 @@ Pour préparer l'environnement à la mise à l'échelle automatique :
 1. Créez une image de VM pour la plateforme que vous utilisez. L'image doit inclure :
    - Git
    - Binaire GitLab Runner
- 
+
      Pour traiter les artefacts de job et le cache, installez le binaire GitLab Runner sur la machine virtuelle et conservez l'exécutable du runner dans le chemin par défaut.
 
    - Dépendances requises par les jobs que vous prévoyez d'exécuter
-  
+
    > [!note]
-   > L'image VM ne nécessite pas l'exécution de GitLab Runner. Les instances lancées à l'aide de l'image de VM ne doivent pas s'enregistrer elles-mêmes en tant que runners dans GitLab.
+L'image VM ne nécessite pas l'exécution de GitLab Runner. Les instances lancées à l'aide de l'image de VM ne doivent pas s'enregistrer elles-mêmes en tant que runners dans GitLab.
 
 ### Binaire GitLab Runner pour les étapes natives {#gitlab-runner-binary-for-native-steps}
 
@@ -527,4 +527,4 @@ Lorsque vous travaillez avec l'exécuteur d'instance, vous pouvez rencontrer les
 
 ### `sh: 1: eval: Running on ip-x.x.x.x via runner-host...n: not found` {#sh-1-eval-running-on-ip-xxxx-via-runner-hostn-not-found}
 
-Cette erreur se produit généralement lorsque la commande `eval` dans l'étape de préparation échoue. Pour résoudre cette erreur, passez au shell `bash` et activez le feature flag [feature flag](../configuration/feature-flags.md) `FF_USE_NEW_BASH_EVAL_STRATEGY`.
+Cette erreur se produit généralement lorsque la commande `eval` dans l'étape de préparation échoue. Pour résoudre cette erreur, passez au shell `bash`.
