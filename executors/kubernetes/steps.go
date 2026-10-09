@@ -131,6 +131,7 @@ func (s *executor) Connect(ctx context.Context) (func() (io.ReadWriteCloser, err
 	go func() {
 		defer logs.Close()
 		defer stdout.Close()
+		defer rw.Close()
 		_, copyErr := io.Copy(rw, logs)
 		logsDone <- copyErr
 	}()

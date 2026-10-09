@@ -20,6 +20,12 @@ func TestReadyWriter(t *testing.T) {
 		writes         []string
 		expectReady    bool
 		expectedSocket string
+		// expectedOutput is what reaches the underlying writer once all
+		// writes are done: everything except the ready line.
+		expectedOutput string
+		// heldBack is a trailing marker prefix (or an unfinished ready line)
+		// that only Close can settle; it must reach the writer then.
+		heldBack string
 	}{
 		{
 			name:           "single write with marker",
@@ -38,6 +44,7 @@ func TestReadyWriter(t *testing.T) {
 			writes:         []string{"prefix\nstep-runner is listening on socket /tmp/mid.sock\nsuffix"},
 			expectReady:    true,
 			expectedSocket: "/tmp/mid.sock",
+			expectedOutput: "prefix\nsuffix",
 		},
 		{
 			name:           "byte by byte",
@@ -50,27 +57,53 @@ func TestReadyWriter(t *testing.T) {
 			writes:         []string{"step-runner is not ready\nstep-runner is listening on socket /tmp/false.sock\n"},
 			expectReady:    true,
 			expectedSocket: "/tmp/false.sock",
+			expectedOutput: "step-runner is not ready\n",
+		},
+		{
+			name:           "false start split across writes",
+			writes:         []string{"step-run", "ner is not ready\n", "step-runner is listening on socket /tmp/split-false.sock\n"},
+			expectReady:    true,
+			expectedSocket: "/tmp/split-false.sock",
+			expectedOutput: "step-runner is not ready\n",
+		},
+		{
+			name:           "marker restarts inside a longer false start",
+			writes:         []string{"step-runner is listep-runner is listening on socket /tmp/restart.sock\n"},
+			expectReady:    true,
+			expectedSocket: "/tmp/restart.sock",
+			expectedOutput: "step-runner is li",
 		},
 		{
 			name:           "multiple markers",
 			writes:         []string{"step-runner is listening on socket /tmp/first.sock\nstep-runner is listening on socket /tmp/second.sock\n"},
 			expectReady:    true,
 			expectedSocket: "/tmp/first.sock",
+			expectedOutput: "step-runner is listening on socket /tmp/second.sock\n",
 		},
 		{
-			name:        "no match",
-			writes:      []string{"no match here"},
-			expectReady: false,
+			name:           "no match",
+			writes:         []string{"no match here"},
+			expectedOutput: "no match here",
 		},
 		{
-			name:        "partial match only",
-			writes:      []string{"step-runner is ready. socket:"},
-			expectReady: false,
+			name:           "partial match only",
+			writes:         []string{"step-runner is ready. socket:"},
+			expectedOutput: "step-runner is ready. socket:",
 		},
 		{
-			name:        "empty write",
-			writes:      []string{""},
-			expectReady: false,
+			name:           "trailing marker prefix is held until Close",
+			writes:         []string{"oops\nstep-runner is"},
+			expectedOutput: "oops\n",
+			heldBack:       "step-runner is",
+		},
+		{
+			name:     "marker without a newline is forwarded on Close",
+			writes:   []string{"step-runner is listening on socket /tmp/partial.sock"},
+			heldBack: "step-runner is listening on socket /tmp/partial.sock",
+		},
+		{
+			name:   "empty write",
+			writes: []string{""},
 		},
 	}
 
@@ -80,8 +113,9 @@ func TestReadyWriter(t *testing.T) {
 			w, ready := readywriter.New(t.Context(), &buf)
 
 			for _, s := range tt.writes {
-				_, err := w.Write([]byte(s))
+				n, err := w.Write([]byte(s))
 				require.NoError(t, err)
+				assert.Equal(t, len(s), n, "held-back bytes count as written")
 			}
 
 			select {
@@ -101,8 +135,10 @@ func TestReadyWriter(t *testing.T) {
 				require.False(t, ok, "expected channel to be closed after first read")
 			}
 
-			expected := strings.Join(tt.writes, "")
-			assert.Equal(t, expected, buf.String(), "all data should be proxied")
+			assert.Equal(t, tt.expectedOutput, buf.String(), "everything but the ready line is proxied")
+
+			require.NoError(t, w.Close())
+			assert.Equal(t, tt.expectedOutput+tt.heldBack, buf.String(), "Close flushes what was held back")
 		})
 	}
 }
@@ -126,6 +162,12 @@ func TestReadyWriter_SocketLengthLimit(t *testing.T) {
 	default:
 		t.Fatal("expected channel to be closed after exceeding max socket length")
 	}
+
+	assert.Equal(t, marker+longPath, buf.String(), "an over-long line is not a handshake and is proxied as output")
+
+	_, err = w.Write([]byte("\nmore output\n"))
+	require.NoError(t, err)
+	assert.Equal(t, marker+longPath+"\nmore output\n", buf.String(), "output after giving up is proxied untouched")
 }
 
 func TestReadyWriter_ContextCancellation(t *testing.T) {

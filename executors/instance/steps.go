@@ -112,6 +112,7 @@ func (e *executor) Connect(ctx context.Context) (func() (io.ReadWriteCloser, err
 	go func() {
 		defer stdout.Close()
 		defer stderr.Close()
+		defer readyWriter.Close()
 
 		serveErrCh <- e.client.Run(ctx, executors.RunOptions{
 			Command: serveCommand,
