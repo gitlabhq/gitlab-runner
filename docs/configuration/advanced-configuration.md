@@ -1390,7 +1390,9 @@ The following parameters define the Docker Machine-based autoscaling feature. Fo
 
 ### The `[[runners.machine.autoscaling]]` sections
 
-The following parameters define the configuration available when using the [Instance](../executors/instance.md) or [Docker Autoscaler](../executors/docker_autoscaler.md#example-aws-autoscaling-for-1-job-per-instance) executor.
+The following parameters define the configuration available when using the [Docker Machine](../executors/docker_machine.md) executor.
+For the [Instance](../executors/instance.md) and [Docker Autoscaler](../executors/docker_autoscaler.md) executors, use the
+[`[[runners.autoscaler.policy]]` sections](#the-runnersautoscalerpolicy-sections) instead.
 
 | Parameter         | Description |
 |-------------------|-------------|
