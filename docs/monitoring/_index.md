@@ -364,7 +364,7 @@ For a complete list of available metrics, see [Available metrics](#available-met
 When you configure the metrics collection for GitLab Runners managed by the GitLab Runner Operator:
 
 - Use Kubernetes `NetworkPolicies` to restrict access to authorized monitoring systems.
-- Consider using `mutal` TLS encryption for metric scraping in production environments.
+- Consider using `mutual` TLS encryption for metric scraping in production environments.
 
 ### Troubleshooting Operator managed GitLab Runner monitoring
 
