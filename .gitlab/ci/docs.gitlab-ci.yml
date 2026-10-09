@@ -14,6 +14,17 @@
     - apk add --update openssl
     - wget https://gitlab.com/gitlab-org/gitlab/-/raw/master/scripts/trigger-build.rb
     - chmod 755 trigger-build.rb
+  secrets:
+    DOCS_PROJECT_API_TOKEN:
+      gitlab_secrets_manager:
+        name: DOCS_PROJECT_API_TOKEN
+        source: group/gitlab-org
+      file: false
+    DOCS_TRIGGER_TOKEN:
+      gitlab_secrets_manager:
+        name: DOCS_TRIGGER_TOKEN
+        source: group/gitlab-org
+      file: false
   variables:
     GIT_STRATEGY: none
     # By default, deploy the Review App using the `main` branch of the `gitlab-org/gitlab-docs` project
