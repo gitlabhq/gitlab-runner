@@ -513,6 +513,63 @@ func TestWaitForPodRunning(t *testing.T) {
 			},
 		},
 		{
+			Name: "ensure fast-fail when runtime fails to join the pod user namespace",
+			Pod: &api.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-pod",
+					Namespace: "test-ns",
+				},
+			},
+			Config: &common.KubernetesConfig{},
+			ClientFunc: func(req *http.Request) (*http.Response, error) {
+				switch p, m := req.URL.Path, req.Method; {
+				case p == "/api/"+version+"/namespaces/test-ns/pods/test-pod" && m == http.MethodGet:
+					pod := &api.Pod{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "test-pod",
+							Namespace: "test-ns",
+						},
+						Spec: api.PodSpec{
+							HostUsers: new(false),
+						},
+						Status: api.PodStatus{
+							Phase: api.PodPending,
+						},
+					}
+					return &http.Response{
+						StatusCode: http.StatusOK,
+						Body:       objBody(codec, pod),
+						Header:     map[string][]string{common.ContentType: {"application/json"}},
+					}, nil
+				default:
+					t.Errorf("unexpected request: %s %#v\n%#v", req.Method, req.URL, req)
+					return nil, fmt.Errorf("unexpected request")
+				}
+			},
+			Events: &api.EventList{
+				Items: []api.Event{
+					{
+						Reason:  "FailedCreatePodSandBox",
+						Message: "Failed to create pod sandbox: rpc error: code = Unknown desc = failed to start sandbox \"70a1146188fb20688275a0a80d36b0ae739111c87aaa1a04dc13142da74c21c7\": failed to create containerd task: failed to create shim task: OCI runtime create failed: creating container: cannot create gofer process: gofer: error setting namespace of type user and path \"/run/containerd/io.containerd.grpc.v1.cri/sandboxes/70a1146188fb20688275a0a80d36b0ae739111c87aaa1a04dc13142da74c21c7/pinned-namespaces/user\": invalid argument",
+					},
+				},
+			},
+			PodEndPhase: api.PodUnknown,
+			Error:       true,
+			VerifyError: func(t *testing.T, err error) {
+				var buildErr *common.BuildError
+				if !errors.As(err, &buildErr) {
+					t.Fatalf("expected a *common.BuildError, got: %T (%v)", err, err)
+				}
+				if buildErr.FailureReason != common.ConfigurationError {
+					t.Errorf("expected FailureReason %q, got %q", common.ConfigurationError, buildErr.FailureReason)
+				}
+				if !strings.Contains(err.Error(), "error setting namespace of type user") {
+					t.Errorf("expected error to mention the user namespace join failure, got: %s", err.Error())
+				}
+			},
+		},
+		{
 			// The sandbox check is gated on the pod's `hostUsers: false`, not on
 			// print_pod_warning_events. Without this case, restoring the old
 			// `printPodWarningEvents &&` guard would not fail any test.

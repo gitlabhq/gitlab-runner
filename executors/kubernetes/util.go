@@ -265,8 +265,19 @@ func podUsesUserNamespaces(pod *api.Pod) bool {
 	return pod.Spec.HostUsers != nil && !*pod.Spec.HostUsers
 }
 
-// checkPodSandboxUserNamespaceFailure detects a runtime that rejected
-// `spec.hostUsers: false` because it doesn't support Linux user namespaces.
+// userNamespaceSandboxFailures are FailedCreatePodSandBox message fragments that
+// mean the runtime can never honour `spec.hostUsers: false`:
+//   - kubelet rejects a runtime handler that doesn't advertise user namespaces.
+//   - gVisor (runsc) cannot join the pinned user namespace (setns EINVAL from a
+//     multithreaded process); reached on containerd >= 2.2.7, which advertises
+//     user namespaces for non-runc runtimes.
+var userNamespaceSandboxFailures = []string{
+	"does not support user namespaces",
+	"error setting namespace of type user",
+}
+
+// checkPodSandboxUserNamespaceFailure detects a runtime that cannot create a pod
+// sandbox with `spec.hostUsers: false`.
 func checkPodSandboxUserNamespaceFailure(ctx context.Context, client kubernetes.Interface, pod *api.Pod) error {
 	//nolint:gocritic
 	// kubeAPI: events, list, hostUsers=false
@@ -281,7 +292,12 @@ func checkPodSandboxUserNamespaceFailure(ctx context.Context, client kubernetes.
 	}
 
 	for _, event := range events.Items {
-		if event.Reason == "FailedCreatePodSandBox" && strings.Contains(event.Message, "does not support user namespaces") {
+		if event.Reason != "FailedCreatePodSandBox" {
+			continue
+		}
+		if slices.ContainsFunc(userNamespaceSandboxFailures, func(s string) bool {
+			return strings.Contains(event.Message, s)
+		}) {
 			return &common.BuildError{
 				Inner:         fmt.Errorf("pod sandbox creation failed: %s", event.Message),
 				FailureReason: common.ConfigurationError,
