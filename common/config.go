@@ -700,6 +700,8 @@ type KubernetesConfig struct {
 	NamespaceOverwriteAllowed                         string                             `toml:"namespace_overwrite_allowed" json:"namespace_overwrite_allowed" long:"namespace_overwrite_allowed" env:"KUBERNETES_NAMESPACE_OVERWRITE_ALLOWED" description:"Regex to validate 'KUBERNETES_NAMESPACE_OVERWRITE' value"`
 	NamespacePerJob                                   bool                               `toml:"namespace_per_job" json:"namespace_per_job" long:"namespace_per_job" env:"KUBERNETES_NAMESPACE_PER_JOB" description:"Use separate namespace for each job. If set, 'KUBERNETES_NAMESPACE' and 'KUBERNETES_NAMESPACE_OVERWRITE_ALLOWED' are ignored."`
 	Privileged                                        *bool                              `toml:"privileged,omitzero" json:"privileged,omitempty" long:"privileged" env:"KUBERNETES_PRIVILEGED" description:"Run all containers with the privileged flag enabled"`
+	HostUsersOverwriteAllowed                         bool                               `toml:"host_users_overwrite_allowed" json:"host_users_overwrite_allowed" long:"host-users-overwrite-allowed" env:"KUBERNETES_HOST_USERS_OVERWRITE_ALLOWED" description:"Bool to authorize builds to overwrite runner 'host_users' configuration. Used with the 'KUBERNETES_HOST_USERS' variable in the build."`
+	HostUsers                                         *bool                              `toml:"host_users,omitzero" json:"host_users,omitempty" long:"host-users" env:"KUBERNETES_HOST_USERS" description:"true uses the host's user namespace, false isolates the pod. Unset keeps the cluster default."`
 	RuntimeClassName                                  *string                            `toml:"runtime_class_name,omitempty" json:"runtime_class_name,omitempty" long:"runtime-class-name" env:"KUBERNETES_RUNTIME_CLASS_NAME" description:"A Runtime Class to use for all created pods, errors if the feature is unsupported by the cluster"`
 	AllowPrivilegeEscalation                          *bool                              `toml:"allow_privilege_escalation,omitzero" json:"allow_privilege_escalation,omitempty" long:"allow-privilege-escalation" env:"KUBERNETES_ALLOW_PRIVILEGE_ESCALATION" description:"Run all containers with the security context allowPrivilegeEscalation flag enabled. When empty, it does not define the allowPrivilegeEscalation flag in the container SecurityContext and allows Kubernetes to use the default privilege escalation behavior."`
 	CPULimit                                          string                             `toml:"cpu_limit,omitempty" json:"cpu_limit" long:"cpu-limit" env:"KUBERNETES_CPU_LIMIT" description:"The CPU allocation given to build containers"`
@@ -1072,6 +1074,27 @@ func (c *KubernetesConfig) getCapabilities(defaultCapDrop []string) *api.Capabil
 	}
 
 	return buildCapabilities(enabled)
+}
+
+// Return true if any container configures ProcMount as Unmasked
+func (c *KubernetesConfig) UsesProcMountUnmasked() bool {
+	if v := c.BuildContainerSecurityContext.getProcMount(); v != nil && *v == api.UnmaskedProcMount {
+		return true
+	}
+
+	if v := c.ServiceContainerSecurityContext.getProcMount(); v != nil && *v == api.UnmaskedProcMount {
+		return true
+	}
+
+	if v := c.HelperContainerSecurityContext.getProcMount(); v != nil && *v == api.UnmaskedProcMount {
+		return true
+	}
+
+	if v := c.InitPermissionsContainerSecurityContext.getProcMount(); v != nil && *v == api.UnmaskedProcMount {
+		return true
+	}
+
+	return false
 }
 
 func buildCapabilities(enabled map[string]bool) *api.Capabilities {

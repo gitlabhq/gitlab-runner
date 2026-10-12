@@ -3284,6 +3284,143 @@ func TestKubernetesBuildPodResources(t *testing.T) {
 	}
 }
 
+func TestKubernetesMultiStepHostUsers(t *testing.T) {
+	t.Parallel()
+
+	kubernetes.SkipKubectlIntegrationTests(t, "kubectl", "cluster-info")
+
+	client := getTestKubeClusterClient(t)
+
+	// User namespaces has been enabled by default in kubernetes v1.33
+	skipKubectlIntegrationTestsIfOnOldCluster(t, client, "1.33.0")
+
+	ctxTimeout := time.Minute
+
+	tests := map[string]struct {
+		hostUsers *bool
+		verifyFn  func(*testing.T, v1.Pod)
+	}{
+		"unset": {
+			hostUsers: nil,
+			verifyFn: func(t *testing.T, pod v1.Pod) {
+				assert.Nil(t, pod.Spec.HostUsers, "Pod HostUsers should be empty")
+			},
+		},
+		"enabled": {
+			hostUsers: func(b bool) *bool { return &b }(true),
+			verifyFn: func(t *testing.T, pod v1.Pod) {
+				require.NotNil(t, pod.Spec.HostUsers)
+				assert.True(t, *pod.Spec.HostUsers)
+			},
+		},
+		"disabled": {
+			hostUsers: func(b bool) *bool { return &b }(false),
+			verifyFn: func(t *testing.T, pod v1.Pod) {
+				require.NotNil(t, pod.Spec.HostUsers)
+				assert.False(t, *pod.Spec.HostUsers)
+			},
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			build := getTestBuild(t, common.GetRemoteSuccessfulMultistepBuild)
+
+			build.Runner.Kubernetes.HostUsers = test.hostUsers
+
+			defer buildtest.OnUserStage(build, func() {
+				ctx, cancel := context.WithTimeout(context.Background(), ctxTimeout)
+				defer cancel()
+				pods, err := client.CoreV1().Pods(ciNamespace).List(
+					ctx,
+					metav1.ListOptions{
+						LabelSelector: labels.Set(build.Runner.Kubernetes.PodLabels).String(),
+					},
+				)
+				require.NoError(t, err)
+				require.NotEmpty(t, pods.Items)
+
+				for _, pod := range pods.Items {
+					test.verifyFn(t, pod)
+				}
+			})()
+
+			err := build.Run(context.Background(), &common.Config{}, &common.Trace{Writer: os.Stdout})
+			assert.NoError(t, err)
+		})
+	}
+}
+
+func TestKubernetesBuildHostUsers(t *testing.T) {
+	t.Parallel()
+
+	kubernetes.SkipKubectlIntegrationTests(t, "kubectl", "cluster-info")
+
+	client := getTestKubeClusterClient(t)
+
+	// User namespaces has been enabled by default in kubernetes v1.33
+	skipKubectlIntegrationTestsIfOnOldCluster(t, client, "1.33.0")
+
+	ctxTimeout := time.Minute
+
+	tests := map[string]struct {
+		hostUsers *bool
+		verifyFn  func(*testing.T, v1.Pod)
+	}{
+		"unset": {
+			hostUsers: nil,
+			verifyFn: func(t *testing.T, pod v1.Pod) {
+				assert.Nil(t, pod.Spec.HostUsers, "Pod HostUsers should be empty")
+			},
+		},
+		"enabled": {
+			hostUsers: func(b bool) *bool { return &b }(true),
+			verifyFn: func(t *testing.T, pod v1.Pod) {
+				require.NotNil(t, pod.Spec.HostUsers)
+				assert.True(t, *pod.Spec.HostUsers)
+			},
+		},
+		"disabled": {
+			hostUsers: func(b bool) *bool { return &b }(false),
+			verifyFn: func(t *testing.T, pod v1.Pod) {
+				require.NotNil(t, pod.Spec.HostUsers)
+				assert.False(t, *pod.Spec.HostUsers)
+			},
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			build := getTestBuild(t, common.GetRemoteSuccessfulBuild)
+
+			build.Runner.Kubernetes.HostUsers = test.hostUsers
+
+			defer buildtest.OnUserStage(build, func() {
+				ctx, cancel := context.WithTimeout(context.Background(), ctxTimeout)
+				defer cancel()
+				pods, err := client.CoreV1().Pods(ciNamespace).List(
+					ctx,
+					metav1.ListOptions{
+						LabelSelector: labels.Set(build.Runner.Kubernetes.PodLabels).String(),
+					},
+				)
+				require.NoError(t, err)
+				require.NotEmpty(t, pods.Items)
+				pod := pods.Items[0]
+
+				test.verifyFn(t, pod)
+			})()
+
+			err := build.Run(context.Background(), &common.Config{}, &common.Trace{Writer: os.Stdout})
+			assert.NoError(t, err)
+		})
+	}
+}
+
 func TestKubernetesAllowedImages(t *testing.T) {
 	t.Parallel()
 

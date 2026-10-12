@@ -58,10 +58,28 @@ func (s *executor) overlayConfigMapName() string {
 // isHostUserEnabled returns false to isolate the linux user namespace of the pod from that of the host.
 // Read more https://kubernetes.io/docs/concepts/workloads/pods/user-namespaces/
 func (s *executor) isHostUserEnabled() *bool {
-	if !s.usesSuspendResume() {
-		return nil
+	f := false
+	if s.configurationOverwrites.hostUsers != nil && !*s.configurationOverwrites.hostUsers {
+		return &f
 	}
-	return new(false)
+	if s.usesSuspendResume() {
+		if s.configurationOverwrites.hostUsers != nil {
+			s.BuildLogger.Warningln(
+				"suspend/resume requires pod to use user namespaces and has overwritten actual " +
+					"configuration which is to use host's user namespace")
+		}
+		return &f
+	}
+	// Setting ProcMount to Unmasked requires the HostUsers value in the pod spec to be false
+	if s.Config.Kubernetes.UsesProcMountUnmasked() {
+		if s.configurationOverwrites.hostUsers != nil {
+			s.BuildLogger.Warningln(
+				"proc_mount unmasked requires pod to use user namespaces and has overwritten actual " +
+					"configuration which is to use host's user namespace")
+		}
+		return &f
+	}
+	return s.configurationOverwrites.hostUsers
 }
 
 // injectSuspendCap ensures CAP_SYS_ADMIN is present in c's security context

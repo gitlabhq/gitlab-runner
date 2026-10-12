@@ -6652,6 +6652,381 @@ func TestSetupBuildPod(t *testing.T) {
 				)
 			},
 		},
+		"default pod does not set HostUsers": {
+			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
+				assert.Nil(
+					t,
+					pod.Spec.HostUsers,
+					"Pod HostUsers should be empty",
+				)
+			},
+		},
+		"configure to enable HostUsers": {
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						HostUsers: func(b bool) *bool { return &b }(true),
+					},
+				},
+			},
+			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
+				require.NotNil(t, pod.Spec.HostUsers)
+				assert.True(t, *pod.Spec.HostUsers)
+			},
+		},
+		"configure to disable HostUsers": {
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						HostUsers: func(b bool) *bool { return &b }(false),
+					},
+				},
+			},
+			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
+				require.NotNil(t, pod.Spec.HostUsers)
+				assert.False(t, *pod.Spec.HostUsers)
+			},
+		},
+		"default config should not allow job to disable HostUsers": {
+			Variables: []spec.Variable{
+				{Key: "KUBERNETES_HOST_USERS", Value: "false", Public: true},
+			},
+			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
+				require.Nil(t, pod.Spec.HostUsers)
+			},
+		},
+		"default config should should not allow job to enable HostUsers": {
+			Variables: []spec.Variable{
+				{Key: "KUBERNETES_HOST_USERS", Value: "true", Public: true},
+			},
+			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
+				require.Nil(t, pod.Spec.HostUsers)
+			},
+		},
+		"configure to disable HostUsersOverwriteAllowed should not allow job to disable HostUsers": {
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						HostUsersOverwriteAllowed: false,
+					},
+				},
+			},
+			Variables: []spec.Variable{
+				{Key: "KUBERNETES_HOST_USERS", Value: "false", Public: true},
+			},
+			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
+				require.Nil(t, pod.Spec.HostUsers)
+			},
+		},
+		"configure to disable HostUsersOverwriteAllowed should not allow job to enable HostUsers": {
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						HostUsersOverwriteAllowed: false,
+					},
+				},
+			},
+			Variables: []spec.Variable{
+				{Key: "KUBERNETES_HOST_USERS", Value: "true", Public: true},
+			},
+			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
+				require.Nil(t, pod.Spec.HostUsers)
+			},
+		},
+		"configure to enable HostUsersOverwriteAllowed should allow job to enable HostUsers": {
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						HostUsersOverwriteAllowed: true,
+					},
+				},
+			},
+			Variables: []spec.Variable{
+				{Key: "KUBERNETES_HOST_USERS", Value: "true", Public: true},
+			},
+			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
+				require.NotNil(t, pod.Spec.HostUsers)
+				assert.True(t, *pod.Spec.HostUsers)
+			},
+		},
+		"configure to enable HostUsersOverwriteAllowed should allow job to disable HostUsers": {
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						HostUsersOverwriteAllowed: true,
+					},
+				},
+			},
+			Variables: []spec.Variable{
+				{Key: "KUBERNETES_HOST_USERS", Value: "false", Public: true},
+			},
+			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
+				require.NotNil(t, pod.Spec.HostUsers)
+				assert.False(t, *pod.Spec.HostUsers)
+			},
+		},
+		"configure to enable HostUsers and HostUsersOverwriteAllowed should allow job to disable HostUsers": {
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						HostUsersOverwriteAllowed: true,
+						HostUsers:                 func(b bool) *bool { return &b }(true),
+					},
+				},
+			},
+			Variables: []spec.Variable{
+				{Key: "KUBERNETES_HOST_USERS", Value: "false", Public: true},
+			},
+			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
+				require.NotNil(t, pod.Spec.HostUsers)
+				assert.False(t, *pod.Spec.HostUsers)
+			},
+		},
+		"configure to disable HostUsers and enable HostUsersOverwriteAllowed should allow job to enable HostUsers": {
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						HostUsersOverwriteAllowed: true,
+						HostUsers:                 func(b bool) *bool { return &b }(false),
+					},
+				},
+			},
+			Variables: []spec.Variable{
+				{Key: "KUBERNETES_HOST_USERS", Value: "true", Public: true},
+			},
+			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
+				require.NotNil(t, pod.Spec.HostUsers)
+				assert.True(t, *pod.Spec.HostUsers)
+			},
+		},
+		"configure ProcMount Unmasked on build container should disable HostUsers": {
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						BuildContainerSecurityContext: common.KubernetesContainerSecurityContext{
+							ProcMount: api.ProcMountType("unmasked"),
+						},
+					},
+				},
+			},
+			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
+				require.NotNil(t, pod.Spec.HostUsers)
+				assert.False(t, *pod.Spec.HostUsers)
+			},
+		},
+		"configure ProcMount Unmasked on service containers should disable HostUsers": {
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						ServiceContainerSecurityContext: common.KubernetesContainerSecurityContext{
+							ProcMount: api.ProcMountType("unmasked"),
+						},
+					},
+				},
+			},
+			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
+				require.NotNil(t, pod.Spec.HostUsers)
+				assert.False(t, *pod.Spec.HostUsers)
+			},
+		},
+		"configure ProcMount Unmasked on init container should disable HostUsers": {
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						InitPermissionsContainerSecurityContext: common.KubernetesContainerSecurityContext{
+							ProcMount: api.ProcMountType("unmasked"),
+						},
+					},
+				},
+			},
+			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
+				require.NotNil(t, pod.Spec.HostUsers)
+				assert.False(t, *pod.Spec.HostUsers)
+			},
+		},
+		"configure ProcMount Unmasked on helper container should disable HostUsers": {
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						HelperContainerSecurityContext: common.KubernetesContainerSecurityContext{
+							ProcMount: api.ProcMountType("unmasked"),
+						},
+					},
+				},
+			},
+			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
+				require.NotNil(t, pod.Spec.HostUsers)
+				assert.False(t, *pod.Spec.HostUsers)
+			},
+		},
+		"configure ProcMount Unmasked on build container should disable HostUsers even when HostUsers is enabled": {
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						HostUsers: func(b bool) *bool { return &b }(true),
+						BuildContainerSecurityContext: common.KubernetesContainerSecurityContext{
+							ProcMount: api.ProcMountType("unmasked"),
+						},
+					},
+				},
+			},
+			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
+				require.NotNil(t, pod.Spec.HostUsers)
+				assert.False(t, *pod.Spec.HostUsers)
+			},
+		},
+		"configure ProcMount Unmasked on service containers should disable HostUsers even when HostUsers is enabled": {
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						HostUsers: func(b bool) *bool { return &b }(true),
+						ServiceContainerSecurityContext: common.KubernetesContainerSecurityContext{
+							ProcMount: api.ProcMountType("unmasked"),
+						},
+					},
+				},
+			},
+			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
+				require.NotNil(t, pod.Spec.HostUsers)
+				assert.False(t, *pod.Spec.HostUsers)
+			},
+		},
+		"configure ProcMount Unmasked on init container should disable HostUsers even when HostUsers is enabled": {
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						HostUsers: func(b bool) *bool { return &b }(true),
+						InitPermissionsContainerSecurityContext: common.KubernetesContainerSecurityContext{
+							ProcMount: api.ProcMountType("unmasked"),
+						},
+					},
+				},
+			},
+			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
+				require.NotNil(t, pod.Spec.HostUsers)
+				assert.False(t, *pod.Spec.HostUsers)
+			},
+		},
+		"configure ProcMount Unmasked on helper container should disable HostUsers even when HostUsers is enabled": {
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						HostUsers: func(b bool) *bool { return &b }(true),
+						HelperContainerSecurityContext: common.KubernetesContainerSecurityContext{
+							ProcMount: api.ProcMountType("unmasked"),
+						},
+					},
+				},
+			},
+			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
+				require.NotNil(t, pod.Spec.HostUsers)
+				assert.False(t, *pod.Spec.HostUsers)
+			},
+		},
+		"configure ProcMount Unmasked on build container should disable HostUsers even when HostUsers is enabled in job": {
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						HostUsersOverwriteAllowed: true,
+						BuildContainerSecurityContext: common.KubernetesContainerSecurityContext{
+							ProcMount: api.ProcMountType("unmasked"),
+						},
+					},
+				},
+			},
+			Variables: []spec.Variable{
+				{Key: "KUBERNETES_HOST_USERS", Value: "true", Public: true},
+			},
+			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
+				require.NotNil(t, pod.Spec.HostUsers)
+				assert.False(t, *pod.Spec.HostUsers)
+			},
+		},
+		"configure ProcMount Unmasked on service containers should disable HostUsers even when HostUsers is enabled in job": {
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						HostUsersOverwriteAllowed: true,
+						ServiceContainerSecurityContext: common.KubernetesContainerSecurityContext{
+							ProcMount: api.ProcMountType("unmasked"),
+						},
+					},
+				},
+			},
+			Variables: []spec.Variable{
+				{Key: "KUBERNETES_HOST_USERS", Value: "true", Public: true},
+			},
+			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
+				require.NotNil(t, pod.Spec.HostUsers)
+				assert.False(t, *pod.Spec.HostUsers)
+			},
+		},
+		"configure ProcMount Unmasked on init container should disable HostUsers even when HostUsers is enabled in job": {
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						HostUsersOverwriteAllowed: true,
+						InitPermissionsContainerSecurityContext: common.KubernetesContainerSecurityContext{
+							ProcMount: api.ProcMountType("unmasked"),
+						},
+					},
+				},
+			},
+			Variables: []spec.Variable{
+				{Key: "KUBERNETES_HOST_USERS", Value: "true", Public: true},
+			},
+			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
+				require.NotNil(t, pod.Spec.HostUsers)
+				assert.False(t, *pod.Spec.HostUsers)
+			},
+		},
+		"configure ProcMount Unmasked on helper container should disable HostUsers even when HostUsers is enabled in job": {
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						HostUsersOverwriteAllowed: true,
+						HelperContainerSecurityContext: common.KubernetesContainerSecurityContext{
+							ProcMount: api.ProcMountType("unmasked"),
+						},
+					},
+				},
+			},
+			Variables: []spec.Variable{
+				{Key: "KUBERNETES_HOST_USERS", Value: "true", Public: true},
+			},
+			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
+				require.NotNil(t, pod.Spec.HostUsers)
+				assert.False(t, *pod.Spec.HostUsers)
+			},
+		},
+		"enable SuspendResume feature flag should disable HostUsers": {
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						HostUsers: nil,
+					},
+				},
+			},
+			PrepareFn: func(t *testing.T, sbptd setupBuildPodTestDef, e *executor) { markSuspendableFFOn(e) },
+			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
+				require.NotNil(t, pod.Spec.HostUsers)
+				assert.False(t, *pod.Spec.HostUsers)
+			},
+		},
+		"enable SuspendResume feature flag should disable HostUsers even when HostUsers is enabled": {
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						HostUsers: func(b bool) *bool { return &b }(true),
+					},
+				},
+			},
+			PrepareFn: func(t *testing.T, sbptd setupBuildPodTestDef, e *executor) { markSuspendableFFOn(e) },
+			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
+				require.NotNil(t, pod.Spec.HostUsers)
+				assert.False(t, *pod.Spec.HostUsers)
+			},
+		},
 		"no runtimeClass when not specified": {
 			RunnerConfig: common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{

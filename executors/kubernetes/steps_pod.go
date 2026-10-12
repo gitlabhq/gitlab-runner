@@ -278,6 +278,7 @@ func (s *executor) stepsPreparePodConfig(opts podConfigPrepareOpts) (api.Pod, er
 			RuntimeClassName:              s.Config.Kubernetes.RuntimeClassName,
 			PriorityClassName:             s.Config.Kubernetes.PriorityClassName,
 			Resources:                     s.podResourcesReference(),
+			HostUsers:                     s.isHostUserEnabled(),
 		},
 	}, nil
 }
