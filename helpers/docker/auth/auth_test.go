@@ -865,6 +865,14 @@ func TestCredsForImagesWithDifferentPaths(t *testing.T) {
 				{`Loaded Docker credentials, source = "$DOCKER_AUTH_CONFIG", hostnames = [registry.local registry.local/ns registry.local/ns/some/image], error = <nil>`},
 			},
 		},
+		"registry.local/ns/some/image@sha256:" + strings.Repeat("a", 64): {
+			expectedSource:   "$DOCKER_AUTH_CONFIG",
+			expectedUsername: "test_user_3",
+			expectedPassword: "test_password_3",
+			expectedLogs: [][]any{
+				{`Loaded Docker credentials, source = "$DOCKER_AUTH_CONFIG", hostnames = [registry.local registry.local/ns registry.local/ns/some/image], error = <nil>`},
+			},
+		},
 		"no_auth_configured/image:l": {
 			expectNoResult: true,
 			expectedLogs: [][]any{
@@ -1056,6 +1064,26 @@ func TestDockerImagePathNormalization(t *testing.T) {
 	for imageRef, expected := range tests {
 		actual := normalizeImageRef(imageRef)
 		assert.Equal(t, expected, actual)
+	}
+}
+
+func TestDockerImagePathNormalizationWithDigest(t *testing.T) {
+	digest := "sha256:" + strings.Repeat("a", 64)
+	tests := map[string]string{
+		"registry.local/ns/image@" + digest:                       "registry.local/ns/image",
+		"registry.local/ns/image:latest@" + digest:                "registry.local/ns/image",
+		"REGISTRY.local:5000/With/Case@" + digest:                 "registry.local:5000/With/Case",
+		"localhost:5000/image@" + digest:                          "localhost:5000/image",
+		"ubuntu@" + digest:                                        "docker.io/ubuntu",
+		"user/ubuntu@" + digest:                                   "docker.io/user/ubuntu",
+		"index.DOCKER.io/user/ubuntu@" + digest:                   "docker.io/user/ubuntu",
+		"registry.local/image@sha512:" + strings.Repeat("a", 128): "registry.local/image",
+	}
+
+	for imageRef, expected := range tests {
+		t.Run(imageRef, func(t *testing.T) {
+			assert.Equal(t, expected, normalizeImageRef(imageRef))
+		})
 	}
 }
 
