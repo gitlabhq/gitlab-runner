@@ -34,6 +34,7 @@ var supportedWindowsBuilds = map[string]string{
 	"10.0.22621": V21H2,
 	"10.0.22631": V21H2,
 	"10.0.26200": V24H2,
+	"10.0.26300": V24H2,
 }
 
 // Version checks the specified kernel version to see if it's one of the
