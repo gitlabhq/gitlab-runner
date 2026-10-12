@@ -298,6 +298,9 @@ func (m *manager) withProtected(s string) string {
 	return s + protectedSuffix
 }
 
+// Adopt records existing mounts as the build's volumes and reconstructs the
+// bind strings. Named volumes are verified to exist; bind mounts are trusted.
+// Reusable volumes are not tracked for removal. Used by the suspend/resume flow.
 func (m *manager) Adopt(ctx context.Context, mounts []container.MountPoint) error {
 	for _, mp := range mounts {
 		var source string
