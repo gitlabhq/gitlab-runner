@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"maps"
 	"regexp"
+	"strconv"
 	"strings"
 
 	api "k8s.io/api/core/v1"
@@ -21,6 +22,8 @@ const (
 	ServiceAccountOverwriteVariableName = "KUBERNETES_SERVICE_ACCOUNT_OVERWRITE"
 	// BearerTokenOverwriteVariableValue is the key for the JobVariable containing user overwritten BearerToken
 	BearerTokenOverwriteVariableValue = "KUBERNETES_BEARER_TOKEN"
+	// HostUsersOverwriteVariableValue is the key for the JobVariable containing user overwritten HostUsers
+	HostUsersOverwriteVariableValue = "KUBERNETES_HOST_USERS"
 	// PodLabelsOverwriteVariablePrefix is the prefix for all the JobVariable keys containing
 	// user overwritten PodLabels
 	PodLabelsOverwriteVariablePrefix = "KUBERNETES_POD_LABELS_"
@@ -123,10 +126,30 @@ func (m *malformedOverwriteError) Is(err error) bool {
 	return ok
 }
 
+type malformedBoolOverwriteError struct {
+	fieldName string
+	value     string
+	err       error
+}
+
+func (m *malformedBoolOverwriteError) Error() string {
+	return fmt.Sprintf("%q is not a boolean: %q", m.fieldName, m.value)
+}
+
+func (m *malformedBoolOverwriteError) Is(err error) bool {
+	_, ok := err.(*malformedBoolOverwriteError)
+	return ok
+}
+
+func (m *malformedBoolOverwriteError) Unwrap() error {
+	return m.err
+}
+
 type overwrites struct {
 	namespace       string
 	serviceAccount  string
 	bearerToken     string
+	hostUsers       *bool
 	podLabels       map[string]string
 	podAnnotations  map[string]string
 	nodeSelector    map[string]string
@@ -185,6 +208,18 @@ func createOverwrites(
 		config.BearerToken,
 		config.BearerTokenOverwriteAllowed,
 		bearerTokenOverwrite,
+		logger,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	hostUsersOverwrite := variables.Get(HostUsersOverwriteVariableValue)
+	o.hostUsers, err = o.evaluateBoolOverwrite(
+		"HostUsers",
+		config.HostUsers,
+		config.HostUsersOverwriteAllowed,
+		hostUsersOverwrite,
 		logger,
 	)
 	if err != nil {
@@ -577,6 +612,32 @@ func (o *overwrites) evaluateMaxPodResourcesOverwrite(
 	}
 
 	return nil
+}
+
+func (o *overwrites) evaluateBoolOverwrite(
+	fieldName string,
+	value *bool,
+	canOverride bool,
+	overwriteValue string,
+	logger buildlogger.Logger,
+) (*bool, error) {
+	var parsedValue bool
+	var err error
+
+	if !canOverride {
+		logger.Debugln("Settings allowing overrides for", fieldName, "disables override.")
+		return value, nil
+	}
+
+	if overwriteValue == "" {
+		return value, nil
+	}
+
+	if parsedValue, err = strconv.ParseBool(overwriteValue); err != nil {
+		return value, &malformedBoolOverwriteError{fieldName: fieldName, value: overwriteValue, err: err}
+	}
+
+	return &parsedValue, nil
 }
 
 func (o *overwrites) evaluateBoolControlledOverwrite(

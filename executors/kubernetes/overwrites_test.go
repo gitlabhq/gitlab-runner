@@ -53,6 +53,7 @@ func TestOverwrites(t *testing.T) {
 		NamespaceOverwriteVariableValue      string
 		ServiceAccountOverwriteVariableValue string
 		BearerTokenOverwriteVariableValue    string
+		HostUsersOverwriteVariableValue      string
 		NodeSelectorOverwriteValues          map[string]string
 		NodeTolerationsOverwriteValues       map[string]string
 		PodLabelsOverwriteValues             map[string]string
@@ -106,6 +107,7 @@ func TestOverwrites(t *testing.T) {
 				NamespaceOverwriteAllowed:      ".*",
 				ServiceAccountOverwriteAllowed: ".*",
 				BearerTokenOverwriteAllowed:    true,
+				HostUsersOverwriteAllowed:      true,
 				NodeSelectorOverwriteAllowed:   ".*",
 				NodeSelector: map[string]string{
 					"test1":                          "test1",
@@ -179,6 +181,7 @@ func TestOverwrites(t *testing.T) {
 			NamespaceOverwriteVariableValue:      "my_namespace",
 			ServiceAccountOverwriteVariableValue: "my_service_account",
 			BearerTokenOverwriteVariableValue:    "my_bearer_token",
+			HostUsersOverwriteVariableValue:      "false",
 			NodeSelectorOverwriteValues: map[string]string{
 				"KUBERNETES_NODE_SELECTOR_SPOT": "eks.amazonaws.com/capacityType=ON_DEMAND",
 				"KUBERNETES_NODE_SELECTOR_ARCH": "kubernetes.io/arch=arm64",
@@ -226,6 +229,7 @@ func TestOverwrites(t *testing.T) {
 				namespace:      "my_namespace",
 				serviceAccount: "my_service_account",
 				bearerToken:    "my_bearer_token",
+				hostUsers:      func(b bool) *bool { return &b }(false),
 				nodeSelector: map[string]string{
 					"test1":                          "test1",
 					"test2":                          "test2",
@@ -272,6 +276,7 @@ func TestOverwrites(t *testing.T) {
 				Namespace:      "my_namespace",
 				ServiceAccount: "my_service_account",
 				BearerToken:    "my_bearer_token",
+				HostUsers:      func(b bool) *bool { return &b }(false),
 				NodeSelector: map[string]string{
 					"test1": "test1",
 					"test2": "test2",
@@ -315,6 +320,7 @@ func TestOverwrites(t *testing.T) {
 			NamespaceOverwriteVariableValue:      "another_namespace",
 			ServiceAccountOverwriteVariableValue: "another_service_account",
 			BearerTokenOverwriteVariableValue:    "another_bearer_token",
+			HostUsersOverwriteVariableValue:      "true",
 			NodeSelectorOverwriteValues: map[string]string{
 				"KUBERNETES_NODE_SELECTOR_1": "test3=test3",
 				"KUBERNETES_NODE_SELECTOR_2": "test4=test4",
@@ -358,6 +364,7 @@ func TestOverwrites(t *testing.T) {
 				namespace:      "my_namespace",
 				serviceAccount: "my_service_account",
 				bearerToken:    "my_bearer_token",
+				hostUsers:      func(b bool) *bool { return &b }(false),
 				nodeSelector: map[string]string{
 					"test1": "test1",
 					"test2": "test2",
@@ -601,6 +608,33 @@ func TestOverwrites(t *testing.T) {
 			EphemeralStorageRequestOverwriteVariableValue: "5000Mi",
 			Error: new(overwriteTooHighError),
 		},
+		{
+			Name: "HostUsers is empty",
+			Config: &common.KubernetesConfig{
+				HostUsersOverwriteAllowed: true,
+				HostUsers:                 func(b bool) *bool { return &b }(false),
+			},
+			HostUsersOverwriteVariableValue: "",
+			Expected: &overwrites{
+				hostUsers:       func(b bool) *bool { return &b }(false),
+				buildLimits:     api.ResourceList{},
+				buildRequests:   api.ResourceList{},
+				serviceLimits:   api.ResourceList{},
+				serviceRequests: api.ResourceList{},
+				helperLimits:    api.ResourceList{},
+				helperRequests:  api.ResourceList{},
+				podLimits:       api.ResourceList{},
+				podRequests:     api.ResourceList{},
+			},
+		},
+		{
+			Name: "HostUsers cannot be parsed as a bool",
+			Config: &common.KubernetesConfig{
+				HostUsersOverwriteAllowed: true,
+			},
+			HostUsersOverwriteVariableValue: "notABool",
+			Error:                           new(malformedBoolOverwriteError),
+		},
 	}
 
 	for _, test := range tests {
@@ -610,6 +644,7 @@ func TestOverwrites(t *testing.T) {
 					NamespaceOverwriteVariableName:                       test.NamespaceOverwriteVariableValue,
 					ServiceAccountOverwriteVariableName:                  test.ServiceAccountOverwriteVariableValue,
 					BearerTokenOverwriteVariableValue:                    test.BearerTokenOverwriteVariableValue,
+					HostUsersOverwriteVariableValue:                      test.HostUsersOverwriteVariableValue,
 					CPULimitOverwriteVariableValue:                       test.CPULimitOverwriteVariableValue,
 					CPURequestOverwriteVariableValue:                     test.CPURequestOverwriteVariableValue,
 					MemoryLimitOverwriteVariableValue:                    test.MemoryLimitOverwriteVariableValue,
