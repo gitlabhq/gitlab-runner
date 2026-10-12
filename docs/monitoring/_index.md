@@ -197,23 +197,23 @@ spec:
   token: gitlab-runner-secret
   buildImage: alpine
   podSpec:
-    name: "metrics-config"
-    patch: |
-      {
-        "containers": [
-          {
-            "name": "runner",
-            "ports": [
-              {
-                "name": "metrics",
-                "containerPort": 9252,
-                "protocol": "TCP"
-              }
-            ]
-          }
-        ]
-      }
-    patchType: "strategic"
+    - name: "metrics-config"
+      patch: |
+        {
+          "containers": [
+            {
+              "name": "runner",
+              "ports": [
+                {
+                  "name": "metrics",
+                  "containerPort": 9252,
+                  "protocol": "TCP"
+                }
+              ]
+            }
+          ]
+        }
+      patchType: "strategic"
 ```
 
 This configuration:
