@@ -528,14 +528,15 @@ func getBuildConfiguration(credentials []spec.Credentials) (string, []types.Auth
 }
 
 // normalizeImageRef takes a raw image reference and normalizes it:
-//   - cuts off the tag
+//   - cuts off the tag and digest
 //   - normalizes docker.io image refs (nginx -> docker.io/nginx, index.docker.io/nginx -> docker.io/nginx)
 //   - lower-cases the hostname
 func normalizeImageRef(imageName string) string {
 	// foo.bar.tld/blipo/blupp:latest -> [ foo.bar.tld/blipp/, blupp:latest ]
 	dir, image := path.Split(imageName)
 
-	// remove tag: blupp:latest -> blupp
+	// remove digest and tag: blupp:latest@sha256:... -> blupp
+	image, _, _ = strings.Cut(image, "@")
 	image, _, _ = strings.Cut(image, ":")
 
 	// reconstruct again -> foo.bar.tld/blipo/blupp
