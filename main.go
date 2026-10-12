@@ -38,6 +38,7 @@ import (
 	_ "gitlab.com/gitlab-org/gitlab-runner/cache/s3v2"
 	_ "gitlab.com/gitlab-org/gitlab-runner/helpers/secrets/resolvers/aws"
 	_ "gitlab.com/gitlab-org/gitlab-runner/helpers/secrets/resolvers/azure_key_vault"
+	_ "gitlab.com/gitlab-org/gitlab-runner/helpers/secrets/resolvers/conjur"
 	_ "gitlab.com/gitlab-org/gitlab-runner/helpers/secrets/resolvers/gcp_secret_manager"
 	_ "gitlab.com/gitlab-org/gitlab-runner/helpers/secrets/resolvers/gitlab_secrets_manager"
 	_ "gitlab.com/gitlab-org/gitlab-runner/helpers/secrets/resolvers/vault"

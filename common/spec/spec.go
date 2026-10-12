@@ -644,6 +644,7 @@ type Secret struct {
 	AzureKeyVault        *AzureKeyVaultSecret        `json:"azure_key_vault,omitempty"`
 	AWSSecretsManager    *AWSSecret                  `json:"aws_secrets_manager,omitempty"`
 	GitLabSecretsManager *GitLabSecretsManagerSecret `json:"gitlab_secrets_manager,omitempty"`
+	Conjur               *ConjurSecret               `json:"conjur,omitempty"`
 	File                 *bool                       `json:"file,omitempty"`
 }
 
@@ -665,6 +666,9 @@ func (s Secret) ExpandVariables(vars Variables) {
 	}
 	if s.AWSSecretsManager != nil {
 		s.AWSSecretsManager.expandVariables(vars)
+	}
+	if s.Conjur != nil {
+		s.Conjur.expandVariables(vars)
 	}
 	// NOTE: GitLab Secrets Manager doesn't support variable expansion
 	// The only user input from the CI config is the secret name which Rails
@@ -749,6 +753,35 @@ func (s *GCPSecretManagerServer) expandVariables(vars Variables) {
 	s.ProjectNumber = vars.ExpandValue(s.ProjectNumber)
 	s.WorkloadIdentityFederationPoolId = vars.ExpandValue(s.WorkloadIdentityFederationPoolId)
 	s.WorkloadIdentityFederationProviderID = vars.ExpandValue(s.WorkloadIdentityFederationProviderID)
+	s.JWT = vars.ExpandValue(s.JWT)
+}
+
+// ConjurSecret represents a secret configuration for CyberArk Conjur, resolved
+// via the authn-jwt authenticator. Path is the only user-authored field (from
+// .gitlab-ci.yml); the Server block is assembled by Rails from CI/CD variables
+// and is gated behind a feature flag, so it may arrive empty.
+type ConjurSecret struct {
+	Path   string       `json:"path"`
+	Server ConjurServer `json:"server"`
+}
+
+type ConjurServer struct {
+	ApplianceURL      string `json:"appliance_url"`
+	Account           string `json:"account"`
+	AuthnJWTServiceID string `json:"authn_jwt_service_id"`
+	JWT               string `json:"jwt"`
+}
+
+func (s *ConjurSecret) expandVariables(vars Variables) {
+	s.Path = vars.ExpandValue(s.Path)
+
+	s.Server.expandVariables(vars)
+}
+
+func (s *ConjurServer) expandVariables(vars Variables) {
+	s.ApplianceURL = vars.ExpandValue(s.ApplianceURL)
+	s.Account = vars.ExpandValue(s.Account)
+	s.AuthnJWTServiceID = vars.ExpandValue(s.AuthnJWTServiceID)
 	s.JWT = vars.ExpandValue(s.JWT)
 }
 
