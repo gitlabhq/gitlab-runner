@@ -141,7 +141,7 @@ func (b *Builder) buildBashScript(lines []string) string {
 // exitCodeCheckSuffix returns the post-command exit-code check for lines that may
 // carry it, and "" for lines that must not (see exitCodeCheckApplies). The check
 // reads $? as the result of the line it follows, so it is appended per line rather
-// than unconditionally. See gitlab-runner#39634.
+// than unconditionally. See https://gitlab.com/gitlab-org/gitlab-runner/-/work_items/39634.
 func exitCodeCheckSuffix(line, checkErr string) string {
 	if !exitCodeCheckApplies(line) {
 		return ""
@@ -152,13 +152,25 @@ func exitCodeCheckSuffix(line, checkErr string) string {
 // exitCodeCheckApplies reports whether the post-command exit-code check may be
 // appended after line. It must not be after a bare "else" (where the check runs
 // as the first statement of the else branch and $? still holds the failed
-// if-condition's status) nor after a negated command "! cmd" (where $? is the
-// negation's non-zero result). "set -o errexit" does not abort in either case,
-// so neither must the check. Other block keywords (then/do/elif) are safe: their
-// body runs only when the preceding condition succeeded, so $? is 0 there.
-// See gitlab-runner#39634.
+// if-condition's status), after a negated command "! cmd" (where $? is non-zero
+// when cmd succeeds), nor after "fi" or "done" (where $? is the status of the
+// last body command, which may be such a negation). "set -o errexit" does not
+// abort in any of these cases, so the check must not either. Other block
+// keywords (then/do/elif) are safe: their body runs only when the preceding
+// condition succeeded, so $? is 0 there.
+// See https://gitlab.com/gitlab-org/gitlab-runner/-/work_items/39634.
 func exitCodeCheckApplies(line string) bool {
-	return line != "else" && !strings.HasPrefix(line, "! ")
+	fields := strings.Fields(line)
+	if len(fields) == 0 {
+		return true
+	}
+	switch fields[0] {
+	case "!", "fi", "done":
+		return false
+	case "else":
+		return len(fields) > 1 && !strings.HasPrefix(fields[1], "#")
+	}
+	return true
 }
 
 func (b *Builder) buildPwshScript(lines []string) string {

@@ -260,7 +260,7 @@ func TestBashScript_Execute(t *testing.T) {
 	requireShell(t, ShellBash)
 
 	// elseLines and negationLines are the two shapes that tripped the removed
-	// restore. Both are re-run with ExitCodeCheck below, where they still fail.
+	// restore. Both are also run with ExitCodeCheck below.
 	elseLines := []string{
 		// TAKE_THEN is unset, so the else branch is taken.
 		`if [ "$TAKE_THEN" = "true" ]; then`,
@@ -288,15 +288,6 @@ func TestBashScript_Execute(t *testing.T) {
 			contains: []string{"ELSE_RAN", "AFTER_FI"},
 			excludes: []string{"THEN_RAN"},
 		},
-		// The post-command exit-code check reads $? at the top of the else branch
-		// for exactly the same reason the removed restore did, so it re-raises the
-		// failed if-condition's status and aborts before the else body runs. That
-		// is a pre-existing defect shared with the legacy generators
-		// (shells/bash.go CheckForErrors, driven per script line by
-		// shells/abstract.go writeCommands, and functions/script_legacy), not
-		// something this change introduced, and FF_ENABLE_BASH_EXIT_CODE_CHECK is
-		// off by default. Recorded here so the gap is visible rather than merely
-		// uncovered; un-skip these when gitlab-runner#39634 is fixed.
 		"else branch runs to completion with exit code check": {
 			lines:    elseLines,
 			opts:     []func(*Builder){withExitCodeCheck},
@@ -325,6 +316,44 @@ func TestBashScript_Execute(t *testing.T) {
 			lines:    negationLines,
 			opts:     []func(*Builder){withExitCodeCheck},
 			contains: []string{"AFTER_NEGATION"},
+		},
+		"else with trailing comment runs to completion with exit code check": {
+			lines: []string{
+				`if [ "$TAKE_THEN" = "true" ]; then`,
+				`echo THEN_RAN`,
+				`else # fallback`,
+				`echo ELSE_RAN`,
+				`fi`,
+				`echo AFTER_FI`,
+			},
+			opts:     []func(*Builder){withExitCodeCheck},
+			contains: []string{"ELSE_RAN", "AFTER_FI"},
+			excludes: []string{"THEN_RAN"},
+		},
+		"negation with a tab after the bang does not abort with exit code check": {
+			lines:    []string{"!\ttrue", `echo AFTER_NEGATION`},
+			opts:     []func(*Builder){withExitCodeCheck},
+			contains: []string{"AFTER_NEGATION"},
+		},
+		"if body ending in negation does not abort with exit code check": {
+			lines: []string{
+				`if true; then`,
+				`! true`,
+				`fi`,
+				`echo AFTER_FI`,
+			},
+			opts:     []func(*Builder){withExitCodeCheck},
+			contains: []string{"AFTER_FI"},
+		},
+		"loop body ending in negation does not abort with exit code check": {
+			lines: []string{
+				`for i in 1; do`,
+				`! true`,
+				`done`,
+				`echo AFTER_DONE`,
+			},
+			opts:     []func(*Builder){withExitCodeCheck},
+			contains: []string{"AFTER_DONE"},
 		},
 		// errexit must still propagate a plain failing command...
 		"failing command still aborts the script": {
