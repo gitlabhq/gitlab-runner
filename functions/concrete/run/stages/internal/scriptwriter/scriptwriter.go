@@ -15,15 +15,9 @@ const (
 	ShellSh         = "sh"
 )
 
-var bashFallbackPaths = []string{
-	"/usr/local/bin/bash",
-	"/usr/bin/bash",
-	"/bin/bash",
-	"/usr/local/bin/sh",
-	"/usr/bin/sh",
-	"/bin/sh",
-	"/busybox/sh",
-}
+// shellSearchDirs are the directories searched by absolute path when PATH has
+// no shell. They match the directories probed by shells.BashDetectShellScript.
+var shellSearchDirs = []string{"/usr/local/bin", "/usr/bin", "/bin", "/busybox"}
 
 // Builder constructs shell scripts from a list of command lines,
 // wrapping them with error handling, tracing, and optional
@@ -75,7 +69,7 @@ func (b *Builder) Build(lines []string) string {
 // the header. That is safe there because an assignment, unlike bash's "(exit N)",
 // is not a command that can fail and so cannot trip $ErrorActionPreference.
 func (b *Builder) buildBashScript(lines []string) string {
-	shPath, err := shellPath(b.shell)
+	shPath, err := resolveShell(b.shell)
 	if err != nil {
 		shPath = "/bin/sh"
 	}
@@ -143,7 +137,7 @@ func (b *Builder) buildBashScript(lines []string) string {
 }
 
 func (b *Builder) buildPwshScript(lines []string) string {
-	shPath, err := shellPath(b.shell)
+	shPath, err := exec.LookPath(b.shell)
 	if err != nil {
 		shPath = b.shell
 	}
@@ -211,29 +205,35 @@ func (b *Builder) buildPwshScript(lines []string) string {
 
 // --- shell resolution ---
 
-func resolveBash() (string, error) {
-	for _, name := range []string{ShellBash, ShellSh} {
-		if p, err := exec.LookPath(name); err == nil {
+// resolveShell returns the absolute path of the POSIX shell to run. "sh" only
+// matches sh. Any other value, including an unknown one, prefers bash and
+// falls back to sh. PATH is searched first, then shellSearchDirs.
+func resolveShell(name string) (string, error) {
+	names := []string{ShellBash, ShellSh}
+	if name == ShellSh {
+		names = []string{ShellSh}
+	}
+
+	for _, n := range names {
+		if p, err := exec.LookPath(n); err == nil {
 			return p, nil
 		}
 	}
 
-	for _, p := range bashFallbackPaths {
-		if info, err := os.Stat(p); err == nil && !info.IsDir() {
-			return p, nil
+	for _, n := range names {
+		for _, dir := range shellSearchDirs {
+			if p := dir + "/" + n; isExecutableFile(p) {
+				return p, nil
+			}
 		}
 	}
 
 	return "", fmt.Errorf("shell not found")
 }
 
-func shellPath(name string) (string, error) {
-	switch name {
-	case ShellPwsh, ShellPowershell:
-		return exec.LookPath(name)
-	default:
-		return resolveBash()
-	}
+func isExecutableFile(path string) bool {
+	info, err := os.Stat(path)
+	return err == nil && info.Mode().IsRegular() && info.Mode().Perm()&0o111 != 0
 }
 
 // --- string escaping ---

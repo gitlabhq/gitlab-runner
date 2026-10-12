@@ -20,7 +20,7 @@ func requireShell(t *testing.T, shell string) {
 	t.Helper()
 	switch shell {
 	case ShellBash, ShellSh:
-		if _, err := resolveBash(); err != nil {
+		if _, err := resolveShell(ShellBash); err != nil {
 			t.Skipf("skipping: no POSIX shell available")
 		}
 	case ShellPwsh, ShellPowershell:
@@ -221,10 +221,10 @@ func runBash(t *testing.T, script string) (string, int) {
 	path := filepath.Join(t.TempDir(), "script.sh")
 	require.NoError(t, os.WriteFile(path, []byte(script), 0o700))
 
-	// resolveBash, not a hardcoded "bash": requireShell gates on resolveBash,
+	// resolveShell, not a hardcoded "bash": requireShell gates on resolveShell,
 	// which falls back to sh, so a host without bash in PATH would admit the
 	// test and then fail to exec.
-	shell, err := resolveBash()
+	shell, err := resolveShell(ShellBash)
 	require.NoError(t, err)
 
 	out, err := exec.Command(shell, path).CombinedOutput()
@@ -508,24 +508,12 @@ func TestBuild_Dispatch(t *testing.T) {
 	}
 }
 
-func TestResolveBash(t *testing.T) {
+func TestResolveShellHost(t *testing.T) {
 	requireShell(t, ShellBash)
 
-	p, err := resolveBash()
+	p, err := resolveShell(ShellBash)
 	require.NoError(t, err)
-	assert.True(t, strings.HasPrefix(p, "/") || strings.Contains(p, ":\\"),
-		"expected absolute path, got %s", p)
-}
-
-func TestShellPath(t *testing.T) {
-	for _, shell := range []string{ShellBash, ShellSh} {
-		t.Run(shell, func(t *testing.T) {
-			requireShell(t, shell)
-			p, err := shellPath(shell)
-			require.NoError(t, err)
-			assert.NotEmpty(t, p)
-		})
-	}
+	assert.True(t, filepath.IsAbs(p), "expected absolute path, got %s", p)
 }
 
 func TestShellEscape(t *testing.T) {
@@ -573,4 +561,151 @@ func TestPsQuoteVariable(t *testing.T) {
 			assert.Equal(t, tc.expected, psQuoteVariable(tc.input))
 		})
 	}
+}
+
+// useShellDirs replaces the fixed shell search directories with temp
+// directories, in the given order. Each entry is a directory name followed by
+// the executable files it holds, e.g. "first:bash". A file ending in "!" is
+// created without the executable bit.
+func useShellDirs(t *testing.T, dirs ...string) map[string]string {
+	t.Helper()
+
+	if runtime.GOOS == "windows" {
+		t.Skip("fixed POSIX shell directories do not exist on Windows")
+	}
+
+	root := t.TempDir()
+	paths := map[string]string{}
+	var searched []string
+	for _, spec := range dirs {
+		dirName, files, _ := strings.Cut(spec, ":")
+		dir := filepath.Join(root, dirName)
+		require.NoError(t, os.MkdirAll(dir, 0o755))
+		searched = append(searched, dir)
+
+		for f := range strings.SplitSeq(files, ",") {
+			if f == "" {
+				continue
+			}
+			mode := os.FileMode(0o755)
+			if name, ok := strings.CutSuffix(f, "!"); ok {
+				f, mode = name, 0o644
+			}
+			require.NoError(t, os.WriteFile(filepath.Join(dir, f), nil, mode))
+			paths[dirName+"/"+f] = filepath.Join(dir, f)
+		}
+	}
+
+	setShellSearchDirs(t, searched...)
+
+	return paths
+}
+
+func setShellSearchDirs(t *testing.T, dirs ...string) {
+	t.Helper()
+
+	old := shellSearchDirs
+	t.Cleanup(func() { shellSearchDirs = old })
+	shellSearchDirs = dirs
+}
+
+func TestResolveShell(t *testing.T) {
+	tests := map[string]struct {
+		dirs  []string
+		shell string
+		want  string
+	}{
+		"bash prefers bash over sh":      {[]string{"d:bash,sh"}, ShellBash, "d/bash"},
+		"sh ignores bash":                {[]string{"d:bash,sh"}, ShellSh, "d/sh"},
+		"unknown prefers bash":           {[]string{"d:bash,sh"}, "cmd", "d/bash"},
+		"empty prefers bash":             {[]string{"d:bash,sh"}, "", "d/bash"},
+		"bash falls back to sh":          {[]string{"d:sh"}, ShellBash, "d/sh"},
+		"later bash beats earlier sh":    {[]string{"a:sh", "b:bash"}, ShellBash, "b/bash"},
+		"earlier dir wins":               {[]string{"a:bash", "b:bash"}, ShellBash, "a/bash"},
+		"busybox style layout":           {[]string{"a:", "busybox:sh"}, ShellBash, "busybox/sh"},
+		"non-executable file is skipped": {[]string{"a:bash!", "b:bash"}, ShellBash, "b/bash"},
+		"only non-executable files":      {[]string{"a:bash!,sh!"}, ShellBash, ""},
+		"sh with only bash":              {[]string{"d:bash"}, ShellSh, ""},
+		"no shell":                       {[]string{"d:"}, ShellBash, ""},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			paths := useShellDirs(t, tc.dirs...)
+			t.Setenv("PATH", t.TempDir())
+
+			got, err := resolveShell(tc.shell)
+			if tc.want == "" {
+				require.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
+			assert.Equal(t, paths[tc.want], got)
+		})
+	}
+}
+
+func TestResolveShellSearchesPathFirst(t *testing.T) {
+	exe := "bash"
+	if runtime.GOOS == "windows" {
+		exe += ".exe"
+	}
+
+	pathDir := t.TempDir()
+	pathBash := filepath.Join(pathDir, exe)
+	require.NoError(t, os.WriteFile(pathBash, nil, 0o755))
+	t.Setenv("PATH", pathDir)
+
+	t.Run("PATH beats fixed directories", func(t *testing.T) {
+		useShellDirs(t, "d:bash,sh")
+
+		got, err := resolveShell(ShellBash)
+		require.NoError(t, err)
+		assert.Equal(t, pathBash, got)
+	})
+
+	t.Run("fixed directories are used when PATH has no shell", func(t *testing.T) {
+		setShellSearchDirs(t)
+		t.Setenv("PATH", t.TempDir())
+
+		_, err := resolveShell(ShellBash)
+		require.Error(t, err)
+	})
+
+	t.Run("fixed directories are used when PATH has no matching shell", func(t *testing.T) {
+		paths := useShellDirs(t, "d:sh")
+
+		got, err := resolveShell(ShellSh)
+		require.NoError(t, err)
+		assert.Equal(t, paths["d/sh"], got)
+	})
+}
+
+func TestBashScriptShebang(t *testing.T) {
+	t.Run("uses the resolved absolute path", func(t *testing.T) {
+		paths := useShellDirs(t, "d:bash,sh")
+		t.Setenv("PATH", t.TempDir())
+
+		script := New("test", ShellBash).Build([]string{"echo hello"})
+
+		assert.True(t, strings.HasPrefix(script, "#!"+paths["d/bash"]+"\n"), script)
+	})
+
+	t.Run("sh does not use bash", func(t *testing.T) {
+		paths := useShellDirs(t, "d:bash,sh")
+		t.Setenv("PATH", t.TempDir())
+
+		script := New("test", ShellSh).Build([]string{"echo hello"})
+
+		assert.True(t, strings.HasPrefix(script, "#!"+paths["d/sh"]+"\n"), script)
+	})
+
+	t.Run("falls back to /bin/sh when no shell is found", func(t *testing.T) {
+		useShellDirs(t, "d:")
+		t.Setenv("PATH", t.TempDir())
+
+		script := New("test", ShellBash).Build([]string{"echo hello"})
+
+		assert.True(t, strings.HasPrefix(script, "#!/bin/sh\n"), script)
+	})
 }
