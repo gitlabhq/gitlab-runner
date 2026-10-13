@@ -3617,6 +3617,7 @@ func TestProcessSecurityOpt(t *testing.T) {
 		securityOpts  []string
 		expectedOpts  []string
 		expectedError string
+		isPodman      bool
 	}{
 		"empty security opts": {
 			securityOpts: []string{},
@@ -3650,6 +3651,16 @@ func TestProcessSecurityOpt(t *testing.T) {
 			securityOpts: []string{fmt.Sprintf("seccomp=%s", seccompProfilePath)},
 			expectedOpts: []string{fmt.Sprintf("seccomp=%s", seccompProfile)},
 		},
+		"seccomp profile path is passed through verbatim for podman": {
+			securityOpts: []string{fmt.Sprintf("seccomp=%s", seccompProfilePath)},
+			expectedOpts: []string{fmt.Sprintf("seccomp=%s", seccompProfilePath)},
+			isPodman:     true,
+		},
+		"podman with non-existent path passes path through": {
+			securityOpts: []string{"seccomp=/nonexistent/profile.json"},
+			expectedOpts: []string{"seccomp=/nonexistent/profile.json"},
+			isPodman:     true,
+		},
 		"mixed security options": {
 			securityOpts: []string{
 				"apparmor=unconfined",
@@ -3675,6 +3686,7 @@ func TestProcessSecurityOpt(t *testing.T) {
 				AbstractExecutor: executors.AbstractExecutor{
 					BuildLogger: buildlogger.New(nil, logger.WithField("test", t.Name()), buildlogger.Options{}),
 				},
+				isPodman: tt.isPodman,
 			}
 
 			result, err := e.processSecurityOpt(tt.securityOpts)
@@ -3687,6 +3699,51 @@ func TestProcessSecurityOpt(t *testing.T) {
 
 			require.NoError(t, err)
 			assert.Equal(t, tt.expectedOpts, result)
+		})
+	}
+}
+
+func TestIsPodmanRuntime(t *testing.T) {
+	tests := map[string]struct {
+		version  client.ServerVersionResult
+		expected bool
+	}{
+		"Docker Engine payload": {
+			version: client.ServerVersionResult{
+				Version: "20.10.12",
+				Components: []system.ComponentVersion{
+					{Name: "Engine", Version: "20.10.12"},
+				},
+			},
+			expected: false,
+		},
+		"Podman version payload": {
+			version: client.ServerVersionResult{
+				Version: "4.5.0-podman",
+			},
+			expected: true,
+		},
+		"Podman component payload": {
+			version: client.ServerVersionResult{
+				Version: "4.5.0",
+				Components: []system.ComponentVersion{
+					{Name: "Podman Engine", Version: "4.5.0"},
+				},
+			},
+			expected: true,
+		},
+		"empty components": {
+			version: client.ServerVersionResult{
+				Version:    "20.10.12",
+				Components: []system.ComponentVersion{},
+			},
+			expected: false,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			assert.Equal(t, tc.expected, isPodmanRuntime(tc.version))
 		})
 	}
 }

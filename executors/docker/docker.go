@@ -12,6 +12,7 @@ import (
 	"net"
 	"net/netip"
 	"os"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -96,6 +97,7 @@ type executor struct {
 	info                      system.Info
 	serverAPIVersion          *version.Version
 	waiter                    wait.KillWaiter
+	isPodman                  bool
 
 	temporary        []string // IDs of containers that should be removed
 	buildContainerID string
@@ -610,6 +612,7 @@ func imageReferenceForCreate(image *image.InspectResponse) string {
 }
 
 // processSecurityOpt processes security options and converts seccomp profile paths to inline JSON
+// if using Docker Engine (Podman uses the path directly).
 func (e *executor) processSecurityOpt(securityOpts []string) ([]string, error) {
 	if len(securityOpts) == 0 {
 		return securityOpts, nil
@@ -622,6 +625,12 @@ func (e *executor) processSecurityOpt(securityOpts []string) ([]string, error) {
 
 		// Check if this is a seccomp option with a file path
 		if ok && key == "seccomp" && !strings.HasPrefix(value, "{") && value != "unconfined" && value != "builtin" {
+			if e.isPodman {
+				processed = append(processed, opt)
+				e.BuildLogger.Debugln("Podman runtime detected, passing seccomp profile path through:", value)
+				continue
+			}
+
 			// Read the seccomp profile from file
 			profileJSON, err := os.ReadFile(value)
 			if err != nil {
@@ -1468,9 +1477,22 @@ func connectDocker(ctx context.Context, options common.ExecutorPrepareOptions, e
 	e.dockerConn = dockerConnection
 	e.info = info
 	e.serverAPIVersion = serverAPIVersion
+	e.isPodman = isPodmanRuntime(serverVersion)
 	e.waiter = wait.NewDockerKillWaiter(dockerConnection)
 
 	return nil
+}
+
+// isPodmanRuntime reports whether we're connected to Podman's Docker-compatible API
+// rather than Docker Engine.
+func isPodmanRuntime(v client.ServerVersionResult) bool {
+	if strings.Contains(strings.ToLower(v.Version), "podman") {
+		return true
+	}
+
+	return slices.ContainsFunc(v.Components, func(c system.ComponentVersion) bool {
+		return strings.Contains(strings.ToLower(c.Name), "podman")
+	})
 }
 
 type contextDialerFunc = func(ctx context.Context, network, addr string) (net.Conn, error)
