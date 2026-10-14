@@ -132,6 +132,7 @@ func (b *builder) buildGetSources() (stages.GetSources, error) {
 		UseExponentialBackoffStageRetry: b.isFeatureFlagOn(featureflags.UseExponentialBackoffStageRetry),
 		SubmoduleStrategy:               variables.Default(b.variables, "GIT_SUBMODULE_STRATEGY", "none", "none", "normal", "recursive"),
 		LFSDisabled:                     variables.DefaultBool(b.variables, "GIT_LFS_SKIP_SMUDGE", false),
+		LFSPullFlags:                    b.splitVarFlagsDefault("GIT_LFS_PULL_FLAGS", nil),
 		Depth:                           b.meta.GitInfo.Depth,
 		RepoURL:                         repoURL,
 		Refspecs:                        b.meta.GitInfo.Refspecs,

@@ -2346,6 +2346,46 @@ func TestGitSubmoduleUpdateFlags(t *testing.T) {
 	}
 }
 
+func TestGitLFSPullFlags(t *testing.T) {
+	tests := map[string]struct {
+		value          string
+		expectedResult []string
+	}{
+		"empty lfs pull flags": {
+			value:          "",
+			expectedResult: nil,
+		},
+		"use custom lfs pull flags": {
+			value:          "--exclude=assets/**",
+			expectedResult: []string{"--exclude=assets/**"},
+		},
+		"use custom lfs pull flags with multiple arguments": {
+			value:          "--include=*.bin,*.png --exclude=large/**",
+			expectedResult: []string{"--include=*.bin,*.png", "--exclude=large/**"},
+		},
+		"disabled": {
+			value:          "none",
+			expectedResult: []string{},
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			build := &Build{
+				Runner: &RunnerConfig{},
+				Job: spec.Job{
+					Variables: spec.Variables{
+						{Key: "GIT_LFS_PULL_FLAGS", Value: test.value},
+					},
+				},
+			}
+
+			result := build.GetGitLFSPullFlags()
+			assert.Equal(t, test.expectedResult, result)
+		})
+	}
+}
+
 func TestDefaultVariables(t *testing.T) {
 	tests := map[string]struct {
 		jobVariables  spec.Variables

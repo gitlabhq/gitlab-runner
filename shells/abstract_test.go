@@ -1893,6 +1893,45 @@ func expectGitConfigCleanup(sw *MockShellWriter, buildDir string, withSubmodules
 	return calls
 }
 
+func TestAbstractShell_writeLFSPullCmd(t *testing.T) {
+	tests := map[string]struct {
+		lfsPullFlags         string
+		expectedLFSPullFlags []any
+	}{
+		"default": {},
+		"with lfs pull flags": {
+			lfsPullFlags:         "--include=*.bin --exclude=large/**",
+			expectedLFSPullFlags: []any{"--include=*.bin", "--exclude=large/**"},
+		},
+		"lfs pull flags disabled": {
+			lfsPullFlags: "none",
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			shell := AbstractShell{}
+			mockWriter := NewMockShellWriter(t)
+
+			build := &common.Build{
+				Runner: &common.RunnerConfig{},
+				Job: spec.Job{
+					Variables: spec.Variables{
+						{Key: "GIT_LFS_PULL_FLAGS", Value: tc.lfsPullFlags},
+					},
+				},
+			}
+
+			mockWriter.EXPECT().IfCmd("git", "lfs", "version").Once()
+			mockWriter.EXPECT().Command("git", append([]any{"lfs", "pull"}, tc.expectedLFSPullFlags...)...).Once()
+			mockWriter.EXPECT().EmptyLine().Once()
+			mockWriter.EXPECT().EndIf().Once()
+
+			shell.writeLFSPullCmd(mockWriter, build)
+		})
+	}
+}
+
 func TestAbstractShell_writeSubmoduleUpdateCmd(t *testing.T) {
 	const (
 		exampleBaseURL  = "http://test.remote"
@@ -1905,10 +1944,12 @@ func TestAbstractShell_writeSubmoduleUpdateCmd(t *testing.T) {
 		Depth                   int
 		GitCleanFlags           string
 		GitSubmoduleUpdateFlags string
+		GitLFSPullFlags         string
 		ExpectedNoticeArgs      []any
 		ExpectedGitUpdateFlags  []any
 		ExpectedGitForEachFlags []any
 		ExpectedGitCleanFlags   []string
+		ExpectedGitLFSPullFlags []any
 	}{
 		"no recursion, no depth limit": {
 			Recursive:             false,
@@ -1962,6 +2003,14 @@ func TestAbstractShell_writeSubmoduleUpdateCmd(t *testing.T) {
 			ExpectedNoticeArgs:    []any{"Updating/initializing submodules..."},
 			GitCleanFlags:         "-ffdx a;b c&&d $(e) `f` |g",
 			ExpectedGitCleanFlags: []string{"-ffdx", "a;b", "c&&d", "$(e)", "`f`", "|g"},
+		},
+		"with lfs pull flags": {
+			Recursive:               false,
+			Depth:                   0,
+			GitLFSPullFlags:         "--exclude=large/** --include=*.bin",
+			ExpectedNoticeArgs:      []any{"Updating/initializing submodules..."},
+			ExpectedGitCleanFlags:   []string{"-ffdx"},
+			ExpectedGitLFSPullFlags: []any{"--exclude=large/**", "--include=*.bin"},
 		},
 	}
 
@@ -2037,7 +2086,7 @@ func TestAbstractShell_writeSubmoduleUpdateCmd(t *testing.T) {
 
 					mockWriter.EXPECT().IfCmd("git", "lfs", "version").Once()
 					mockWriter.EXPECT().Noticef("Pulling LFS files...").Once()
-					mockWriter.EXPECT().CommandArgExpand("git", slices.Concat(withExplicitSubmoduleCreds(), expectedGitForEachArgsFn(), []any{"git", "lfs", "pull"})...).Once()
+					mockWriter.EXPECT().CommandArgExpand("git", slices.Concat(withExplicitSubmoduleCreds(), expectedGitForEachArgsFn(), []any{"git", "lfs", "pull"}, tc.ExpectedGitLFSPullFlags)...).Once()
 					mockWriter.EXPECT().EndIf().Once()
 
 					err := shell.writeSubmoduleUpdateCmd(
@@ -2049,6 +2098,7 @@ func TestAbstractShell_writeSubmoduleUpdateCmd(t *testing.T) {
 								Variables: spec.Variables{
 									{Key: "GIT_SUBMODULE_UPDATE_FLAGS", Value: tc.GitSubmoduleUpdateFlags},
 									{Key: "GIT_CLEAN_FLAGS", Value: tc.GitCleanFlags},
+									{Key: "GIT_LFS_PULL_FLAGS", Value: tc.GitLFSPullFlags},
 								},
 							},
 							Runner: &common.RunnerConfig{

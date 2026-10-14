@@ -950,16 +950,22 @@ func (b *AbstractShell) writeCloneFetchCmds(w ShellWriter, info common.ShellScri
 		// Please read https://gitlab.com/gitlab-org/gitlab-runner/issues/3366 and
 		// https://github.com/git-lfs/git-lfs/issues/3524 for context.
 		if !build.IsLFSSmudgeDisabled() {
-			w.IfCmd("git", "lfs", "version")
-			w.Command("git", "lfs", "pull")
-			w.EmptyLine()
-			w.EndIf()
+			b.writeLFSPullCmd(w, build)
 		}
 	} else {
 		w.Noticef("Skipping Git checkout")
 	}
 
 	return nil
+}
+
+// writeLFSPullCmd writes `git lfs pull`, guarded by a check that Git LFS is installed.
+// GIT_LFS_PULL_FLAGS can be used to limit which objects are pulled.
+func (b *AbstractShell) writeLFSPullCmd(w ShellWriter, build *common.Build) {
+	w.IfCmd("git", "lfs", "version")
+	w.Command("git", append([]string{"lfs", "pull"}, build.GetGitLFSPullFlags()...)...)
+	w.EmptyLine()
+	w.EndIf()
 }
 
 func (b *AbstractShell) changeFilesOwnership(w ShellWriter, info common.ShellScriptInfo, dir ...string) {
@@ -1557,7 +1563,7 @@ func (b *AbstractShell) writeSubmoduleUpdateCmd(w ShellWriter, build *common.Bui
 	if !build.IsLFSSmudgeDisabled() {
 		w.IfCmd("git", "lfs", "version")
 		w.Noticef("Pulling LFS files...")
-		w.CommandArgExpand("git", withExplicitSubmoduleCreds(append(foreachArgs, "git", "lfs", "pull"))...)
+		w.CommandArgExpand("git", withExplicitSubmoduleCreds(slices.Concat(foreachArgs, []string{"git", "lfs", "pull"}, build.GetGitLFSPullFlags()))...)
 		w.EndIf()
 	}
 
