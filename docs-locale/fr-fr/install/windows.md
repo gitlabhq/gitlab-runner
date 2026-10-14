@@ -212,7 +212,7 @@ Assurez-vous d'avoir les codes couleur ANSI dans la sortie de votre programme. �
 
 L'interface web de GitLab CI émule un terminal UNIX ANSI (au moins partiellement). `gitlab-runner` achemine toute sortie du build directement vers l'interface web. Cela signifie que tous les codes couleur ANSI présents sont respectés.
 
-Les anciennes versions du terminal d'invite de commandes Windows (antérieures à Windows 10, version 1511) ne prennent pas en charge les codes couleur ANSI. Elles utilisent à la place des appels win32 ([`ANSI.SYS`](https://en.wikipedia.org/wiki/ANSI.SYS)) qui ne sont **pas** présents dans la chaîne à afficher. Lors de l'écriture de programmes multiplateformes, les développeurs utilisent généralement les codes couleur ANSI par défaut. Ces codes sont convertis en appels win32 lors de l'exécution sur un système Windows, par exemple [Colorama](https://pypi.org/project/colorama/).
+Les anciennes versions du terminal d'invite de commandes Windows (antérieures à Windows 10, version 1511) ne prennent pas en charge les codes couleur ANSI. Ces appels utilisent win32 ([`ANSI.SYS`](https://en.wikipedia.org/wiki/ANSI.SYS)) à la place, qui ne sont pas présents dans la chaîne à afficher. Lors de l'écriture de programmes multiplateformes, les développeurs utilisent généralement les codes couleur ANSI par défaut. Ces codes sont convertis en appels win32 lors de l'exécution sur un système Windows, par exemple, [Colorama](https://pypi.org/project/colorama/).
 
 Si votre programme effectue ce qui précède, vous devez désactiver cette conversion pour les builds CI afin que les codes ANSI restent dans la chaîne.
 

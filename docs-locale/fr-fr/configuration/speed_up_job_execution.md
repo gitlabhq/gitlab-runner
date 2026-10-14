@@ -157,7 +157,7 @@ Utilisez une compression plus rapide pour accélérer l'archivage et le téléch
 | Variable | Recommandé pour la vitesse | Description |
 |----------|------------------------|-------------|
 | `CACHE_COMPRESSION_LEVEL` | `fastest` ou `fast` | Moins de CPU et chargement ou téléchargement plus rapide. Les archives sont plus volumineuses. La valeur par défaut est `default`. |
-| `CACHE_COMPRESSION_FORMAT` | `zip` | `zip` est souvent plus rapide à créer. `tarzstd` offre un meilleur taux de compression mais peut être plus lent. |
+| `CACHE_COMPRESSION_FORMAT` | `zip` (caches de petite taille) ou `zipzstd` (caches de grande taille, multi-cœur) | `zipzstd` compresse en parallèle et est plus rapide que `zip` sur les runners multi-cœur avec des caches de grande taille. Cependant, la surcharge de Zstandard peut le rendre plus lent sur les runners mono-cœur ou avec des caches de petite taille. L'extraction parallèle `zipzstd` est le comportement par défaut (la compression est toujours parallèle). Si vous désactivez le feature flag `FF_USE_FASTZIP`, l'extraction est mono-thread. `tarzstd` offre le meilleur taux de compression, mais peut être plus lent. |
 
 Exemple de configuration dans `.gitlab-ci.yml` :
 

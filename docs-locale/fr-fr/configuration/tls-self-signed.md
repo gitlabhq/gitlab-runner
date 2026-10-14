@@ -265,7 +265,7 @@ systemctl restart docker.service
 
 Pour les systèmes d'exploitation autres qu'Ubuntu ou Alpine, consultez la documentation de votre système d'exploitation pour trouver les commandes appropriées permettant d'installer le certificat approuvé.
 
-En fonction de votre version de GitLab Runner et de l'environnement hôte Docker, vous devrez peut-être également désactiver le feature flag `FF_RESOLVE_FULL_TLS_CHAIN`.
+Dans GitLab Runner 15.5.1 à 16.3, selon l'environnement de l'hôte Docker, vous pourriez également avoir à désactiver le feature flag `FF_RESOLVE_FULL_TLS_CHAIN`. Dans GitLab Runner 16.4 et versions ultérieures, la valeur par défaut du flag est `false`. Il est obsolète et sera supprimé dans GitLab Runner 20.0.
 
 ### Erreurs `apt-get: not found` dans les jobs {#apt-get-not-found-errors-in-jobs}
 
