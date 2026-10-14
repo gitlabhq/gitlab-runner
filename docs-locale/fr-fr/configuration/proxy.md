@@ -201,6 +201,12 @@ Lorsque GitLab Runner reçoit une réponse `429 Too Many Requests`, il suit cett
 
 Le runner effectue jusqu'à 5 nouvelles tentatives pour les requêtes échouées. Si toutes les tentatives échouent, le runner consigne l'erreur provenant de la dernière réponse.
 
+Chaque réponse retentée est journalisée avec les champs `status`, `attempt`, `max_attempts`, `correlation_id`, `retry_after` et `ratelimit_reset_time`. Utilisez `correlation_id` pour trouver la requête correspondante dans les journaux de l'API GitLab. Chaque tentative, y compris les nouvelles tentatives, est comptabilisée dans la métrique `gitlab_runner_api_request_attempts_total` avec son statut HTTP. La limite de débit est visible sous la forme `gitlab_runner_api_request_attempts_total{status="429"}`, même lorsque la tentative finale réussit.
+
+Les requêtes de job (`POST /api/v4/jobs/request`) font exception. Une réponse `429` à une requête de job ne fait pas l'objet d'une nouvelle tentative. Le runner journalise `Checking for jobs... rate limited` au niveau `warning`, libère le slot `request_concurrency` et interroge à nouveau après l'intervalle habituel `check_interval`. Attendre la période `Retry-After` tout en maintenant le slot réduirait le taux de récupération des jobs de l'ensemble du gestionnaire de runner pour la durée de la limite de débit.
+
+Il en va de même lorsque le runner demande des jobs via le Job Router (`FF_USE_JOB_ROUTER`). GitLab Relay (KAS) retourne immédiatement au runner une requête de job soumise à une limite de débit, accompagnée de la valeur `Retry-After`, et le runner journalise la même ligne `Checking for jobs... rate limited`. La requête est comptabilisée dans `gitlab_runner_job_router_get_job_requests_total` avec `code="ResourceExhausted"`.
+
 ### Formats d'en-têtes pris en charge {#supported-header-formats}
 
 | En-tête                | Format              | Exemple                         |

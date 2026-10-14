@@ -322,7 +322,22 @@ runners:
 > [!note]
 > À la place de `emptyDir`, vous pouvez utiliser n'importe quel autre [type de volume pris en charge](_index.md#configure-volume-types). Étant donné que tous les fichiers qui ne sont pas explicitement gérés et stockés en tant qu'artefacts de build sont généralement éphémères, `emptyDir` convient à la plupart des cas.
 
-## Erreur : `failed to share mount point: /: permission denied` {#error-failed-to-share-mount-point--permission-denied}
+## Erreur : `could not lock config file` ou `unable to access '~/.gitconfig'` {#error-could-not-lock-config-file-or-unable-to-access-gitconfig}
+
+Les jobs qui utilisent une image non-root peuvent échouer lorsque `HOME` pointe vers un répertoire auquel l'utilisateur de build ne peut pas accéder, par exemple `/root` ou `/`. L'erreur spécifique dépend de l'opération Git et de votre version de GitLab Runner :
+
+- `error: could not lock config file /root/.gitconfig: Permission denied` se produit lorsque Git écrit une configuration globale, par exemple `git config --global` dans un script de job ou le paramètre `safe.directory`.
+- `fatal: unable to access '/root/.gitconfig': Permission denied` se produit sur n'importe quelle commande Git dans GitLab Runner 19.2 avec le [feature flag `FF_GIT_URLS_WITHOUT_TOKENS`](../../configuration/feature-flags.md) activé.
+
+Kubernetes ne dérive pas `HOME` de l'utilisateur dans le contexte de sécurité ; ainsi, une image non-root sans `HOME` explicite conserve la valeur définie dans l'image.
+
+Pour résoudre le problème, accordez à l'utilisateur de build un répertoire personnel accessible en écriture :
+
+- Montez un volume et faites pointer `HOME` vers celui-ci, comme indiqué dans [la section sur le système de fichiers racine en lecture seule](#for-the-build-pod).
+- Définissez `HOME` dans l'image, par exemple `ENV HOME=/home/user`.
+- Exportez `HOME` dans un `pre_build_script`, par exemple `export HOME="$(mktemp -d)"`. Cela couvre uniquement les commandes Git dans le script de job, et non la récupération des sources.
+
+## Erreur :`failed to share mount point: /: permission denied` {#error-failed-to-share-mount-point--permission-denied}
 
 Les outils de conteneurs rootless qui utilisent [rootlesskit](https://github.com/rootless-containers/rootlesskit) (tels que rootless BuildKit, Podman ou Docker) peuvent échouer sur un runner Kubernetes avec une erreur telle que :
 

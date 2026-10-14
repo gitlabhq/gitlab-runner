@@ -65,7 +65,6 @@ Pour installer GitLab Runner à partir du chart Helm :
    helm repo add gitlab https://charts.gitlab.io
    ```
 
-1. Si vous utilisez Helm 2, initialisez Helm avec `helm init`.
 1. Vérifiez les versions de GitLab Runner auxquelles vous avez accès :
 
    ```shell
@@ -81,10 +80,6 @@ Pour installer GitLab Runner à partir du chart Helm :
 1. Après avoir [configuré](#configure-gitlab-runner-with-the-helm-chart) GitLab Runner dans votre fichier `values.yaml`, exécutez cette commande en modifiant les paramètres selon vos besoins :
 
    ```shell
-   # For Helm 2
-   helm install --namespace <NAMESPACE> --name gitlab-runner -f <CONFIG_VALUES_FILE> gitlab/gitlab-runner
-
-   # For Helm 3
    helm install --namespace <NAMESPACE> gitlab-runner -f <CONFIG_VALUES_FILE> gitlab/gitlab-runner
    ```
 
@@ -94,13 +89,9 @@ Pour installer GitLab Runner à partir du chart Helm :
 
 ### Vérifier les versions disponibles du chart Helm GitLab Runner {#check-available-gitlab-runner-helm-chart-versions}
 
-Les charts Helm et GitLab Runner ne suivent pas le même versionnement. Pour voir les correspondances de versions entre les deux, exécutez la commande pour votre version de Helm :
+Les charts Helm et GitLab Runner ne suivent pas le même versionnement. Pour afficher les correspondances de versions entre les deux, exécutez cette commande :
 
 ```shell
-# For Helm 2
-helm search -l gitlab/gitlab-runner
-
-# For Helm 3
 helm search repo -l gitlab/gitlab-runner
 ```
 
@@ -117,6 +108,23 @@ gitlab/gitlab-runner  0.61.2        16.8.0      GitLab Runner
 ...
 ```
 
+### Installer GitLab Runner depuis un registre OCI {#install-gitlab-runner-from-an-oci-registry}
+
+Les versions 0.92.2 et ultérieures du chart Helm sont également disponibles en tant qu'artefacts Open Container Initiative (OCI). Utilisez cette méthode comme alternative à l'ajout du dépôt Helm GitLab.
+
+Après avoir [configuré GitLab Runner avec le chart Helm](#configure-gitlab-runner-with-the-helm-chart) dans votre fichier `values.yaml`, exécutez cette commande et modifiez les paramètres selon vos besoins :
+
+```shell
+helm install --namespace <NAMESPACE> gitlab-runner \
+  oci://registry.gitlab.com/charts/charts.gitlab.io/release/gitlab-runner \
+  --version <RUNNER_HELM_CHART_VERSION> \
+  -f <CONFIG_VALUES_FILE>
+```
+
+- `<NAMESPACE>` :  l'espace de nommage Kubernetes dans lequel vous souhaitez installer GitLab Runner.
+- `<RUNNER_HELM_CHART_VERSION>` : la version du chart à installer. Utilisez `0.92.2` ou une version ultérieure.
+- `<CONFIG_VALUES_FILE>` : Le chemin vers le fichier de valeurs contenant votre configuration personnalisée.
+
 ## Mettre à niveau GitLab Runner avec le chart Helm {#upgrade-gitlab-runner-with-the-helm-chart}
 
 Prérequis :
@@ -131,9 +139,9 @@ Pour modifier votre configuration ou mettre à jour les charts, utilisez `helm u
 helm upgrade --namespace <NAMESPACE> -f <CONFIG_VALUES_FILE> <RELEASE-NAME> gitlab/gitlab-runner
 ```
 
-- `<NAMESPACE>` :  L'espace de nommage Kubernetes dans lequel vous avez installé GitLab Runner.
-- `<CONFIG_VALUES_FILE>` :  Le chemin vers le fichier de valeurs contenant votre configuration personnalisée. Pour le créer, consultez [Configurer GitLab Runner avec le chart Helm](#configure-gitlab-runner-with-the-helm-chart).
-- `<RELEASE-NAME>` :  Le nom que vous avez donné au chart lors de son installation. Dans la section d'installation, l'exemple l'a nommé `gitlab-runner`.
+- `<NAMESPACE>` : L'espace de nommage Kubernetes dans lequel vous avez installé GitLab Runner.
+- `<CONFIG_VALUES_FILE>` : Le chemin vers le fichier de valeurs contenant votre configuration personnalisée. Pour le créer, consultez [Configurer GitLab Runner avec le chart Helm](#configure-gitlab-runner-with-the-helm-chart).
+- `<RELEASE-NAME>` : Le nom que vous avez donné au chart lors de son installation. Dans la section d'installation, l'exemple l'a nommé `gitlab-runner`.
 - Pour mettre à jour vers une version spécifique du chart Helm GitLab Runner plutôt que la dernière, ajoutez `--version <RUNNER_HELM_CHART_VERSION>` à votre commande `helm upgrade`.
 
 ## Désinstaller GitLab Runner avec le chart Helm {#uninstall-gitlab-runner-with-the-helm-chart}
