@@ -114,6 +114,8 @@ const (
 )
 
 var (
+	// Duplicated in executors/kubernetes/autoscaler for pause pod labels, because that
+	// package cannot import this one. Keep the two definitions in sync.
 	runnerLabelNamespacePattern = regexp.MustCompile(`(?i)(^|.*\.)` + regexp.QuoteMeta(runnerLabelNamespace) + `(\/.*|$)`)
 
 	PropagationPolicy = metav1.DeletePropagationBackground

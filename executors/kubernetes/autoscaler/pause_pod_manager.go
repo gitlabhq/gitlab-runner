@@ -3,7 +3,9 @@ package autoscaler
 import (
 	"context"
 	"fmt"
+	"maps"
 	"math"
+	"regexp"
 	"sync"
 	"time"
 
@@ -15,7 +17,10 @@ import (
 	schedulingv1 "k8s.io/api/scheduling/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
+	apivalidation "k8s.io/apimachinery/pkg/api/validation"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1validation "k8s.io/apimachinery/pkg/apis/meta/v1/validation"
+	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/client-go/kubernetes"
 
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/dns"
@@ -52,7 +57,19 @@ const (
 	// orphanThreshold is how long a deployment can go without a heartbeat before
 	// it's considered orphaned and eligible for cleanup.
 	orphanThreshold = 1 * time.Hour
+
+	// runnerLabelNamespace is the label namespace reserved for runner-managed labels.
+	// User-configured pause pod labels in this namespace, or any subdomain of it such as
+	// manager.runner.gitlab.com, are ignored so the Deployment selector cannot be broken.
+	runnerLabelNamespace = "runner.gitlab.com"
 )
+
+// runnerLabelNamespacePattern mirrors runnerLabelNamespacePattern in the kubernetes executor
+// package, which applies the same rule to job pod labels. That package imports this one, so
+// the pattern is duplicated rather than imported. Moving both to a shared package under
+// executors/kubernetes/internal would remove the duplication; it was not done here to keep
+// this change small. Keep the two definitions in sync.
+var runnerLabelNamespacePattern = regexp.MustCompile(`(?i)(^|.*\.)` + regexp.QuoteMeta(runnerLabelNamespace) + `(\/.*|$)`)
 
 // PausePodManagerConfig holds configuration for the pause pod manager.
 type PausePodManagerConfig struct {
@@ -84,6 +101,12 @@ type PausePodManagerConfig struct {
 	RuntimeClassName *string
 
 	ImagePullSecrets []api.LocalObjectReference
+
+	// Labels are additional labels for the pause pod template. Labels in the
+	// runner.gitlab.com namespace are ignored.
+	Labels map[string]string
+	// Annotations for the pause pod template.
+	Annotations map[string]string
 }
 
 // PausePodManager manages a Deployment of pause pods for pre-warming cluster capacity.
@@ -106,6 +129,10 @@ type PausePodManager struct {
 func NewPausePodManager(client kubernetes.Interface, config PausePodManagerConfig, log logrus.FieldLogger, metrics *Metrics) (*PausePodManager, error) {
 	if err := config.Policies.ParseAll(); err != nil {
 		return nil, fmt.Errorf("parsing policies: %w", err)
+	}
+
+	if err := validatePodMetadata(config.Labels, config.Annotations); err != nil {
+		return nil, err
 	}
 
 	return &PausePodManager{
@@ -477,7 +504,8 @@ func (m *PausePodManager) buildDeployment(replicas int) *appsv1.Deployment {
 			},
 			Template: api.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels: labels,
+					Labels:      m.podTemplateLabels(labels),
+					Annotations: m.config.Annotations,
 				},
 				Spec: api.PodSpec{
 					Containers: []api.Container{
@@ -505,6 +533,44 @@ func (m *PausePodManager) buildDeployment(replicas int) *appsv1.Deployment {
 	}
 
 	return deployment
+}
+
+// validatePodMetadata applies the API server's label and annotation rules to the
+// user-configured pause pod metadata so a misconfiguration is reported once, with the
+// offending key, instead of as a repeating Deployment create error in the reconcile loop.
+func validatePodMetadata(labels, annotations map[string]string) error {
+	var errs field.ErrorList
+	errs = append(errs, metav1validation.ValidateLabels(labels, field.NewPath("pause_pod_labels"))...)
+	errs = append(errs, apivalidation.ValidateAnnotations(annotations, field.NewPath("pause_pod_annotations"))...)
+
+	if len(errs) > 0 {
+		return fmt.Errorf("validating pause pod metadata: %w", errs.ToAggregate())
+	}
+
+	return nil
+}
+
+// podTemplateLabels merges user-configured labels on top of the runner-managed labels.
+// The runner-managed labels are copied rather than modified because the caller also
+// uses them as the Deployment selector, which must contain only runner-managed labels.
+func (m *PausePodManager) podTemplateLabels(runnerLabels map[string]string) map[string]string {
+	labels := make(map[string]string, len(runnerLabels)+len(m.config.Labels))
+	maps.Copy(labels, runnerLabels)
+
+	for key, val := range m.config.Labels {
+		if runnerLabelNamespacePattern.MatchString(key) {
+			// Warn rather than debug: this runs once per Deployment create, and a
+			// silently dropped label is the failure mode this feature exists to remove.
+			m.log.WithField("label", key).Warnf(
+				"not setting pause pod label, overwrite of labels in the %q namespace is not allowed",
+				runnerLabelNamespace,
+			)
+			continue
+		}
+		labels[key] = val
+	}
+
+	return labels
 }
 
 // BuildResourceRequests creates resource requests matching typical job pod requirements.

@@ -818,6 +818,11 @@ type KubernetesAutoscalerConfig struct {
 	Policy []AutoscalerPolicyConfig `toml:"policy,omitempty" json:"policy,omitempty" description:"Scaling policies for pause pods"`
 
 	PausePodImagePullSecrets []string `toml:"pause_pod_image_pull_secrets,omitempty" json:"pause_pod_image_pull_secrets,omitempty" long:"pause-pod-image-pull-secrets" env:"KUBERNETES_AUTOSCALER_PAUSE_POD_IMAGE_PULL_SECRETS" description:"A list of image pull secrets for pause pod images"`
+
+	// PausePodLabels are additional labels for pause pods. Labels in the runner.gitlab.com namespace are ignored.
+	PausePodLabels map[string]string `toml:"pause_pod_labels,omitempty" json:"pause_pod_labels,omitempty" long:"pause-pod-labels" description:"A toml table/json object of key-value. Value is expected to be a string. When set, pause pods are created with the given labels. Labels in the runner.gitlab.com namespace are ignored."`
+	// PausePodAnnotations are annotations for pause pods.
+	PausePodAnnotations map[string]string `toml:"pause_pod_annotations,omitempty" json:"pause_pod_annotations,omitempty" long:"pause-pod-annotations" description:"A toml table/json object of key-value. Value is expected to be a string. When set, pause pods are created with the given annotations."`
 }
 
 type RequestRetryLimit int

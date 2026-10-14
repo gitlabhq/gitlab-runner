@@ -152,6 +152,12 @@ func (p *Provider) createManager(config *common.RunnerConfig) (*PausePodManager,
 	k8sConfig := config.Kubernetes
 	autoscalerConfig := k8sConfig.Autoscaler
 
+	// ensureManager retries on every Acquire, so reject an invalid config before
+	// creating a client or making any API call.
+	if err := validatePodMetadata(autoscalerConfig.PausePodLabels, autoscalerConfig.PausePodAnnotations); err != nil {
+		return nil, nil, err
+	}
+
 	kubeConfig, err := p.getKubeConfig(k8sConfig)
 	if err != nil {
 		return nil, nil, err
@@ -205,6 +211,8 @@ func (p *Provider) createManager(config *common.RunnerConfig) (*PausePodManager,
 		ServiceAccountName: k8sConfig.ServiceAccount,
 		RuntimeClassName:   k8sConfig.RuntimeClassName,
 		ImagePullSecrets:   localObjectReferences(autoscalerConfig.PausePodImagePullSecrets),
+		Labels:             autoscalerConfig.PausePodLabels,
+		Annotations:        autoscalerConfig.PausePodAnnotations,
 	}
 
 	manager, err := NewPausePodManager(client, managerConfig, log, p.metrics)

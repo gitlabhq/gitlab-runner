@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
+	logrustest "github.com/sirupsen/logrus/hooks/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
@@ -23,9 +24,10 @@ func TestNewPausePodManager(t *testing.T) {
 	log := logrus.NewEntry(logrus.New())
 
 	tests := []struct {
-		name    string
-		config  PausePodManagerConfig
-		wantErr bool
+		name        string
+		config      PausePodManagerConfig
+		wantErr     bool
+		errContains string
 	}{
 		{
 			name: "valid config with policies",
@@ -60,6 +62,50 @@ func TestNewPausePodManager(t *testing.T) {
 			},
 			wantErr: true,
 		},
+		{
+			name: "valid labels and annotations",
+			config: PausePodManagerConfig{
+				Namespace:        "default",
+				RunnerShortToken: "test-runner",
+				SystemID:         "s_testsystem",
+				Labels:           map[string]string{"team": "platform-ci", "tags.datadoghq.com/env": "prd"},
+				Annotations:      map[string]string{"arm/include": "true"},
+			},
+			wantErr: false,
+		},
+		{
+			name: "invalid label key",
+			config: PausePodManagerConfig{
+				Namespace:        "default",
+				RunnerShortToken: "test-runner",
+				SystemID:         "s_testsystem",
+				Labels:           map[string]string{"team name": "platform-ci"},
+			},
+			wantErr:     true,
+			errContains: `pause_pod_labels: Invalid value: "team name"`,
+		},
+		{
+			name: "invalid label value",
+			config: PausePodManagerConfig{
+				Namespace:        "default",
+				RunnerShortToken: "test-runner",
+				SystemID:         "s_testsystem",
+				Labels:           map[string]string{"team": "platform/ci"},
+			},
+			wantErr:     true,
+			errContains: `pause_pod_labels: Invalid value: "platform/ci"`,
+		},
+		{
+			name: "invalid annotation key",
+			config: PausePodManagerConfig{
+				Namespace:        "default",
+				RunnerShortToken: "test-runner",
+				SystemID:         "s_testsystem",
+				Annotations:      map[string]string{"arm//include": "true"},
+			},
+			wantErr:     true,
+			errContains: `pause_pod_annotations: Invalid value: "arm//include"`,
+		},
 	}
 
 	for _, tt := range tests {
@@ -68,6 +114,9 @@ func TestNewPausePodManager(t *testing.T) {
 			if tt.wantErr {
 				assert.Error(t, err)
 				assert.Nil(t, manager)
+				if tt.errContains != "" {
+					assert.ErrorContains(t, err, tt.errContains)
+				}
 			} else {
 				require.NoError(t, err)
 				assert.NotNil(t, manager)
@@ -206,6 +255,121 @@ func TestPausePodManager_BuildDeployment_DefaultImage(t *testing.T) {
 
 	deployment := manager.buildDeployment(1)
 	assert.Equal(t, defaultPausePodImage, deployment.Spec.Template.Spec.Containers[0].Image)
+}
+
+func TestPausePodManager_BuildDeployment_LabelsAndAnnotations(t *testing.T) {
+	runnerLabels := map[string]string{
+		pausePodLabel: pausePodLabelValue,
+		runnerIDLabel: "runner-123",
+		systemIDLabel: "s_testsystem",
+	}
+
+	tests := map[string]struct {
+		labels              map[string]string
+		annotations         map[string]string
+		expectedLabels      map[string]string
+		expectedAnnotations map[string]string
+	}{
+		"no labels or annotations configured": {
+			expectedLabels:      runnerLabels,
+			expectedAnnotations: nil,
+		},
+		"labels and annotations are added to the pod template": {
+			labels:      map[string]string{"team": "platform-ci", "tags.datadoghq.com/env": "prd"},
+			annotations: map[string]string{"arm/include": "true"},
+			expectedLabels: map[string]string{
+				pausePodLabel:            pausePodLabelValue,
+				runnerIDLabel:            "runner-123",
+				systemIDLabel:            "s_testsystem",
+				"team":                   "platform-ci",
+				"tags.datadoghq.com/env": "prd",
+			},
+			expectedAnnotations: map[string]string{"arm/include": "true"},
+		},
+		"labels in the runner.gitlab.com namespace are ignored": {
+			labels: map[string]string{
+				pausePodLabel:                        "false",
+				runnerIDLabel:                        "other-runner",
+				"runner.gitlab.com/Pause-Pod":        "false",
+				"project.runner.gitlab.com/id":       "42",
+				"runner.gitlab.com":                  "x",
+				"team":                               "platform-ci",
+				"not-runner.gitlab.com/allowed":      "yes",
+				"runner.gitlab.com.example.org/name": "yes",
+			},
+			expectedLabels: map[string]string{
+				pausePodLabel:                        pausePodLabelValue,
+				runnerIDLabel:                        "runner-123",
+				systemIDLabel:                        "s_testsystem",
+				"team":                               "platform-ci",
+				"not-runner.gitlab.com/allowed":      "yes",
+				"runner.gitlab.com.example.org/name": "yes",
+			},
+			expectedAnnotations: nil,
+		},
+		"annotations in the runner.gitlab.com namespace are not filtered": {
+			// Runner-managed annotations live on the Deployment, not on the pod
+			// template, so there is nothing for a user annotation to collide with.
+			annotations:         map[string]string{"runner.gitlab.com/custom": "x"},
+			expectedLabels:      runnerLabels,
+			expectedAnnotations: map[string]string{"runner.gitlab.com/custom": "x"},
+		},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			config := PausePodManagerConfig{
+				Namespace:        "default",
+				RunnerShortToken: "runner-123",
+				SystemID:         "s_testsystem",
+				Labels:           tt.labels,
+				Annotations:      tt.annotations,
+			}
+
+			manager, err := NewPausePodManager(fake.NewClientset(), config, logrus.NewEntry(logrus.New()), nil)
+			require.NoError(t, err)
+
+			deployment := manager.buildDeployment(1)
+
+			assert.Equal(t, tt.expectedLabels, deployment.Spec.Template.Labels)
+			assert.Equal(t, tt.expectedAnnotations, deployment.Spec.Template.Annotations)
+
+			// User metadata must never leak into the Deployment's own labels or selector,
+			// otherwise a config change would break the immutable selector.
+			assert.Equal(t, runnerLabels, deployment.Labels)
+			assert.Equal(t, runnerLabels, deployment.Spec.Selector.MatchLabels)
+		})
+	}
+}
+
+// The constructor rejects uppercase label prefixes as invalid syntax before the reserved
+// namespace filter runs, so the filter's case-insensitive match is exercised directly.
+func TestPausePodManager_PodTemplateLabels_ReservedNamespaceIsCaseInsensitive(t *testing.T) {
+	logger, hook := logrustest.NewNullLogger()
+
+	manager := &PausePodManager{
+		config: PausePodManagerConfig{
+			Labels: map[string]string{
+				"RUNNER.GITLAB.COM/pause-pod": "false",
+				"Manager.Runner.GitLab.com/x": "y",
+				"team":                        "platform-ci",
+			},
+		},
+		log: logger,
+	}
+
+	runnerLabels := map[string]string{pausePodLabel: pausePodLabelValue}
+
+	labels := manager.podTemplateLabels(runnerLabels)
+
+	assert.Equal(t, map[string]string{pausePodLabel: pausePodLabelValue, "team": "platform-ci"}, labels)
+	assert.Equal(t, map[string]string{pausePodLabel: pausePodLabelValue}, runnerLabels, "input map must not be modified")
+
+	require.Len(t, hook.Entries, 2)
+	for _, entry := range hook.Entries {
+		assert.Equal(t, logrus.WarnLevel, entry.Level)
+		assert.Contains(t, entry.Message, "not setting pause pod label")
+	}
 }
 
 func TestPausePodManager_CreateDeployment(t *testing.T) {

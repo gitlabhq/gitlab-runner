@@ -158,6 +158,30 @@ func TestConfigParse(t *testing.T) {
 				assert.Equal(t, []string{"internal-registry-secret"}, autoscaler.PausePodImagePullSecrets)
 			},
 		},
+		"parse pause pod labels and annotations": {
+			config: `
+						[[runners]]
+							executor = "kubernetes"
+								[runners.kubernetes]
+									[runners.kubernetes.autoscaler]
+										[runners.kubernetes.autoscaler.pause_pod_labels]
+											"team" = "platform-ci"
+											"tags.datadoghq.com/env" = "prd"
+										[runners.kubernetes.autoscaler.pause_pod_annotations]
+											"arm/include" = "true"
+					`,
+			validateConfig: func(t *testing.T, config *Config) {
+				require.Equal(t, 1, len(config.Runners))
+
+				autoscaler := config.Runners[0].Kubernetes.Autoscaler
+
+				assert.Equal(t, map[string]string{
+					"team":                   "platform-ci",
+					"tags.datadoghq.com/env": "prd",
+				}, autoscaler.PausePodLabels)
+				assert.Equal(t, map[string]string{"arm/include": "true"}, autoscaler.PausePodAnnotations)
+			},
+		},
 		"parse Docker Container Labels with string key and value": {
 			config: `
                         [[runners]]
