@@ -230,6 +230,22 @@ func TestBuild_GetSources(t *testing.T) {
 		assert.Empty(t, config.GetSources.SubmoduleUpdateFlags)
 	})
 
+	t.Run("lfs pull flags", func(t *testing.T) {
+		vars := newTestVars(t, map[string]string{
+			"GIT_LFS_PULL_FLAGS": "--include=*.bin --exclude=large/**",
+		})
+		config := buildConfig(t, baseJob(), vars)
+		assert.Equal(t, []string{"--include=*.bin", "--exclude=large/**"}, config.GetSources.LFSPullFlags)
+	})
+
+	t.Run("GIT_LFS_PULL_FLAGS=none clears flags", func(t *testing.T) {
+		vars := newTestVars(t, map[string]string{
+			"GIT_LFS_PULL_FLAGS": "none",
+		})
+		config := buildConfig(t, baseJob(), vars)
+		assert.Empty(t, config.GetSources.LFSPullFlags)
+	})
+
 	t.Run("feature flags", func(t *testing.T) {
 		ff := func(name string) bool {
 			switch name {

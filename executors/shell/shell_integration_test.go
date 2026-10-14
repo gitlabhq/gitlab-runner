@@ -811,6 +811,45 @@ func TestBuildWithGitStrategyFetchWithUserDisabledLFS(t *testing.T) {
 	})
 }
 
+func TestBuildWithGitLFSPullFlags(t *testing.T) {
+	tests := map[string]struct {
+		flags  string
+		assert func(t *testing.T, build *common.Build)
+	}{
+		"exclude skips the LFS object": {
+			flags:  "--exclude=files/lfs/**",
+			assert: assertLFSFileNotDownloaded,
+		},
+		"include downloads the LFS object": {
+			flags:  "--include=files/lfs/**",
+			assert: assertLFSFileDownloaded,
+		},
+		"none downloads the LFS object": {
+			flags:  "none",
+			assert: assertLFSFileDownloaded,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			shellstest.OnEachShell(t, func(t *testing.T, shell string) {
+				successfulBuild, err := common.GetRemoteSuccessfulLFSBuild()
+				assert.NoError(t, err)
+				build := newBuild(t, successfulBuild, shell)
+
+				build.Variables = append(
+					build.Variables,
+					spec.Variable{Key: "GIT_LFS_PULL_FLAGS", Value: tc.flags},
+				)
+
+				err = buildtest.RunBuild(t, build)
+				assert.NoError(t, err)
+				tc.assert(t, build)
+			})
+		})
+	}
+}
+
 func TestBuildWithGitStrategyFetchNoCheckoutWithoutLFS(t *testing.T) {
 	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
 		successfulBuild, err := common.GetSuccessfulBuild()

@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -1200,6 +1201,99 @@ func TestWalkRemove(t *testing.T) {
 				_, err := os.Stat(filepath.Join(root, rel))
 				assert.NoError(t, err, "expected %s to still exist", rel)
 			}
+		})
+	}
+}
+
+// stubGit puts a fake git on PATH that succeeds and records the arguments of
+// every call, one call per line. It returns a function that reads the calls.
+func stubGit(t *testing.T) func() []string {
+	t.Helper()
+
+	if runtime.GOOS == "windows" {
+		t.Skip("git stub is a shell script")
+	}
+
+	dir := t.TempDir()
+	log := filepath.Join(dir, "calls.log")
+	script := "#!/bin/sh\necho \"$*\" >> '" + log + "'\n"
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "git"), []byte(script), 0o755))
+	t.Setenv("PATH", dir+string(os.PathListSeparator)+os.Getenv("PATH"))
+
+	return func() []string {
+		data, err := os.ReadFile(log)
+		if os.IsNotExist(err) {
+			return nil
+		}
+		require.NoError(t, err)
+		return strings.Split(strings.TrimSpace(string(data)), "\n")
+	}
+}
+
+func TestGetSources_GitLFSPull(t *testing.T) {
+	tests := map[string]struct {
+		lfsDisabled   bool
+		lfsPullFlags  []string
+		expectedCalls []string
+	}{
+		"without flags": {
+			expectedCalls: []string{"lfs version", "lfs pull"},
+		},
+		"with flags": {
+			lfsPullFlags:  []string{"--include=*.bin", "--exclude=large/**"},
+			expectedCalls: []string{"lfs version", "lfs pull --include=*.bin --exclude=large/**"},
+		},
+		"lfs disabled": {
+			lfsDisabled:  true,
+			lfsPullFlags: []string{"--include=*.bin"},
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			calls := stubGit(t)
+			e := newTestEnv(t, "bash")
+
+			gs := GetSources{LFSDisabled: tc.lfsDisabled, LFSPullFlags: tc.lfsPullFlags}
+			require.NoError(t, gs.gitLFSPull(t.Context(), e, nil))
+
+			assert.Equal(t, tc.expectedCalls, calls())
+		})
+	}
+}
+
+func TestGetSources_SubmoduleLFSPullFlags(t *testing.T) {
+	tests := map[string]struct {
+		recursive    bool
+		lfsPullFlags []string
+		expectedCall string
+	}{
+		"without flags": {
+			expectedCall: "submodule foreach git lfs pull",
+		},
+		"with flags": {
+			lfsPullFlags: []string{"--include=*.bin", "--exclude=large/**"},
+			expectedCall: "submodule foreach git lfs pull --include=*.bin --exclude=large/**",
+		},
+		"recursive with flags": {
+			recursive:    true,
+			lfsPullFlags: []string{"--exclude=large/**"},
+			expectedCall: "submodule foreach --recursive git lfs pull --exclude=large/**",
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			calls := stubGit(t)
+			e := newTestEnv(t, "bash")
+			extConfig := filepath.Join(e.TmpDir, "config")
+
+			gs := GetSources{LFSPullFlags: tc.lfsPullFlags}
+			require.NoError(t, gs.doSubmoduleUpdate(t.Context(), e, extConfig, nil, tc.recursive))
+
+			absExtConfig, err := filepath.Abs(extConfig)
+			require.NoError(t, err)
+			assert.Contains(t, calls(), "-c include.path="+absExtConfig+" "+tc.expectedCall)
 		})
 	}
 }

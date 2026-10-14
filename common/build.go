@@ -2285,6 +2285,10 @@ func (b *Build) GetGitSubmoduleUpdateFlags() []string {
 	return b.Settings().GitSubmoduleUpdateFlags
 }
 
+func (b *Build) GetGitLFSPullFlags() []string {
+	return b.Settings().GitLFSPullFlags
+}
+
 func (b *Build) IsDebugTraceEnabled() bool {
 	return b.Settings().CIDebugTrace
 }

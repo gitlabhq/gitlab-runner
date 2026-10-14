@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -58,6 +59,7 @@ type GetSources struct {
 	MaxAttempts       int      `json:"max_attempts,omitempty"`
 	SubmoduleStrategy string   `json:"submodule_strategy,omitempty"`
 	LFSDisabled       bool     `json:"lfs_disabled,omitempty"`
+	LFSPullFlags      []string `json:"lfs_pull_flags,omitempty"`
 	Depth             int      `json:"depth,omitempty"`
 	RepoURL           string   `json:"repo_url,omitempty"`
 	Refspecs          []string `json:"refspecs,omitempty"`
@@ -711,7 +713,7 @@ func (s GetSources) gitLFSPull(ctx context.Context, e *env.Env, extraEnv map[str
 	if s.LFSDisabled || !hasCommand(ctx, "git", "lfs", "version") {
 		return nil
 	}
-	return git(ctx, e, extraEnv, "lfs", "pull")
+	return git(ctx, e, extraEnv, append([]string{"lfs", "pull"}, s.LFSPullFlags...)...)
 }
 
 func (s GetSources) updateSubmodules(ctx context.Context, e *env.Env, extConfigFile string, extraEnv map[string]string) error {
@@ -816,7 +818,7 @@ func (s GetSources) doSubmoduleUpdate(ctx context.Context, e *env.Env, extConfig
 
 	if !s.LFSDisabled && hasCommand(ctx, "git", "lfs", "version") {
 		e.Noticef("Pulling LFS files for submodules...")
-		_ = git(ctx, e, extraEnv, withCreds(append(foreachArgs, "git", "lfs", "pull"))...)
+		_ = git(ctx, e, extraEnv, withCreds(slices.Concat(foreachArgs, []string{"git", "lfs", "pull"}, s.LFSPullFlags))...)
 	}
 
 	return nil

@@ -54,6 +54,7 @@ type BuildSettings struct {
 	GitCloneExtraFlags      cmdFlags
 	GitFetchExtraFlags      cmdFlags
 	GitSubmoduleUpdateFlags cmdFlags
+	GitLFSPullFlags         cmdFlags
 	GitLFSSkipSmudge        bool
 	GitSubmoduleForceHTTPS  bool
 
@@ -167,6 +168,7 @@ func validateVariables(variables spec.Variables, b *Build, defaultGitStategy Git
 		validate(variables, "GIT_CLONE_EXTRA_FLAGS", &b.buildSettings.GitCloneExtraFlags, cmdFlags{}),
 		validate(variables, "GIT_FETCH_EXTRA_FLAGS", &b.buildSettings.GitFetchExtraFlags, gitFetchFlagsDefault),
 		validate(variables, "GIT_SUBMODULE_UPDATE_FLAGS", &b.buildSettings.GitSubmoduleUpdateFlags, nil),
+		validate(variables, "GIT_LFS_PULL_FLAGS", &b.buildSettings.GitLFSPullFlags, nil),
 		validate(variables, "GIT_LFS_SKIP_SMUDGE", &b.buildSettings.GitLFSSkipSmudge, false),
 		validate(variables, "GIT_SUBMODULE_FORCE_HTTPS", &b.buildSettings.GitSubmoduleForceHTTPS, false),
 
