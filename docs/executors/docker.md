@@ -1413,6 +1413,13 @@ GitLab Runner automatically selects the helper image that matches the host's Win
 architecture, so you don't usually need to set `helper_image` manually. For example, on a Windows
 Server 2025 (24H2) ARM64 host, the runner selects the `arm64-vXYZ-servercore24H2` image.
 
+The multi-platform tags without an OS suffix (`gitlab/gitlab-runner-helper:vXYZ` and
+`gitlab/gitlab-runner-helper:vXYZ-pwsh`) include only one Windows version. In GitLab Runner 19.3
+and later, the `vXYZ` and `vXYZ-pwsh` tags include Windows Server 2025 (24H2) only.
+If you override `helper_image` with one of these tags on an older Windows host, image resolution
+fails. Instead, use the tag for your Windows version without an architecture prefix. For example,
+use `vXYZ-servercore21H2` instead of `vXYZ`, or `vXYZ-nanoserver21H2` instead of `vXYZ-pwsh`.
+
 > [!note]
 > ARM64 helper images are only available for Windows Server 2025 (24H2). Microsoft does not publish ARM64
 > base images for Windows Server 2019 (1809) or 2022 (21H2). On those versions, the runner falls back to

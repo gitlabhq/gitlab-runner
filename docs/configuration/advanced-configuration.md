@@ -2717,6 +2717,11 @@ valid and point to the same image.
     helper_image = "my.registry.local/gitlab/gitlab-runner-helper:x86_64-v${CI_RUNNER_VERSION}"
 ```
 
+On Windows, the `v${CI_RUNNER_VERSION}` and `v${CI_RUNNER_VERSION}-pwsh` tags include only one
+Windows version. On an older Windows host, use a tag with an explicit Windows version, such as
+`v${CI_RUNNER_VERSION}-servercore21H2`. For more information, see
+[Windows helper images](../executors/docker.md#windows-helper-images).
+
 #### When using PowerShell Core
 
 An additional version of the helper image for Linux,

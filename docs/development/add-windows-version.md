@@ -182,6 +182,18 @@ We should update the following:
    indexes. For a new Windows flavor, also add an entry to `knownWinFlavors`. The
    `TestHelperImagesRejectedTags` test fails if a version is missing, but not if a version is in
    the wrong position. To verify, run `make pusher-test`.
+
+   Moving a new version to the front changes which Windows version the multi-platform `vXYZ`
+   and `vXYZ-pwsh` tags resolve to. To announce the change to users who pin those tags on older
+   hosts before they upgrade:
+
+   - In the [Windows helper images](../executors/docker.md#windows-helper-images) section of
+     `docs/executors/docker.md`, change the current `and later` sentence to end at the last
+     runner version that includes the previous Windows version. Then add an
+     `In GitLab Runner X.Y and later` sentence for the new version.
+   - State the new Windows version for the `vXYZ` and `vXYZ-pwsh` tags in the MR title, so the
+     change appears in `CHANGELOG.md`, which is generated from MR titles through
+     [`.gitlab/changelog.yml`](https://gitlab.com/gitlab-org/gitlab-runner/blob/main/.gitlab/changelog.yml).
 1. **CI jobs**: Add or update the following:
 
    - Prebuilt helper image job in `.gitlab/ci/build.gitlab-ci.yml`
