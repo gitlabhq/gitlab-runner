@@ -97,6 +97,99 @@ func TestProvider_Acquire_NoAutoscalerConfig(t *testing.T) {
 	assert.Nil(t, provider.GetManager(config))
 }
 
+func TestProvider_Acquire_PassesPausePodLabelsAndAnnotations(t *testing.T) {
+	mockProvider := common.NewMockExecutorProvider(t)
+	mockProvider.EXPECT().Acquire(mock.Anything).Return(nil, nil)
+
+	provider := NewProvider(mockProvider)
+
+	provider.newKubeClient = func(*restclient.Config) (kubernetes.Interface, error) {
+		return fake.NewClientset(), nil
+	}
+	provider.getKubeConfig = func(*common.KubernetesConfig) (*restclient.Config, error) {
+		return &restclient.Config{}, nil
+	}
+
+	labels := map[string]string{"team": "platform-ci"}
+	annotations := map[string]string{"arm/include": "true"}
+
+	config := &common.RunnerConfig{
+		RunnerCredentials: common.RunnerCredentials{
+			Token: "test-token",
+		},
+		RunnerSettings: common.RunnerSettings{
+			Kubernetes: &common.KubernetesConfig{
+				Namespace: "default",
+				Autoscaler: &common.KubernetesAutoscalerConfig{
+					Policy: []common.AutoscalerPolicyConfig{
+						{
+							IdleCount: 2,
+							Periods:   []string{"* * * * *"},
+						},
+					},
+					PausePodLabels:      labels,
+					PausePodAnnotations: annotations,
+				},
+			},
+		},
+		ConfigLoadedAt: time.Now(),
+	}
+
+	_, err := provider.Acquire(config)
+	require.NoError(t, err)
+
+	manager := provider.GetManager(config)
+	require.NotNil(t, manager)
+	assert.Equal(t, labels, manager.config.Labels)
+	assert.Equal(t, annotations, manager.config.Annotations)
+}
+
+func TestProvider_Acquire_InvalidPausePodLabelsDoesNotCreateManager(t *testing.T) {
+	mockProvider := common.NewMockExecutorProvider(t)
+	mockProvider.EXPECT().Acquire(mock.Anything).Return(nil, nil)
+
+	provider := NewProvider(mockProvider)
+
+	kubeClientCreated := false
+	provider.newKubeClient = func(*restclient.Config) (kubernetes.Interface, error) {
+		kubeClientCreated = true
+		return fake.NewClientset(), nil
+	}
+	provider.getKubeConfig = func(*common.KubernetesConfig) (*restclient.Config, error) {
+		return &restclient.Config{}, nil
+	}
+
+	config := &common.RunnerConfig{
+		RunnerCredentials: common.RunnerCredentials{
+			Token: "test-token",
+		},
+		RunnerSettings: common.RunnerSettings{
+			Kubernetes: &common.KubernetesConfig{
+				Namespace: "default",
+				Autoscaler: &common.KubernetesAutoscalerConfig{
+					Policy: []common.AutoscalerPolicyConfig{
+						{
+							IdleCount: 2,
+							Periods:   []string{"* * * * *"},
+						},
+					},
+					PausePodLabels: map[string]string{"team name": "platform-ci"},
+				},
+			},
+		},
+		ConfigLoadedAt: time.Now(),
+	}
+
+	// Acquire must still succeed so the job runs; only the pause pod manager is skipped.
+	_, err := provider.Acquire(config)
+	require.NoError(t, err)
+
+	assert.Nil(t, provider.GetManager(config))
+	// ensureManager runs on every Acquire, so an invalid config must be rejected before
+	// any Kubernetes client or API call is made, or each poll would waste a request.
+	assert.False(t, kubeClientCreated, "kube client must not be created for an invalid config")
+}
+
 func TestProvider_ConfigReload_ReplacesManager(t *testing.T) {
 	mockProvider := common.NewMockExecutorProvider(t)
 	mockProvider.EXPECT().Acquire(mock.Anything).Return(nil, nil)

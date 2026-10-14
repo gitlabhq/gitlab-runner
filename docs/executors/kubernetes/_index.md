@@ -519,6 +519,36 @@ To enable pause pods, add a `[runners.kubernetes.autoscaler]` section to your
 | `max_pause_pods` | Maximum number of pause pods to create. Set to `0` for unlimited. |
 | `pause_pod_image` | Image for pause pods. Defaults to `registry.k8s.io/pause:3.10`. |
 | `pause_pod_priority_class_name` | Priority class for pause pods. Defaults to `gitlab-runner-idle-capacity` (auto-created with priority `-1`). If specified, auto-creation is skipped. |
+| `pause_pod_image_pull_secrets` | List of image pull secrets for the pause pod image. Introduced in [GitLab Runner 19.1](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/39395). |
+| `pause_pod_labels` | Table of labels to add to pause pods. Labels in the `runner.gitlab.com` namespace are ignored. Introduced in [GitLab Runner 19.5](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/39844). |
+| `pause_pod_annotations` | Table of annotations to add to pause pods. Introduced in [GitLab Runner 19.5](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/39844). |
+
+### Set labels and annotations on pause pods
+
+Pause pods do not inherit `pod_labels` or `pod_annotations` from job pods. Metadata that
+protects a running job, such as `karpenter.sh/do-not-disrupt` or a pod cleanup TTL, would
+prevent the cluster from consolidating or removing idle pause pods.
+
+Use `pause_pod_labels` and `pause_pod_annotations` to set metadata on pause pods for
+scheduling policies, admission webhooks, and cost attribution:
+
+```toml
+[runners.kubernetes.autoscaler]
+  [runners.kubernetes.autoscaler.pause_pod_labels]
+    "team" = "platform-ci"
+  [runners.kubernetes.autoscaler.pause_pod_annotations]
+    "example.com/arch-opt-in" = "true"
+```
+
+The runner uses the values as written and does not expand CI/CD variables. When the runner
+reloads its configuration, it deletes the pause pod `Deployment` and creates it again with the
+new values. If the runner exits without deleting the `Deployment`, the next runner process
+uses the existing `Deployment` and keeps its previous pod template. To apply the new values,
+delete the `Deployment`.
+
+Keys and values must follow the Kubernetes syntax rules for labels and annotations. If an
+entry is invalid, the runner logs a warning that names the entry and does not create pause pods
+until you fix the configuration. Jobs continue to run.
 
 ### Priority classes for preemption
 
