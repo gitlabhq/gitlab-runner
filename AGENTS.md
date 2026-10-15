@@ -21,11 +21,18 @@ Do not post comments to issues or merge requests during the fix process.
 
 ## Deprecated features — do not invest in fixes
 
-- **docker+machine executor** — deprecated GitLab 17.5, removal GitLab 20.0 (May 2027)
 - **`gitlab-runner exec` command** — deprecated, scheduled for removal
 
 When asked to fix a bug in these features: log the deprecation status and
 migration path to stdout, then exit. Do not create branches or MRs.
+
+## docker+machine executor — actively maintained
+
+The docker+machine executor (`executors/docker/machine/`) is formally deprecated
+(GitLab 17.5, removal GitLab 20.0) but runs all GitLab.com SaaS Linux runners
+in production today. Treat it as a fully supported executor: fix bugs, improve
+autoscaling and capacity behaviour, and open MRs for it like any other package.
+The deprecation notice is not a reason to skip or deprioritise work on it.
 
 ## Coding standards
 
@@ -107,7 +114,7 @@ Do not treat pre-existing infrastructure-dependent failures as blockers.
 ## Bug triage — when to stop
 
 Stop and log reasoning without creating an MR when:
-- The bug affects a deprecated executor or command (see above)
+- The bug affects a deprecated command (see above; this does not include docker+machine)
 - The root cause cannot be determined from available context
 - The fix would require changes across more than 5 files or touches core architecture
 - The issue has a `security` label — these require human review
