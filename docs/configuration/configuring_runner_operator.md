@@ -202,6 +202,7 @@ must use environment variables instead of configuration templates to modify the 
 | `runners.request_concurrency`    | `RUNNER_REQUEST_CONCURRENCY` | `1`           |
 | `runners.output_limit`           | `RUNNER_OUTPUT_LIMIT`        | `4096`        |
 | `kubernetes.runner.poll_timeout` | `KUBERNETES_POLL_TIMEOUT`    | `180`         |
+| `kubernetes.namespace`           | `KUBERNETES_NAMESPACE`       | The namespace of the `Runner` resource |
 
 ## Configure a custom TLS cert
 
