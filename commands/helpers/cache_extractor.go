@@ -2,6 +2,7 @@ package helpers
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -252,10 +253,17 @@ func (c *CacheExtractorCommand) presignedParallelDownloadEligible() bool {
 	return featureflags.IsOn(logger, os.Getenv(featureflags.UseParallelCacheTransfer)) && c.Concurrency > 1
 }
 
+// errRangeNotHonored marks a chunk answered with 200 and the whole object: the server ignored Range,
+// and a sequential GET still downloads such an object. A 206 for another range is not marked: a
+// caching proxy whose cache key leaves out Range answers the sequential GET with the same partial
+// 206, and the sequential download would keep that as the archive.
+var errRangeNotHonored = errors.New("range not honored")
+
 // tryPresignedParallelDownload uses a single-byte Range GET (not HEAD: presigned S3 URLs are typically
 // signed for GET only). A 206 response yields Content-Length/Content-Range for parallel chunk GETs.
 // It returns done=true when the download path finished (including up-to-date short-circuit or parallel
-// download); err propagates parallel download failures. done=false, err=nil means fall back to a full GET.
+// download); err propagates parallel download failures. done=false, err=nil means fall back to a full GET,
+// which is also the answer when a chunk is answered with 200 and the whole object.
 func (c *CacheExtractorCommand) tryPresignedParallelDownload() (done bool, err error) {
 	selectedURL := c.selectPresignedURL()
 
@@ -304,6 +312,10 @@ func (c *CacheExtractorCommand) tryPresignedParallelDownload() (done bool, err e
 
 	cleanedURL := url_helpers.CleanURL(selectedURL)
 	err = c.downloadParallel(contentLength, date, resp.Header.Get("ETag"), cleanedURL, headersToCacheMetadata(resp.Header), c.presignedRangeFetchChunk(selectedURL))
+	if errors.Is(err, errRangeNotHonored) {
+		logrus.WithError(err).Infoln("Presigned URL did not honor a chunk Range request, using sequential download")
+		return false, nil
+	}
 	return true, err
 }
 
@@ -347,8 +359,14 @@ func (c *CacheExtractorCommand) presignedRangeFetchChunk(rawURL string) func(off
 		if err != nil {
 			return nil, err
 		}
-		if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusPartialContent {
+		// Anything but a 206 for exactly this range (a 200 full body, or a 206
+		// for another range) would put the wrong bytes at this chunk's offset.
+		wantRange := fmt.Sprintf("bytes %d-%d/", offset, offset+length-1)
+		if resp.StatusCode != http.StatusPartialContent || !strings.HasPrefix(resp.Header.Get("Content-Range"), wantRange) {
 			_ = resp.Body.Close()
+			if resp.StatusCode == http.StatusOK {
+				return nil, fmt.Errorf("range request failed: %s: %w", resp.Status, errRangeNotHonored)
+			}
 			return nil, fmt.Errorf("range request failed: %s", resp.Status)
 		}
 		return resp.Body, nil

@@ -28,6 +28,7 @@ import (
 
 	. "gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 )
 
 const (
@@ -3206,6 +3207,178 @@ func TestArtifactsDownload(t *testing.T) {
 			assert.Equal(t, string(artifact), tc.expectedArtifact)
 		})
 	}
+}
+
+// artifactRangePayload returns size bytes whose parallel chunks start with different bytes, so a
+// chunk written at the wrong offset shows in the file.
+func artifactRangePayload(size int) []byte {
+	payload := make([]byte, size)
+	for i := range payload {
+		payload[i] = byte(i % 251)
+	}
+	return payload
+}
+
+// parseArtifactRange reads the bytes=start-end Range header of a request.
+func parseArtifactRange(r *http.Request) (start, end int, ok bool) {
+	_, err := fmt.Sscanf(r.Header.Get("Range"), "bytes=%d-%d", &start, &end)
+	return start, end, err == nil
+}
+
+// writeArtifactRange answers with a 206 that holds bytes start-end of payload.
+func writeArtifactRange(w http.ResponseWriter, payload []byte, start, end int) {
+	w.Header().Set("Content-Range", fmt.Sprintf("bytes %d-%d/%d", start, end, len(payload)))
+	w.WriteHeader(http.StatusPartialContent)
+	_, _ = w.Write(payload[start : end+1])
+}
+
+// tryArtifactParallelDownloadFrom runs tryArtifactParallelDownload for an object of size bytes at
+// serverURL/artifacts.zip and writes it into dest.
+func tryArtifactParallelDownloadFrom(t *testing.T, serverURL string, size int, dest *os.File) bool {
+	t.Helper()
+
+	c := NewGitLabClient()
+	credentials := &JobCredentials{URL: serverURL}
+	log, _ := test.NewNullLogger()
+
+	// DownloadArtifacts sends the Range probe on this client before the chunk requests, which
+	// creates its transport. Do the same so the concurrent chunk requests only read it.
+	cli, err := c.getClient(credentials)
+	require.NoError(t, err)
+	cli.ensureTLSConfig()
+
+	return c.tryArtifactParallelDownload(t.Context(), credentials, serverURL+"/artifacts.zip", int64(size), log, dest)
+}
+
+// TestTryArtifactParallelDownload covers an object store that answers every chunk Range GET with a
+// 206 for that range: the parallel download succeeds and the file holds the whole object.
+func TestTryArtifactParallelDownload(t *testing.T) {
+	payload := artifactRangePayload(2*artifactParallelChunkSize + 1024)
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		start, end, ok := parseArtifactRange(r)
+		if !ok {
+			http.Error(w, "missing or invalid Range", http.StatusBadRequest)
+			return
+		}
+		writeArtifactRange(w, payload, start, end)
+	}))
+	defer server.Close()
+
+	path := filepath.Join(t.TempDir(), "artifacts.zip")
+	dest, err := os.Create(path)
+	require.NoError(t, err)
+	defer dest.Close()
+
+	require.True(t, tryArtifactParallelDownloadFrom(t, server.URL, len(payload), dest), "the parallel download should succeed")
+
+	got, err := os.ReadFile(path)
+	require.NoError(t, err)
+	assert.True(t, bytes.Equal(payload, got), "the file differs from the object (%d bytes, want %d)", len(got), len(payload))
+}
+
+// TestTryArtifactParallelDownloadRejectsChunkOutsideRange covers an object store that honors the
+// first chunk Range GET but answers every chunk after the first with bytes from elsewhere in the
+// object. Written at the chunk offset, they would corrupt the artifact, so the parallel download
+// must report failure and leave the object to the single download stream.
+func TestTryArtifactParallelDownloadRejectsChunkOutsideRange(t *testing.T) {
+	tests := map[string]func(w http.ResponseWriter, payload []byte, start, end int){
+		"200 with the whole object": func(w http.ResponseWriter, payload []byte, _, _ int) {
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write(payload)
+		},
+		"206 for another range": func(w http.ResponseWriter, payload []byte, start, end int) {
+			writeArtifactRange(w, payload, 0, end-start)
+		},
+		"206 without Content-Range": func(w http.ResponseWriter, payload []byte, start, end int) {
+			w.WriteHeader(http.StatusPartialContent)
+			_, _ = w.Write(payload[:end-start+1])
+		},
+	}
+
+	for name, respond := range tests {
+		t.Run(name, func(t *testing.T) {
+			payload := artifactRangePayload(artifactParallelChunkSize + 1024)
+
+			var outsideRange atomic.Int64
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				start, end, ok := parseArtifactRange(r)
+				switch {
+				case !ok:
+					http.Error(w, "missing or invalid Range", http.StatusBadRequest)
+				case start > 0:
+					outsideRange.Add(1)
+					respond(w, payload, start, end)
+				default:
+					writeArtifactRange(w, payload, start, end)
+				}
+			}))
+			defer server.Close()
+
+			dest, err := os.Create(filepath.Join(t.TempDir(), "artifacts.zip"))
+			require.NoError(t, err)
+			defer dest.Close()
+
+			ok := tryArtifactParallelDownloadFrom(t, server.URL, len(payload), dest)
+
+			require.Positive(t, outsideRange.Load(), "the server should have answered a chunk outside its range")
+			assert.False(t, ok, "a chunk response outside the requested range must fail the parallel download")
+		})
+	}
+}
+
+// TestDownloadArtifactsParallelFallsBackOnChunkOutsideRange covers a direct download whose object
+// store answers the middle chunk of three with 200 and the whole object, while the others arrive
+// as requested. DownloadArtifacts must drop the parallel download, make one GET without Range and
+// write the whole object.
+func TestDownloadArtifactsParallelFallsBackOnChunkOutsideRange(t *testing.T) {
+	t.Setenv(featureflags.UseParallelArtifactTransfer, "true")
+
+	payload := artifactRangePayload(2*artifactParallelChunkSize + 1024)
+
+	var fullGets, outsideRange atomic.Int64
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/api/v4/jobs/10/artifacts" {
+			http.Redirect(w, r, "http://"+r.Host+"/artifacts.zip", http.StatusFound)
+			return
+		}
+		if r.URL.Path != "/artifacts.zip" {
+			http.NotFound(w, r)
+			return
+		}
+
+		start, end, ok := parseArtifactRange(r)
+		switch {
+		case r.Header.Get("Range") == "":
+			fullGets.Add(1)
+			_, _ = w.Write(payload)
+		case !ok:
+			http.Error(w, "invalid Range", http.StatusBadRequest)
+		case start == artifactParallelChunkSize:
+			outsideRange.Add(1)
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write(payload)
+		default:
+			writeArtifactRange(w, payload, start, end)
+		}
+	}))
+	defer server.Close()
+
+	path := filepath.Join(t.TempDir(), "artifacts.zip")
+	dest, err := os.Create(path)
+	require.NoError(t, err)
+	defer dest.Close()
+
+	directDownload := true
+	state := NewGitLabClient().DownloadArtifacts(JobCredentials{ID: 10, URL: server.URL, Token: "token"}, dest, &directDownload)
+
+	require.Equal(t, DownloadSucceeded, state)
+	assert.Equal(t, int64(1), outsideRange.Load(), "the middle chunk should have been answered with 200")
+	assert.Equal(t, int64(1), fullGets.Load(), "DownloadArtifacts should fall back to one GET without Range")
+
+	got, err := os.ReadFile(path)
+	require.NoError(t, err)
+	assert.True(t, bytes.Equal(payload, got), "the file differs from the object (%d bytes, want %d)", len(got), len(payload))
 }
 
 func TestRunnerVersion(t *testing.T) {

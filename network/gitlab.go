@@ -1221,7 +1221,10 @@ func (n *GitLabClient) tryArtifactParallelDownload(
 		if err != nil {
 			return nil, err
 		}
-		if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusPartialContent {
+		// Anything but a 206 for exactly this range (a 200 full body, or a 206
+		// for another range) would put the wrong bytes at this chunk's offset.
+		wantRange := fmt.Sprintf("bytes %d-%d/", offset, offset+length-1)
+		if resp.StatusCode != http.StatusPartialContent || !strings.HasPrefix(resp.Header.Get("Content-Range"), wantRange) {
 			_ = resp.Body.Close()
 			return nil, fmt.Errorf("range request failed: %s", resp.Status)
 		}
