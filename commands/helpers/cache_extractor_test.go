@@ -781,6 +781,176 @@ func TestCacheExtractorPresignedParallelTransfer(t *testing.T) {
 	assert.Equal(t, payload, got)
 }
 
+// TestCacheExtractorPresignedParallelTransferFallsBackOnFullBodyChunk covers a server that honors
+// the bytes=0-0 probe and the first chunk, but answers every chunk after the first with 200 OK and
+// the whole object, as a load balancer does when one of its nodes ignores Range. Written at the
+// chunk offset, that body would corrupt the archive, so the parallel download must stop and the
+// extractor must make one sequential GET instead.
+func TestCacheExtractorPresignedParallelTransferFallsBackOnFullBodyChunk(t *testing.T) {
+	t.Setenv(featureflags.UseParallelCacheTransfer, "true")
+	cdTempDir(t)
+
+	payload := parallelTestZipBytes(t)
+	require.Greater(t, len(payload), 32, "payload should span multiple parallel chunks")
+
+	lm := time.Date(2020, 5, 1, 12, 0, 0, 0, time.UTC).Format(http.TimeFormat)
+	rangeHandler := testParallelPresignedCacheHandler(t, payload, lm)
+	var fullBody, sequential atomic.Int64
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Last-Modified", lm)
+		start, _, ok := parseBytesRangeHeader(r.Header.Get("Range"))
+		switch {
+		case r.Header.Get("Range") == "":
+			sequential.Add(1)
+			_, _ = w.Write(payload)
+		case ok && start > 0:
+			fullBody.Add(1)
+			_, _ = w.Write(payload)
+		default:
+			rangeHandler(w, r)
+		}
+	}))
+	t.Cleanup(ts.Close)
+
+	cmd := CacheExtractorCommand{
+		File:               cacheExtractorArchive,
+		URL:                ts.URL + "/cache.zip",
+		ChunkSize:          7,
+		Concurrency:        4,
+		TransferBufferSize: defaultCacheTransferBufferSize,
+	}
+
+	require.NoError(t, cmd.handlePresignedURL())
+	assert.Positive(t, fullBody.Load(), "the server should have answered chunks with 200 and the whole object")
+	assert.Equal(t, int64(1), sequential.Load(), "the extractor should fall back to one sequential GET")
+
+	got, err := os.ReadFile(cacheExtractorArchive)
+	require.NoError(t, err)
+	assert.Equal(t, payload, got)
+}
+
+// TestCacheExtractorPresignedParallelTransferRejectsChunkOutsideRange covers chunks answered with a
+// 206 that is not for the requested range. A sequential GET would not help: a caching proxy whose
+// cache key leaves out Range answers every request, one without Range included, with the partial
+// 206 it stored first, and the sequential download would keep that as the archive. So the parallel
+// download fails with a retryable error, no GET without Range is made and no archive is written.
+func TestCacheExtractorPresignedParallelTransferRejectsChunkOutsideRange(t *testing.T) {
+	tests := map[string]struct {
+		// replayToAll answers every request with respond, the probe and a GET without Range
+		// included, as the caching proxy does once it has stored the probe's 206. Otherwise
+		// respond answers every chunk after the first.
+		replayToAll bool
+		respond     func(w http.ResponseWriter, payload []byte, start, end int64)
+	}{
+		"206 for another range": {
+			respond: func(w http.ResponseWriter, payload []byte, start, end int64) {
+				w.Header().Set("Content-Range", fmt.Sprintf("bytes 0-%d/%d", end-start, len(payload)))
+				w.WriteHeader(http.StatusPartialContent)
+				_, _ = w.Write(payload[:end-start+1])
+			},
+		},
+		"206 without Content-Range": {
+			respond: func(w http.ResponseWriter, payload []byte, start, end int64) {
+				w.WriteHeader(http.StatusPartialContent)
+				_, _ = w.Write(payload[:end-start+1])
+			},
+		},
+		"206 a caching proxy replays to every request": {
+			replayToAll: true,
+			respond: func(w http.ResponseWriter, payload []byte, _, _ int64) {
+				w.Header().Set("Content-Range", fmt.Sprintf("bytes 0-0/%d", len(payload)))
+				w.WriteHeader(http.StatusPartialContent)
+				_, _ = w.Write(payload[:1])
+			},
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Setenv(featureflags.UseParallelCacheTransfer, "true")
+			cdTempDir(t)
+
+			payload := parallelTestZipBytes(t)
+			require.Greater(t, len(payload), 32, "payload should span multiple parallel chunks")
+
+			lm := time.Date(2020, 5, 1, 12, 0, 0, 0, time.UTC).Format(http.TimeFormat)
+			rangeHandler := testParallelPresignedCacheHandler(t, payload, lm)
+			var outsideRange, sequential atomic.Int64
+			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.Header().Set("Last-Modified", lm)
+				if r.Header.Get("Range") == "" {
+					sequential.Add(1)
+				}
+				start, end, ok := parseBytesRangeHeader(r.Header.Get("Range"))
+				switch {
+				case tc.replayToAll || (ok && start > 0):
+					outsideRange.Add(1)
+					tc.respond(w, payload, start, end)
+				case !ok:
+					_, _ = w.Write(payload)
+				default:
+					rangeHandler(w, r)
+				}
+			}))
+			t.Cleanup(ts.Close)
+
+			cmd := CacheExtractorCommand{
+				File:               cacheExtractorArchive,
+				URL:                ts.URL + "/cache.zip",
+				ChunkSize:          7,
+				Concurrency:        4,
+				TransferBufferSize: defaultCacheTransferBufferSize,
+			}
+
+			err := cmd.handlePresignedURL()
+			require.ErrorAs(t, err, new(retryableError), "a chunk outside its range should fail with a retryable error")
+			assert.ErrorContains(t, err, "range request failed: 206 Partial Content")
+			assert.Positive(t, outsideRange.Load(), "the server should have answered chunks outside their range")
+			assert.Zero(t, sequential.Load(), "a 206 outside the range should not switch to the sequential GET")
+			assert.NoFileExists(t, cacheExtractorArchive)
+		})
+	}
+}
+
+// TestCacheExtractorPresignedParallelTransferFailsOnChunkError covers a chunk answered with a
+// server error. That says nothing about Range support, so the parallel download fails with a
+// retryable error and the extractor does not switch to the sequential GET.
+func TestCacheExtractorPresignedParallelTransferFailsOnChunkError(t *testing.T) {
+	t.Setenv(featureflags.UseParallelCacheTransfer, "true")
+	cdTempDir(t)
+
+	payload := parallelTestZipBytes(t)
+	lm := time.Date(2020, 5, 1, 12, 0, 0, 0, time.UTC).Format(http.TimeFormat)
+	rangeHandler := testParallelPresignedCacheHandler(t, payload, lm)
+	var sequential atomic.Int64
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		start, _, ok := parseBytesRangeHeader(r.Header.Get("Range"))
+		switch {
+		case !ok:
+			sequential.Add(1)
+			_, _ = w.Write(payload)
+		case start > 0:
+			http.Error(w, "unavailable", http.StatusServiceUnavailable)
+		default:
+			rangeHandler(w, r)
+		}
+	}))
+	t.Cleanup(ts.Close)
+
+	cmd := CacheExtractorCommand{
+		File:        cacheExtractorArchive,
+		URL:         ts.URL + "/cache.zip",
+		ChunkSize:   7,
+		Concurrency: 4,
+	}
+
+	err := cmd.handlePresignedURL()
+	require.ErrorAs(t, err, new(retryableError), "a server error on a chunk should stay retryable")
+	assert.ErrorContains(t, err, "range request failed: 503 Service Unavailable")
+	assert.Zero(t, sequential.Load(), "a server error on a chunk should not switch to the sequential GET")
+	assert.NoFileExists(t, cacheExtractorArchive)
+}
+
 // TestCacheExtractorGoCloudParallelTransfer exercises handleGoCloudURL with FF_USE_PARALLEL_CACHE_TRANSFER, range probe, and parallel NewRangeReader + WriteAt.
 func TestCacheExtractorGoCloudParallelTransfer(t *testing.T) {
 	t.Setenv(featureflags.UseParallelCacheTransfer, "true")
