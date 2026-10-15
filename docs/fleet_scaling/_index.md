@@ -139,6 +139,24 @@ With the [Kubernetes executor](../executors/kubernetes/_index.md):
 - The CI/CD jobs are executed on each pod, which is comprised of multiple containers.
 - The pods used for job execution typically require more compute and memory resources than the pod that hosts the runner manager.
 
+#### Runner managers and Kubernetes clusters
+
+A runner manager and a Kubernetes cluster do not have a fixed one-to-one relationship.
+
+A single runner manager can have multiple `[[runners]]` entries in its `config.toml`. Each runner
+entry has its own executor configuration. For runners using the Kubernetes executor, the Kubernetes
+API connection can therefore be configured independently for each runner.
+
+This configuration allows a runner manager to use multiple Kubernetes clusters. For each cluster,
+set `host` and its [credentials](../executors/kubernetes/_index.md#configuration-settings) in the `[runners.kubernetes]` section of that runner entry. The
+`context` setting applies only when `host` is empty. A manager that runs in a pod with a mounted
+service account token uses its own cluster and ignores `context`.
+A runner manager can also run outside the Kubernetes cluster it manages, provided it can connect to
+the Kubernetes API. The `concurrent` setting limits jobs across all runner entries, including
+entries that target different clusters.
+
+Multiple runner managers can also be configured to use the same Kubernetes cluster.
+
 #### Reusing a runner configuration
 
 Each runner manager associated with the same runner authentication token is assigned a `system_id` identifier.
