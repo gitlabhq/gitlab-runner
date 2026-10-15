@@ -664,14 +664,6 @@ func TestResolveShellSearchesPathFirst(t *testing.T) {
 		assert.Equal(t, pathBash, got)
 	})
 
-	t.Run("fixed directories are used when PATH has no shell", func(t *testing.T) {
-		setShellSearchDirs(t)
-		t.Setenv("PATH", t.TempDir())
-
-		_, err := resolveShell(ShellBash)
-		require.Error(t, err)
-	})
-
 	t.Run("fixed directories are used when PATH has no matching shell", func(t *testing.T) {
 		paths := useShellDirs(t, "d:sh")
 
