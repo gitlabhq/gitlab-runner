@@ -306,7 +306,7 @@ func (s *commandExecutor) changeFilesOwnership() error {
 	}
 
 	dockerExec := exec.NewDocker(s.Context, s.dockerConn, s.waiter, s.Build.Log())
-	inspect := user.NewInspect(s.dockerConn, dockerExec)
+	inspect := user.NewInspect(s.dockerConn)
 	imageSHA := s.buildContainer.Image
 	imageName := s.Build.Image.Name
 

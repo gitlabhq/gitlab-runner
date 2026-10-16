@@ -8,7 +8,8 @@ import (
 	"strconv"
 	"strings"
 
-	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/exec"
+	"github.com/moby/moby/api/pkg/stdcopy"
+	"github.com/moby/moby/client"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/limitwriter"
 )
@@ -26,16 +27,12 @@ type Inspect interface {
 	GID(ctx context.Context, containerID string) (int, error)
 }
 
-func NewInspect(c docker.Client, exec exec.Docker) Inspect {
-	return &defaultInspect{
-		c:    c,
-		exec: exec,
-	}
+func NewInspect(c docker.Client) Inspect {
+	return &defaultInspect{c: c}
 }
 
 type defaultInspect struct {
-	c    docker.Client
-	exec exec.Docker
+	c docker.Client
 }
 
 func (i *defaultInspect) IsRoot(ctx context.Context, imageID string) (bool, error) {
@@ -68,19 +65,45 @@ func retrieveLastLine(s string) string {
 func (i *defaultInspect) executeCommand(ctx context.Context, containerID string, command string) (int, error) {
 	stdout := new(bytes.Buffer)
 	stderr := new(bytes.Buffer)
-	streams := exec.IOStreams{
-		Stdin:  strings.NewReader(command),
-		Stdout: limitwriter.New(stdout, 1024),
-		Stderr: limitwriter.New(stderr, 1024),
+
+	execResponse, err := i.c.ContainerExecCreate(ctx, containerID, client.ExecCreateOptions{
+		AttachStdout: true,
+		AttachStderr: true,
+		Cmd:          strings.Fields(command),
+	})
+	if err != nil {
+		return 0, fmt.Errorf("creating exec for %q on container %q: %w", command, containerID, err)
 	}
 
-	err := i.exec.Exec(ctx, containerID, streams, nil)
+	response, err := i.c.ContainerExecAttach(ctx, execResponse.ID, client.ExecAttachOptions{})
 	if err != nil {
-		return 0, fmt.Errorf("executing %q on container %q: %w", command, containerID, err)
+		return 0, fmt.Errorf("attaching exec for %q on container %q: %w", command, containerID, err)
+	}
+	defer response.Close()
+
+	_, err = stdcopy.StdCopy(
+		limitwriter.New(stdout, 1024),
+		limitwriter.New(stderr, 1024),
+		response.Reader,
+	)
+	if err != nil {
+		return 0, fmt.Errorf("reading output of %q on container %q: %w", command, containerID, err)
+	}
+
+	execInspect, err := i.c.ContainerExecInspect(ctx, execResponse.ID)
+	if err != nil {
+		return 0, fmt.Errorf("inspecting exec for %q on container %q: %w", command, containerID, err)
+	}
+	if execInspect.Running {
+		return 0, fmt.Errorf("exec for %q on container %q is still running", command, containerID)
+	}
+
+	stderrContent := strings.TrimSpace(stderr.String())
+	if execInspect.ExitCode != 0 {
+		return 0, fmt.Errorf("command %q on container %q exited with status %d (stderr: %s)", command, containerID, execInspect.ExitCode, stderrContent)
 	}
 
 	stdoutContent := retrieveLastLine(stdout.String())
-	stderrContent := strings.TrimSpace(stderr.String())
 	if len(stdoutContent) < 1 {
 		return 0, fmt.Errorf("%w (stderr: %s)", errIDNoOutput, stderrContent)
 	}
