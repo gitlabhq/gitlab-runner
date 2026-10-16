@@ -122,7 +122,8 @@ Instead of using AWS S3, you can create your own cache storage.
 1. Log in to a dedicated machine where the cache server will run.
 1. Make sure that [Docker Engine](https://docs.docker.com/get-started/get-docker/) is installed
    on that machine.
-1. Start [MinIO](https://www.min.io), a simple S3-compatible server written in Go:
+1. Start [Silo](https://github.com/pgsty/silo), a fork of MinIO that serves the S3 API
+   and reads the same `MINIO_ROOT_USER` and `MINIO_ROOT_PASSWORD` variables:
 
    ```shell
    docker run -d --restart always -p 9005:9000 \
@@ -130,7 +131,7 @@ Instead of using AWS S3, you can create your own cache storage.
            -e "MINIO_ROOT_USER=<minio_root_username>" \
            -e "MINIO_ROOT_PASSWORD=<minio_root_password>" \
            --name minio \
-           minio/minio:latest server /export
+           pgsty/silo:latest server /export
    ```
 
    You can modify the port `9005` to expose the cache server on a
@@ -158,7 +159,8 @@ Instead of using AWS S3, you can create your own cache storage.
 
 You can now
 [configure `config.toml`](autoscale.md#distributed-runners-caching)
-to use the new cache server.
+to use the new cache server. In the `[runners.cache.s3]` section, set `Insecure = true`,
+because this server uses HTTP without TLS.
 
 ### Use Google Cloud Storage
 
