@@ -14,6 +14,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	"github.com/stretchr/testify/assert"
@@ -465,19 +466,21 @@ func TestSection_OutputFormat(t *testing.T) {
 }
 
 func TestSection_EndTimestampAfterBody(t *testing.T) {
-	r := testRunner(t, &Config{TraceSections: true})
+	synctest.Test(t, func(t *testing.T) {
+		r := testRunner(t, &Config{TraceSections: true})
 
-	err := r.section(t.Context(), "slow", func(_ context.Context, _ *env.Env) error {
-		time.Sleep(1100 * time.Millisecond)
-		return nil
+		err := r.section(t.Context(), "slow", func(_ context.Context, _ *env.Env) error {
+			time.Sleep(1100 * time.Millisecond)
+			return nil
+		})
+		require.NoError(t, err)
+
+		markers := regexp.MustCompile(`section_(start|end):(\d+):slow`).FindAllStringSubmatch(runnerStdout(r), -1)
+		require.Len(t, markers, 2)
+		start, _ := strconv.Atoi(markers[0][2])
+		end, _ := strconv.Atoi(markers[1][2])
+		assert.Greater(t, end, start)
 	})
-	require.NoError(t, err)
-
-	markers := regexp.MustCompile(`section_(start|end):(\d+):slow`).FindAllStringSubmatch(runnerStdout(r), -1)
-	require.Len(t, markers, 2)
-	start, _ := strconv.Atoi(markers[0][2])
-	end, _ := strconv.Atoi(markers[1][2])
-	assert.Greater(t, end, start)
 }
 
 // TestSectionNames verifies the runner emits the expected stage section
