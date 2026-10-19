@@ -155,6 +155,9 @@ func TestBuildStepsBootstrapInitContainer_PullPolicyKeyedByInitContainerName(t *
 // If any of the three keyed off a different name (the original bug used
 // helperContainerName read-side), the cursor would never advance and the
 // init container would be rebuilt with the first policy on every attempt.
+//
+// The retry loop's pod-watcher handover (issue #39817) is asserted here too,
+// since this is the only unit test that drives withPullRetry across attempts.
 func TestStepsBootstrapPullPolicy_CyclesAcrossRetries(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("UseNativeSteps returns false on Windows by design")
@@ -182,6 +185,29 @@ func TestStepsBootstrapPullPolicy_CyclesAcrossRetries(t *testing.T) {
 	require.NoError(t, err)
 	ex.pullManager = pm
 
+	// Regression guard for https://gitlab.com/gitlab-org/gitlab-runner/-/issues/39817:
+	// every retry must stop the watcher tracking the failed pod before deleting
+	// it, or the deletion event is reported against the next attempt's pod.
+	failedPod := &api.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-steps-pod",
+			Namespace: "default",
+		},
+	}
+	fakeClient := testclient.NewClientset(failedPod)
+	ex.pod = failedPod
+	ex.kubeClient = fakeClient
+
+	mockPodWatcher := newMockPodWatcher(t)
+	var clearedWhilePodAlive []bool
+	mockPodWatcher.On("UpdatePodName", "").
+		Run(func(mock.Arguments) {
+			_, getErr := fakeClient.CoreV1().Pods("default").
+				Get(t.Context(), failedPod.Name, metav1.GetOptions{})
+			clearedWhilePodAlive = append(clearedWhilePodAlive, getErr == nil)
+		}).Twice()
+	ex.podWatcher = mockPodWatcher
+
 	var seen []api.PullPolicy
 	retryErr := ex.withPullRetry(t.Context(), func() error {
 		c, buildErr := ex.buildStepsBootstrapInitContainer()
@@ -203,6 +229,9 @@ func TestStepsBootstrapPullPolicy_CyclesAcrossRetries(t *testing.T) {
 		seen,
 		"each retry must read the next registered policy under %q",
 		stepsBootstrapInitContainerName)
+	assert.Equal(t, []bool{true, false}, clearedWhilePodAlive,
+		"the first retry must clear the watcher before deleting %q; by the "+
+			"second retry there is no pod left to delete", failedPod.Name)
 }
 
 // In Concrete mode the build container's Command must be the
