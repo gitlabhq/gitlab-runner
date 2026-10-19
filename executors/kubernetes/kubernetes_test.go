@@ -3663,6 +3663,13 @@ func TestPrepare(t *testing.T) {
 			WindowsKernelVersionGetter: func() string {
 				panic("this should never be called on non-windows")
 			},
+			// Autoset takes the architecture from common.AppVersion, which is
+			// the host's; pin it so the expected x86_64 image holds on any host.
+			Setup: func(t *testing.T, _ *executor) {
+				arch := common.AppVersion.Architecture
+				common.AppVersion.Architecture = "amd64"
+				t.Cleanup(func() { common.AppVersion.Architecture = arch })
+			},
 			RunnerConfig: &common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{

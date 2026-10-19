@@ -281,8 +281,9 @@ func TestGenerateMetadataToFile(t *testing.T) {
 					require.NoError(t, err)
 
 					assert.Equal(t, string(indented), string(b))
-					assert.Contains(t, string(indented), startedAtRFC3339)
-					assert.Contains(t, string(indented), endedAtRFC3339)
+					// protojson writes Timestamps in UTC, whatever the input's offset.
+					assert.Contains(t, string(indented), startedAt.UTC().Format(time.RFC3339))
+					assert.Contains(t, string(indented), endedAt.UTC().Format(time.RFC3339))
 				})
 			}
 		})
