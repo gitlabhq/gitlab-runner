@@ -33,7 +33,14 @@ include:
   - local: /.gitlab/ci/release.gitlab-ci.yml
   - local: /.gitlab/ci/postrelease.gitlab-ci.yml
   - local: /.gitlab/ci/deploy.gitlab-ci.yml
+  # Uses `secrets`, which dev.gitlab.org rejects and fork MR pipelines can't use.
   - local: /.gitlab/ci/docs.gitlab-ci.yml
+    rules:
+      - if: '$CI_SERVER_URL != "https://gitlab.com" || $CI_PROJECT_PATH != "gitlab-org/gitlab-runner"'
+        when: never
+      - if: '$CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_SOURCE_PROJECT_PATH != "gitlab-org/gitlab-runner"'
+        when: never
+      - when: always
   - local: /.gitlab/ci/rebase.gitlab-ci.yml
   - local: /.gitlab/ci/hosted-runners-bridge.gitlab-ci.yml
   - component: ${CI_SERVER_FQDN}/gitlab-org/components/danger-review/danger-review@2.1.0
