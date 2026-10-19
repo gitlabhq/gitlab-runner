@@ -355,6 +355,25 @@ func TestBashScript_Execute(t *testing.T) {
 			opts:     []func(*Builder){withExitCodeCheck},
 			contains: []string{"AFTER_DONE"},
 		},
+		// A multi-line script: item (a YAML "- |" block) reaches
+		// exitCodeCheckApplies as one string, so its last line decides, not the
+		// first word of the whole item.
+		"multi-line item whose last line is a failing list aborts with exit code check": {
+			lines:    []string{"! false\nfalse && true", `echo NEVER_RAN`},
+			opts:     []func(*Builder){withExitCodeCheck},
+			wantCode: 1,
+			excludes: []string{"NEVER_RAN"},
+		},
+		"multi-line item ending in a negation does not abort with exit code check": {
+			lines:    []string{"echo FIRST\n! true", `echo AFTER_ITEM`},
+			opts:     []func(*Builder){withExitCodeCheck},
+			contains: []string{"FIRST", "AFTER_ITEM"},
+		},
+		"multi-line item ending in fi after a negation does not abort with exit code check": {
+			lines:    []string{"if true; then\n! true\nfi", `echo AFTER_FI`},
+			opts:     []func(*Builder){withExitCodeCheck},
+			contains: []string{"AFTER_FI"},
+		},
 		// errexit must still propagate a plain failing command...
 		"failing command still aborts the script": {
 			lines:    []string{`false`, `echo NEVER_RAN`},

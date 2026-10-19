@@ -150,17 +150,18 @@ func exitCodeCheckSuffix(line, checkErr string) string {
 }
 
 // exitCodeCheckApplies reports whether the post-command exit-code check may be
-// appended after line. It must not be after a bare "else" (where the check runs
-// as the first statement of the else branch and $? still holds the failed
-// if-condition's status), after a negated command "! cmd" (where $? is non-zero
-// when cmd succeeds), nor after "fi" or "done" (where $? is the status of the
-// last body command, which may be such a negation). "set -o errexit" does not
-// abort in any of these cases, so the check must not either. Other block
-// keywords (then/do/elif) are safe: their body runs only when the preceding
-// condition succeeded, so $? is 0 there.
+// appended after line. The check reads $? from the last line of a multi-line
+// item, so that line decides. It must not follow a bare "else" (where $? still
+// holds the failed if-condition's status), a negated command "! cmd" (where $?
+// is non-zero when cmd succeeds), nor "fi" or "done" (where $? is the status of
+// the last body command, which may be such a negation). Failures that
+// "set -o errexit" ignores, such as "false && true", must still abort: that is
+// the purpose of the check. After "then" and "while ...; do", $? is 0, because
+// the body runs only when the condition succeeded. After "until ...; do" it is
+// not, and the check aborts there.
 // See https://gitlab.com/gitlab-org/gitlab-runner/-/work_items/39634.
 func exitCodeCheckApplies(line string) bool {
-	fields := strings.Fields(line)
+	fields := strings.Fields(line[strings.LastIndexByte(line, '\n')+1:])
 	if len(fields) == 0 {
 		return true
 	}
