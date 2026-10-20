@@ -2,6 +2,8 @@ package machine
 
 import (
 	"sync"
+
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/circuitbreaker"
 )
 
 // runnerMachinesCoordinator tracks the status of a specific Machine configuration, ensuring that the maximum number
@@ -15,6 +17,10 @@ type runnerMachinesCoordinator struct {
 	availableLock sync.Mutex
 
 	availableSignal chan struct{}
+
+	breakerLock     sync.Mutex
+	breaker         *circuitbreaker.Breaker
+	breakerSettings creationBreakerSettings
 }
 
 func newRunnerMachinesCoordinator() *runnerMachinesCoordinator {

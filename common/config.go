@@ -520,12 +520,25 @@ type DockerMachine struct {
 	WarmupDuration      time.Duration `toml:"WarmupDuration,omitzero" long:"warmup-duration" env:"MACHINE_WARMUP_DURATION" description:"(Experimental) How long warm-up lasts from the runner's first machine acquisition (defaults to 10m)"`
 	WarmupReadyFraction float64       `toml:"WarmupReadyFraction,omitzero" long:"warmup-ready-fraction" env:"MACHINE_WARMUP_READY_FRACTION" description:"(Experimental) Fraction of the warm-up idle target (WarmupIdleFraction x IdleCount), not of IdleCount, that must be booted before /health/ready reports ready. Between 0 and 1; 0 selects the default 0.8"`
 
+	CreationBreaker *DockerMachineCreationBreaker `toml:"creation_breaker,omitempty" json:",omitempty" namespace:"creation-breaker" description:"(Experimental) Stop creating machines for a while when most recent creations fail"`
+
 	OffPeakPeriods   []string `toml:"OffPeakPeriods,omitempty" json:",omitempty" description:"Time periods when the scheduler is in the OffPeak mode. DEPRECATED"`              // DEPRECATED
 	OffPeakTimezone  string   `toml:"OffPeakTimezone,omitempty" description:"Timezone for the OffPeak periods (defaults to Local). DEPRECATED"`                                 // DEPRECATED
 	OffPeakIdleCount int      `toml:"OffPeakIdleCount,omitzero" description:"Maximum idle machines when the scheduler is in the OffPeak mode. DEPRECATED"`                      // DEPRECATED
 	OffPeakIdleTime  int      `toml:"OffPeakIdleTime,omitzero" description:"Minimum time after machine can be destroyed when the scheduler is in the OffPeak mode. DEPRECATED"` // DEPRECATED
 
 	AutoscalingConfigs []*DockerMachineAutoscaling `toml:"autoscaling" json:",omitempty" description:"Ordered list of configurations for autoscaling periods (last match wins)"`
+}
+
+type DockerMachineCreationBreaker struct {
+	Enabled      bool          `toml:"enabled,omitempty" json:"enabled,omitempty" long:"enabled" env:"MACHINE_CREATION_BREAKER_ENABLED" description:"Stop creating machines for a while when most recent creations fail, instead of retrying at the rate the failures allow (default: false)"`
+	FailureRate  float64       `toml:"failure_rate,omitempty" json:"failure_rate,omitempty" long:"failure-rate" env:"MACHINE_CREATION_BREAKER_FAILURE_RATE" description:"Fraction of the creations started within the window that must have failed to stop creation (default: 0.5)"`
+	Window       time.Duration `toml:"window,omitempty" json:"window,omitempty" long:"window" env:"MACHINE_CREATION_BREAKER_WINDOW" description:"How far back creations are counted (default: 1m)"`
+	Settle       time.Duration `toml:"settle,omitempty" json:"settle,omitempty" long:"settle" env:"MACHINE_CREATION_BREAKER_SETTLE" description:"Creations younger than this are not counted yet, so fast failures are not judged before the successes started with them can return (default: 5s)"`
+	MinCreations int           `toml:"min_creations,omitempty" json:"min_creations,omitempty" long:"min-creations" env:"MACHINE_CREATION_BREAKER_MIN_CREATIONS" description:"Creation does not stop before this many counted creations (default: 20)"`
+	OpenInitial  time.Duration `toml:"open_initial,omitempty" json:"open_initial,omitempty" long:"open-initial" env:"MACHINE_CREATION_BREAKER_OPEN_INITIAL" description:"How long creation stays stopped the first time; doubles each time the probes that follow all fail (default: 5s)"`
+	OpenMax      time.Duration `toml:"open_max,omitempty" json:"open_max,omitempty" long:"open-max" env:"MACHINE_CREATION_BREAKER_OPEN_MAX" description:"Longest time creation stays stopped (default: 1m)"`
+	Probes       int           `toml:"probes,omitempty" json:"probes,omitempty" long:"probes" env:"MACHINE_CREATION_BREAKER_PROBES" description:"Creations allowed at once after a stop, to find out whether the provider recovered (default: MaxGrowthRate/10, at least 1)"`
 }
 
 type DockerMachineShutdownDrain struct {
@@ -2400,7 +2413,68 @@ func (c *DockerMachine) GetIdleTime() int {
 const (
 	defaultMachineWarmupDuration      = 10 * time.Minute
 	defaultMachineWarmupReadyFraction = 0.8
+
+	defaultMachineCreationBreakerFailureRate  = 0.5
+	defaultMachineCreationBreakerWindow       = time.Minute
+	defaultMachineCreationBreakerSettle       = 5 * time.Second
+	defaultMachineCreationBreakerMinCreations = 20
+	defaultMachineCreationBreakerOpenInitial  = 5 * time.Second
+	defaultMachineCreationBreakerOpenMax      = time.Minute
 )
+
+func (c *DockerMachine) CreationBreakerEnabled() bool {
+	return c.CreationBreaker != nil && c.CreationBreaker.Enabled
+}
+
+func (c *DockerMachineCreationBreaker) GetFailureRate() float64 {
+	if c.FailureRate <= 0 || c.FailureRate > 1 {
+		return defaultMachineCreationBreakerFailureRate
+	}
+	return c.FailureRate
+}
+
+func (c *DockerMachineCreationBreaker) GetWindow() time.Duration {
+	if c.Window <= 0 {
+		return defaultMachineCreationBreakerWindow
+	}
+	return c.Window
+}
+
+func (c *DockerMachineCreationBreaker) GetSettle() time.Duration {
+	if c.Settle <= 0 {
+		return defaultMachineCreationBreakerSettle
+	}
+	return c.Settle
+}
+
+func (c *DockerMachineCreationBreaker) GetMinCreations() int {
+	if c.MinCreations <= 0 {
+		return defaultMachineCreationBreakerMinCreations
+	}
+	return c.MinCreations
+}
+
+func (c *DockerMachineCreationBreaker) GetOpenInitial() time.Duration {
+	if c.OpenInitial <= 0 {
+		return defaultMachineCreationBreakerOpenInitial
+	}
+	return c.OpenInitial
+}
+
+func (c *DockerMachineCreationBreaker) GetOpenMax() time.Duration {
+	maxOpen := c.OpenMax
+	if maxOpen <= 0 {
+		maxOpen = defaultMachineCreationBreakerOpenMax
+	}
+	return max(maxOpen, c.GetOpenInitial())
+}
+
+func (c *DockerMachineCreationBreaker) GetProbes(maxGrowthRate int) int {
+	if c.Probes > 0 {
+		return c.Probes
+	}
+	return max(1, maxGrowthRate/10)
+}
 
 func (c *DockerMachine) WarmupEnabled() bool {
 	return c.WarmupIdleFraction > 0
@@ -3033,6 +3107,7 @@ func (c *RunnerConfig) Validate() error {
 		"slot cgroups":                      c.validateSlotCgroups,
 		"machine options with name":         c.validateMachineOptionsWithName,
 		"machine warm-up":                   c.validateMachineWarmup,
+		"machine creation breaker":          c.validateMachineCreationBreaker,
 		"allowed_docker_credential_helpers": c.validateAllowedDockerCredentialHelpers,
 	} {
 		err := v()
@@ -3088,6 +3163,17 @@ func (c *RunnerConfig) validateMachineWarmup() error {
 	ready := c.Machine.WarmupReadyFraction
 	if math.IsNaN(ready) || ready < 0 || ready > 1 {
 		return fmt.Errorf("WarmupReadyFraction %v must be between 0 (unset) and 1", ready)
+	}
+	return nil
+}
+
+func (c *RunnerConfig) validateMachineCreationBreaker() error {
+	if c.Machine == nil || !c.Machine.CreationBreakerEnabled() {
+		return nil
+	}
+	cb := c.Machine.CreationBreaker
+	if cb.GetSettle() >= cb.GetWindow() {
+		return fmt.Errorf("settle %v must be shorter than window %v", cb.GetSettle(), cb.GetWindow())
 	}
 	return nil
 }

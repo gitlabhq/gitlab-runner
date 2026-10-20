@@ -22,6 +22,7 @@ import (
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	docker_executor "gitlab.com/gitlab-org/gitlab-runner/executors/docker"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/circuitbreaker"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 	"gitlab.com/gitlab-org/gitlab-runner/log/test"
@@ -108,6 +109,7 @@ type testMachine struct {
 	Stopped chan bool
 
 	forceRemoveCalls int
+	createCalls      int
 
 	mutex sync.Mutex
 }
@@ -115,6 +117,7 @@ type testMachine struct {
 func (m *testMachine) Create(ctx context.Context, driver, name string, _ docker.MachineOutput, opts ...string) error {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
+	m.createCalls++
 
 	if strings.Contains(name, "second-fail") {
 		if !m.second {
@@ -1684,6 +1687,129 @@ func TestMachineWarmupCreationErrorIgnoredWhenGrowthUnlimited(t *testing.T) {
 	time.Sleep(50 * time.Millisecond)
 	assert.True(t, state.burst)
 	assert.Empty(t, warmupLogEntries(hook, "Machine creation failed during warm-up, dropping the creation burst"))
+}
+
+func creationBreakerConfig(t *testing.T) *common.RunnerConfig {
+	config := &common.RunnerConfig{
+		RunnerCredentials: common.RunnerCredentials{Token: "token-a-1234567890"},
+		RunnerSettings: common.RunnerSettings{
+			Machine: &common.DockerMachine{
+				MachineName:   "create-fail-%s",
+				IdleCount:     4,
+				MaxGrowthRate: 1,
+				CreationBreaker: &common.DockerMachineCreationBreaker{
+					Enabled:      true,
+					Settle:       time.Millisecond,
+					MinCreations: 2,
+					OpenInitial:  time.Hour,
+				},
+			},
+		},
+	}
+	require.NoError(t, config.Machine.CompilePeriods())
+	return config
+}
+
+// trippedCreationBreaker drives Acquire until the runner's breaker is open.
+func trippedCreationBreaker(t *testing.T, p *machineProvider, config *common.RunnerConfig) *circuitbreaker.Breaker {
+	coordinator, err := p.runnerMachinesCoordinator(config)
+	require.NoError(t, err)
+	breaker := coordinator.creationBreaker(config)
+
+	require.Eventually(t, func() bool {
+		_, _ = p.Acquire(config)
+		return breaker.State() == circuitbreaker.Open
+	}, 5*time.Second, 10*time.Millisecond)
+	return breaker
+}
+
+func creatingMachines(p *machineProvider) int {
+	p.lock.RLock()
+	defer p.lock.RUnlock()
+	n := 0
+	for _, d := range p.details {
+		d.Lock()
+		if d.State == machineStateCreating {
+			n++
+		}
+		d.Unlock()
+	}
+	return n
+}
+
+func TestMachineCreationBreakerPausesCreation(t *testing.T) {
+	hook, cleanup := test.NewHook()
+	defer cleanup()
+
+	p, m := testMachineProvider()
+	config := creationBreakerConfig(t)
+	trippedCreationBreaker(t, p, config)
+
+	m.mutex.Lock()
+	callsAtTrip := m.createCalls
+	m.mutex.Unlock()
+	assert.GreaterOrEqual(t, callsAtTrip, 2)
+
+	for range 5 {
+		_, _ = p.Acquire(config)
+		time.Sleep(10 * time.Millisecond)
+	}
+	m.mutex.Lock()
+	assert.Equal(t, callsAtTrip, m.createCalls, "no creation while the breaker is open")
+	m.mutex.Unlock()
+
+	var tripped bool
+	for _, entry := range hook.AllEntries() {
+		if entry.Message == "Machine creation circuit breaker tripped, pausing machine creation" {
+			tripped = true
+		}
+	}
+	assert.True(t, tripped)
+}
+
+func TestMachineCreationBreakerWaitStopsOnShutdown(t *testing.T) {
+	p, m := testMachineProvider()
+	config := creationBreakerConfig(t)
+	trippedCreationBreaker(t, p, config)
+	require.Eventually(t, func() bool {
+		_, _ = p.Acquire(config)
+		return creatingMachines(p) > 0
+	}, 5*time.Second, 10*time.Millisecond, "creations wait on the open breaker")
+
+	m.mutex.Lock()
+	callsAtTrip := m.createCalls
+	m.mutex.Unlock()
+
+	p.BeginShutdown(nil)
+
+	assert.Eventually(t, func() bool { return creatingMachines(p) == 0 }, 5*time.Second, 10*time.Millisecond,
+		"waiting creations are dropped on shutdown")
+
+	for range 3 {
+		_, _ = p.Acquire(config)
+		time.Sleep(10 * time.Millisecond)
+	}
+	assert.Zero(t, creatingMachines(p), "no idle refill once shutdown has begun")
+	m.mutex.Lock()
+	assert.Equal(t, callsAtTrip, m.createCalls)
+	m.mutex.Unlock()
+}
+
+func TestMachineCreationBreakerDisabledOnReloadReleasesWaiters(t *testing.T) {
+	p, _ := testMachineProvider()
+	config := creationBreakerConfig(t)
+	breaker := trippedCreationBreaker(t, p, config)
+	require.Eventually(t, func() bool {
+		_, _ = p.Acquire(config)
+		return creatingMachines(p) > 0
+	}, 5*time.Second, 10*time.Millisecond)
+
+	reloaded := creationBreakerConfig(t)
+	reloaded.Machine.CreationBreaker.Enabled = false
+	coordinator, err := p.runnerMachinesCoordinator(reloaded)
+	require.NoError(t, err)
+	assert.Nil(t, coordinator.creationBreaker(reloaded))
+	assert.Equal(t, circuitbreaker.Closed, breaker.State(), "the old breaker is reset so its waiters proceed")
 }
 
 func TestMachineWarmupPrunesStaleRunners(t *testing.T) {

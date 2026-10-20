@@ -6,6 +6,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/circuitbreaker"
 )
 
 // collectDetails snapshots the current machine population, bucketed by
@@ -50,6 +51,7 @@ type machineMetrics struct {
 	warmupDesc              *prometheus.Desc
 	warmupTimedOutDesc      *prometheus.Desc
 	warmupReadyDesc         *prometheus.Desc
+	creationBreakerDesc     *prometheus.Desc
 }
 
 func newMachineMetrics(name string, config *common.MachineConfig) machineMetrics {
@@ -135,6 +137,12 @@ func newMachineMetrics(name string, config *common.MachineConfig) machineMetrics
 			runnerLabels,
 			constLabels,
 		),
+		creationBreakerDesc: prometheus.NewDesc(
+			"gitlab_runner_autoscaling_machine_creation_breaker",
+			"1 for the current state of the machine creation circuit breaker (closed, open, half-open), 0 for the others.",
+			append([]string{"state"}, runnerLabels...),
+			constLabels,
+		),
 	}
 
 	if config.CreationPhaseMetricsEnabled() {
@@ -178,6 +186,7 @@ func (m *machineProvider) Describe(ch chan<- *prometheus.Desc) {
 	ch <- m.warmupDesc
 	ch <- m.warmupTimedOutDesc
 	ch <- m.warmupReadyDesc
+	ch <- m.creationBreakerDesc
 }
 
 // Collect implements prometheus.Collector.
@@ -224,6 +233,13 @@ func (m *machineProvider) Collect(ch chan<- prometheus.Metric) {
 		ch <- prometheus.MustNewConstMetric(
 			m.idleTargetDesc, prometheus.GaugeValue, limits.idleTarget,
 			runner, limits.runnerName, limits.systemID)
+		if limits.breakerEnabled {
+			for _, state := range []circuitbreaker.State{circuitbreaker.Closed, circuitbreaker.Open, circuitbreaker.HalfOpen} {
+				ch <- prometheus.MustNewConstMetric(
+					m.creationBreakerDesc, prometheus.GaugeValue, boolToFloat(state == limits.breakerState),
+					state.String(), runner, limits.runnerName, limits.systemID)
+			}
+		}
 		if !limits.warmupEnabled {
 			continue
 		}

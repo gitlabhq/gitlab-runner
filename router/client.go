@@ -121,24 +121,20 @@ func (c *Client) RequestJob(ctx context.Context, config common.RunnerConfig, ses
 		return c.delegate.RequestJob(ctx, config, sessionInfo)
 	}
 
-	// Resolve discovery before the breaker gate so a "no router" result can't
-	// strand a half-open trial. Every path past Allow() must then resolve the
-	// trial: record an outcome once the router is reached, or Abort if we bail.
 	disco := c.getRouterDiscovery(ctx, config)
 	if disco == nil {
 		return c.fallback(ctx, config, sessionInfo, fallbackNoDiscovery)
 	}
 
-	if !c.breaker.Allow() {
+	permit, ok := c.breaker.Acquire()
+	if !ok {
 		return c.fallback(ctx, config, sessionInfo, fallbackBreakerOpen)
 	}
 
 	jobRequest := c.delegate.PrepareJobRequest(config, sessionInfo)
 	jobRequestJSON, err := json.Marshal(jobRequest)
 	if err != nil {
-		// The router was never contacted, so there's no success/failure to record;
-		// Abort releases the half-open trial Allow() may have granted.
-		c.breaker.Abort()
+		permit.Abort()
 		config.Log().WithError(err).Error("json.Marshal()")
 		return nil, false
 	}
@@ -151,7 +147,7 @@ func (c *Client) RequestJob(ctx context.Context, config common.RunnerConfig, ses
 		TLSKeyFile:  config.TLSKeyFile,
 	})
 	if err != nil {
-		if c.breaker.RecordFailure() {
+		if permit.Failure() {
 			config.Log().WithError(err).WithField("job_router_url", disco.ServerURL).
 				Warn("Job router circuit breaker tripped on dial failure, falling back to direct job requests")
 		} else {
@@ -186,14 +182,14 @@ func (c *Client) RequestJob(ctx context.Context, config common.RunnerConfig, ses
 	)
 	c.metrics.recordGetJobRequest(config.RunnerCredentials.ShortDescription(), config.SystemID, status.Code(err))
 	if err != nil {
-		healthy, reason := c.handleRouterError(ctx, err, responseMD, requestCorrelationID, disco, config)
+		healthy, reason := c.handleRouterError(ctx, permit, err, responseMD, requestCorrelationID, disco, config)
 		if reason != fallbackNone {
 			return c.fallback(ctx, config, sessionInfo, reason)
 		}
 		return nil, healthy
 	}
 
-	if c.breaker.RecordSuccess() {
+	if permit.Success() {
 		config.Log().WithField("job_router_url", disco.ServerURL).
 			Info("Job router recovered, resuming routing")
 	}
@@ -237,6 +233,7 @@ func (c *Client) fallback(ctx context.Context, config common.RunnerConfig, sessi
 //     reports whether the runner should stay healthy and keep polling the router.
 func (c *Client) handleRouterError(
 	ctx context.Context,
+	permit *circuitbreaker.Permit,
 	err error,
 	responseMD metadata.MD,
 	requestCorrelationID string,
@@ -249,14 +246,14 @@ func (c *Client) handleRouterError(
 	case code == codes.Unimplemented:
 		// Job router deliberately disabled. The router answered, so the breaker is
 		// fine; drop the cached router to force re-discovery, then fall back to Rails.
-		c.breaker.RecordSuccess()
+		permit.Success()
 		c.invalidateRouterDiscovery()
 		logger.Info("Job router is disabled, falling back to direct job requests")
 		return false, fallbackRouterDisabled
 	case isRouterFailure(code):
 		// The router is unreachable: count it toward the breaker. On trip, fall back;
 		// below the threshold, treat it as transient and keep polling the router.
-		if c.breaker.RecordFailure() {
+		if permit.Failure() {
 			logger.WithError(err).WithField("job_router_url", disco.ServerURL).
 				Warn("Job router circuit breaker tripped, falling back to direct job requests")
 			return false, fallbackBreakerTripped
@@ -266,7 +263,7 @@ func (c *Client) handleRouterError(
 	case code == codes.PermissionDenied:
 		// The runner is forbidden (403). The router responded, so the breaker is
 		// satisfied, but the runner is unhealthy — same as the direct HTTP path.
-		c.breaker.RecordSuccess()
+		permit.Success()
 		logger.WithError(err).Error("Error requesting a job")
 		return false, fallbackNone
 	case code == codes.ResourceExhausted:
@@ -274,7 +271,7 @@ func (c *Client) handleRouterError(
 		// warn with the Retry-After GitLab Relay (KAS) forwards, report no job with the
 		// runner healthy so its request_concurrency slot is released, and flag the
 		// push-back for adaptive request concurrency as the HTTP retry layer does.
-		c.breaker.RecordSuccess()
+		permit.Success()
 		network.MarkRetryAttempted(ctx)
 		logger.WithFields(logrus.Fields{
 			grpcCodeLogField: code.String(),
@@ -286,7 +283,7 @@ func (c *Client) handleRouterError(
 		// though the request itself failed. All other errors (e.g. FailedPrecondition
 		// for a 409 when another runner took the build) are transient and must not
 		// count towards unhealthy_requests_limit.
-		c.breaker.RecordSuccess()
+		permit.Success()
 		logger.WithError(err).Error("Error requesting a job")
 		return true, fallbackNone
 	}

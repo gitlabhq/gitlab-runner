@@ -14,6 +14,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/circuitbreaker"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 )
@@ -111,18 +112,22 @@ type machineProvider struct {
 	warmups    map[string]*warmupState
 
 	// Acquire refuses once set, so a worker that raced the stop signal does not refill the pool.
-	shuttingDown atomic.Bool
-	drainLock    sync.Mutex
-	drain        *shutdownDrain
+	shuttingDown   atomic.Bool
+	shutdownCtx    context.Context
+	shutdownCancel context.CancelFunc
+	drainLock      sync.Mutex
+	drain          *shutdownDrain
 }
 
 type autoscalingLimits struct {
-	runnerName    string
-	systemID      string
-	maxGrowthRate float64
-	idleTarget    float64
-	warmupEnabled bool
-	updatedAt     time.Time
+	runnerName     string
+	systemID       string
+	maxGrowthRate  float64
+	idleTarget     float64
+	warmupEnabled  bool
+	breakerEnabled bool
+	breakerState   circuitbreaker.State
+	updatedAt      time.Time
 }
 
 // Entries not refreshed by Acquire within this window were removed from the
@@ -268,6 +273,13 @@ func (m *machineProvider) createWithGrowthCapacity(
 	errCh chan error,
 ) {
 	logger := logrus.WithField("name", details.Name)
+
+	permit, err := m.waitForCreationBreaker(coordinator, config, details)
+	if err != nil {
+		errCh <- err
+		return
+	}
+
 	started := time.Now()
 
 	ctx, ctxCancelFn := context.WithTimeout(context.Background(), machineCreateCommandTimeout)
@@ -281,7 +293,7 @@ func (m *machineProvider) createWithGrowthCapacity(
 		output = docker.MachineOutput{JSONLogFormat: true, OnEntry: phases.observe}
 	}
 
-	err := m.machine.Create(ctx, config.Machine.MachineDriver, details.Name, output, opts...)
+	err = m.machine.Create(ctx, config.Machine.MachineDriver, details.Name, output, opts...)
 	phaseDurations := phases.finish(time.Now())
 
 	// Inspect post-Create regardless of outcome. libmachine saves state
@@ -319,8 +331,10 @@ func (m *machineProvider) createWithGrowthCapacity(
 		m.totalActions.WithLabelValues(actionLabels("creation-failed", details.targets)...).Inc()
 		m.failedCreationHistogram.WithLabelValues(details.targets.values()...).Observe(time.Since(started).Seconds())
 		m.warmupCreationFailed(config, err)
+		permit.Failure()
 		_ = m.remove(details.Name, "Failed to create")
 	} else {
+		permit.Success()
 		details.Lock()
 		details.State = state
 		details.Used = time.Now()
@@ -344,6 +358,27 @@ func (m *machineProvider) createWithGrowthCapacity(
 		coordinator.addAvailableMachine()
 	}
 	errCh <- err
+}
+
+func (m *machineProvider) waitForCreationBreaker(
+	coordinator *runnerMachinesCoordinator,
+	config *common.RunnerConfig,
+	details *machineDetails,
+) (*circuitbreaker.Permit, error) {
+	breaker := coordinator.creationBreaker(config)
+	if breaker == nil {
+		return nil, nil
+	}
+
+	ctx, cancel := context.WithTimeout(m.shutdownCtx, machineCreateCommandTimeout)
+	defer cancel()
+	permit, ok := breaker.Wait(ctx)
+	if !ok {
+		details.logger().Warningln("Machine creation gave up waiting for the circuit breaker")
+		_ = m.remove(details.Name, "Gave up waiting for the circuit breaker")
+		return nil, fmt.Errorf("waiting for the machine creation circuit breaker: %w", ctx.Err())
+	}
+	return permit, nil
 }
 
 func (m *machineProvider) findFreeMachine(skipCache bool, machines ...string) (details *machineDetails) {
@@ -747,7 +782,7 @@ func (m *machineProvider) forgetHeartbeat(name string) {
 
 func (m *machineProvider) createMachines(config *common.RunnerConfig, data *machinesData, warmup *warmupLimits) {
 	for {
-		if !canCreateIdle(config, data, warmup) || m.shuttingDown.Load() {
+		if !canCreateIdle(config, data, warmup) || m.shuttingDown.Load() || m.shutdownCtx.Err() != nil {
 			return
 		}
 
@@ -961,10 +996,7 @@ func (m *machineProvider) Release(config *common.RunnerConfig, data common.Execu
 }
 
 func (m *machineProvider) updateAutoscalingLimits(config *common.RunnerConfig, data *machinesData, warmup *warmupLimits) {
-	m.autoscalingLimitsLock.Lock()
-	defer m.autoscalingLimitsLock.Unlock()
-
-	m.autoscalingLimits[config.ShortDescription()] = autoscalingLimits{
+	limits := autoscalingLimits{
 		runnerName:    config.Name,
 		systemID:      config.GetSystemID(),
 		maxGrowthRate: float64(maxGrowthRate(config, warmup)),
@@ -972,6 +1004,24 @@ func (m *machineProvider) updateAutoscalingLimits(config *common.RunnerConfig, d
 		warmupEnabled: config.Machine.WarmupEnabled(),
 		updatedAt:     time.Now(),
 	}
+	if coordinator, err := m.runnerMachinesCoordinator(config); err == nil {
+		if breaker := coordinator.creationBreaker(config); breaker != nil {
+			limits.breakerEnabled = true
+			limits.breakerState = breaker.State()
+		}
+	}
+
+	m.autoscalingLimitsLock.Lock()
+	defer m.autoscalingLimitsLock.Unlock()
+	m.autoscalingLimits[config.ShortDescription()] = limits
+}
+
+func breakerLogger(config *common.RunnerConfig) *logrus.Entry {
+	return logrus.WithFields(logrus.Fields{
+		"runner":      config.ShortDescription(),
+		"runner_name": config.Name,
+		"system_id":   config.GetSystemID(),
+	})
 }
 
 func (m *machineProvider) signalRelease(config *common.RunnerConfig) error {
@@ -1011,9 +1061,12 @@ func (m *machineProvider) Create() common.Executor {
 
 func newMachineProvider(provider common.ExecutorProvider) *machineProvider {
 	name := "docker+machine"
+	ctx, cancel := context.WithCancel(context.Background())
 
 	return &machineProvider{
 		name:              name,
+		shutdownCtx:       ctx,
+		shutdownCancel:    cancel,
 		details:           make(machinesDetails),
 		runners:           make(runnersDetails),
 		machine:           docker.NewMachineCommand(),
