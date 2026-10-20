@@ -73,6 +73,10 @@ func (d *shutdownDrain) finishWithin(ctx context.Context) {
 }
 
 func (m *machineProvider) BeginShutdown(config *common.Config) {
+	// Creations parked on the breaker would otherwise hold their jobs until
+	// the shutdown timeout, whether or not the early drain is on.
+	m.shutdownCancel()
+
 	drainConfig := shutdownDrainConfig(config)
 	if drainConfig == nil || !drainConfig.Early {
 		return
@@ -86,6 +90,7 @@ func (m *machineProvider) BeginShutdown(config *common.Config) {
 
 func (m *machineProvider) Shutdown(ctx context.Context, config *common.Config) {
 	m.shuttingDown.Store(true)
+	m.shutdownCancel()
 
 	logger := logrus.WithField("executor", m.name)
 	logger.Info("Shutting down docker+machine executor provider")

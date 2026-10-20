@@ -1487,6 +1487,62 @@ example one added by a configuration reload, does not warm up.
   WarmupIdleFraction = 0.75   # build 150 machines, ready once 80% of them are booted
 ```
 
+### The `[runners.machine.creation_breaker]` section
+
+`MaxGrowthRate` limits how many machines are being created at once. It limits
+how many are created per second only through the time a creation takes. A
+provider that provisions a machine in a minute is called `MaxGrowthRate` times
+per minute. A provider that rejects the request in a second is called
+`MaxGrowthRate` times per second. The rejected requests still count against
+API quotas, so a provider outage turns into a quota outage.
+
+With `enabled = true`, the runner manager stops creating machines for a runner
+when most of its recent creations failed. It waits, then lets a few probe
+creations through to find out whether the provider recovered.
+
+| Parameter       | Description |
+|-----------------|-------------|
+| `enabled`       | Stop creating machines for a while when most recent creations fail. Default is `false`. |
+| `failure_rate`  | Fraction of the counted creations that must have failed before creation stops. Must be a float between `0` and `1`. Default is `0.5`. |
+| `window`        | How far back creations are counted (duration, for example `"1m"`). Default is `1m`. |
+| `settle`        | Creations younger than this value are not counted yet (duration, for example `"5s"`). Must be shorter than `window`. Default is `5s`. |
+| `min_creations` | Creation does not stop before this many creations are counted. Default is `20`. |
+| `open_initial`  | How long creation stops the first time (duration, for example `"5s"`). Doubles each time the probes that follow all fail. Default is `5s`. |
+| `open_max`      | Longest time creation stops (duration, for example `"1m"`). Default is `1m`. |
+| `probes`        | Number of creations allowed at once after a stop. Default is `MaxGrowthRate / 10`, at least `1`. |
+
+Creations are counted by when they started, not by when they finished. A
+failed creation returns in a second while a successful one takes a minute, so
+counting them as they finish would see the failures first. Creations
+younger than `settle` are not counted. Creations older than `settle` are
+counted as failed if they failed, and as not failed otherwise, whether they
+succeeded or are still running. Creation stops once at least `min_creations`
+are counted and at least `failure_rate` of them failed.
+
+A slow creation is not a failure. If the provider accepts requests but takes
+minutes to complete them, creation does not stop, and `MaxGrowthRate` limits
+the load as before.
+
+Creation stops for `open_initial`, shortened by up to half as jitter. Then
+`probes` creations are allowed. If one succeeds, creation resumes. If all of
+them fail, creation stops for twice as long, up to `open_max`. Creations that
+were running when creation stopped do not count toward resuming or stopping
+again, whatever their outcome.
+
+Jobs that need a machine wait while creation is stopped, the same way they
+wait while `MaxGrowthRate` is exhausted. The state is exported as a metric and
+each change is logged. Disabling the breaker or changing its settings in a
+configuration reload releases the creations waiting on it and starts over
+with creation allowed.
+
+```toml
+[runners.machine]
+  IdleCount = 200
+  MaxGrowthRate = 90
+  [runners.machine.creation_breaker]
+    enabled = true   # stop after half of a minute's creations fail, 9 probes after 5s to 1m
+```
+
 ### Environment variables in machine options
 
 {{< history >}}

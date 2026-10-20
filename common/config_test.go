@@ -4287,6 +4287,25 @@ func TestRunnerConfig_ValidateMachineWarmup(t *testing.T) {
 	assert.NoError(t, (&RunnerConfig{}).Validate())
 }
 
+func TestRunnerConfig_ValidateMachineCreationBreaker(t *testing.T) {
+	validate := func(cb *DockerMachineCreationBreaker) error {
+		return (&RunnerConfig{RunnerSettings: RunnerSettings{Machine: &DockerMachine{CreationBreaker: cb}}}).Validate()
+	}
+
+	assert.NoError(t, validate(nil))
+	assert.NoError(t, validate(&DockerMachineCreationBreaker{Enabled: true}))
+	assert.NoError(t, validate(&DockerMachineCreationBreaker{Enabled: true, Window: 10 * time.Second, Settle: time.Second}))
+	assert.NoError(t, validate(&DockerMachineCreationBreaker{Enabled: false, Window: time.Second, Settle: time.Minute}), "not checked while disabled")
+
+	err := validate(&DockerMachineCreationBreaker{Enabled: true, Window: 5 * time.Second})
+	require.Error(t, err, "default settle equals the window")
+	assert.Contains(t, err.Error(), "settle 5s must be shorter than window 5s")
+
+	err = validate(&DockerMachineCreationBreaker{Enabled: true, Settle: 2 * time.Minute})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "settle 2m0s must be shorter than window 1m0s")
+}
+
 func TestRunnerConfig_ValidateAllowedDockerCredentialHelpers(t *testing.T) {
 	tests := map[string]struct {
 		allowlist    map[string][]string
