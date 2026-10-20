@@ -355,6 +355,17 @@ func TestBashScript_Execute(t *testing.T) {
 			opts:     []func(*Builder){withExitCodeCheck},
 			contains: []string{"AFTER_DONE"},
 		},
+		"until loop runs to completion with exit code check": {
+			lines: []string{
+				`n=0`,
+				`until [ $n -ge 1 ]; do`,
+				`n=1`,
+				`done`,
+				`echo AFTER_UNTIL`,
+			},
+			opts:     []func(*Builder){withExitCodeCheck},
+			contains: []string{"AFTER_UNTIL"},
+		},
 		// Guards the exact-match in exitCodeCheckApplies: the inner "fi" closes
 		// the nested if, and the outer "else" is still a bare else. Widening
 		// either case to a prefix or substring match breaks this.
@@ -393,6 +404,16 @@ func TestBashScript_Execute(t *testing.T) {
 			lines:    []string{"if true; then\n! true\nfi", `echo AFTER_FI`},
 			opts:     []func(*Builder){withExitCodeCheck},
 			contains: []string{"AFTER_FI"},
+		},
+		"multi-line item ending in done after a negation does not abort with exit code check": {
+			lines:    []string{"for i in 1; do\n! true\ndone", `echo AFTER_DONE`},
+			opts:     []func(*Builder){withExitCodeCheck},
+			contains: []string{"AFTER_DONE"},
+		},
+		"multi-line item ending in a negation does not abort with sections and exit code check": {
+			lines:    []string{"echo FIRST\n! true", `echo AFTER_ITEM`},
+			opts:     []func(*Builder){withExitCodeCheck, withScriptSections},
+			contains: []string{"FIRST", "AFTER_ITEM"},
 		},
 		// errexit must still propagate a plain failing command...
 		"failing command still aborts the script": {

@@ -153,12 +153,12 @@ func exitCodeCheckSuffix(line, checkErr string) string {
 // appended after line. The check reads $? from the last line of a multi-line
 // item, so that line decides. It must not follow a bare "else" (where $? still
 // holds the failed if-condition's status), a negated command "! cmd" (where $?
-// is non-zero when cmd succeeds), nor "fi" or "done" (where $? is the status of
-// the last body command, which may be such a negation). Failures that
-// "set -o errexit" ignores, such as "false && true", must still abort: that is
-// the purpose of the check. After "then" and "while ...; do", $? is 0, because
-// the body runs only when the condition succeeded. After "until ...; do" it is
-// not, and the check aborts there.
+// is non-zero when cmd succeeds), "fi" or "done" (where $? is the status of the
+// last body command, which may be such a negation), nor "until ...; do" (where
+// $? is the failed condition's status). Failures that "set -o errexit" ignores,
+// such as "false && true", must still abort: that is the purpose of the check.
+// After "then" and "while ...; do", $? is 0, because the body runs only when
+// the condition succeeded.
 // See https://gitlab.com/gitlab-org/gitlab-runner/-/work_items/39634.
 func exitCodeCheckApplies(line string) bool {
 	fields := strings.Fields(line[strings.LastIndexByte(line, '\n')+1:])
@@ -168,6 +168,8 @@ func exitCodeCheckApplies(line string) bool {
 	switch fields[0] {
 	case "!", "fi", "done":
 		return false
+	case "until":
+		return fields[len(fields)-1] != "do"
 	case "else":
 		return len(fields) > 1 && !strings.HasPrefix(fields[1], "#")
 	}
