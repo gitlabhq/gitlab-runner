@@ -355,6 +355,26 @@ func TestBashScript_Execute(t *testing.T) {
 			opts:     []func(*Builder){withExitCodeCheck},
 			contains: []string{"AFTER_DONE"},
 		},
+		// Guards the exact-match in exitCodeCheckApplies: the inner "fi" closes
+		// the nested if, and the outer "else" is still a bare else. Widening
+		// either case to a prefix or substring match breaks this.
+		"nested else runs to completion with exit code check": {
+			lines: []string{
+				`if false; then`,
+				`echo OUTER_THEN`,
+				`else`,
+				`if false; then`,
+				`echo INNER_THEN`,
+				`else`,
+				`echo INNER_ELSE`,
+				`fi`,
+				`fi`,
+				`echo AFTER_FI`,
+			},
+			opts:     []func(*Builder){withExitCodeCheck},
+			contains: []string{"INNER_ELSE", "AFTER_FI"},
+			excludes: []string{"OUTER_THEN", "INNER_THEN"},
+		},
 		// A multi-line script: item (a YAML "- |" block) reaches
 		// exitCodeCheckApplies as one string, so its last line decides, not the
 		// first word of the whole item.
