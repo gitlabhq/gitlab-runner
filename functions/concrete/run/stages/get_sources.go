@@ -660,32 +660,81 @@ func (s GetSources) gitFetch(ctx context.Context, e *env.Env, extraEnv map[strin
 }
 
 func (s GetSources) gitClone(ctx context.Context, e *env.Env, templateDir, remoteURL string, extraEnv map[string]string) error {
+	revision := cloneRevision(s.Ref, s.SHA)
+
+	cloneTarget := s.Ref
+	if revision != "" {
+		cloneTarget = revision
+	}
+
 	switch {
 	case s.Depth > 0:
-		e.Noticef("Cloning repository for %s with git depth set to %d...", s.Ref, s.Depth)
-	case s.Ref != "":
-		e.Noticef("Cloning repository for %s...", s.Ref)
+		e.Noticef("Cloning repository for %s with git depth set to %d...", cloneTarget, s.Depth)
+	case cloneTarget != "":
+		e.Noticef("Cloning repository for %s...", cloneTarget)
 	default:
 		e.Noticef("Cloning repository...")
 	}
 
-	cloneArgs := s.configArgs()
-	cloneArgs = append(cloneArgs, "clone", "--no-checkout", remoteURL, ".", "--template", templateDir)
-	if s.Depth > 0 {
-		cloneArgs = append(cloneArgs, "--depth", strconv.Itoa(s.Depth))
+	if conflict := cloneRevisionConflict(s.GitCloneFlags); revision != "" && conflict != "" {
+		e.Warningf(
+			"GIT_CLONE_EXTRA_FLAGS contains %s, which git clone does not accept together with"+
+				" --revision (used to clone %s)",
+			conflict, cloneTarget,
+		)
 	}
-	if strings.HasPrefix(s.Ref, "refs/") {
-		cloneArgs = append(cloneArgs, "--revision", s.Ref)
-	} else if s.Ref != "" {
-		cloneArgs = append(cloneArgs, "--branch", s.Ref)
-	}
-	cloneArgs = append(cloneArgs, s.GitCloneFlags...)
 
-	if err := git(ctx, e, extraEnv, cloneArgs...); err != nil {
+	if err := git(ctx, e, extraEnv, s.cloneArgs(remoteURL, templateDir)...); err != nil {
 		return fmt.Errorf("git clone: %w", err)
 	}
 
 	return nil
+}
+
+func (s GetSources) cloneArgs(remoteURL, templateDir string) []string {
+	args := s.configArgs()
+	// git parses --revision before it knows the remote's object format
+	if s.ObjectFormat != "" && s.ObjectFormat != "sha1" {
+		args = append(args, "-c", "init.defaultObjectFormat="+s.ObjectFormat)
+	}
+	args = append(args, "clone", "--no-checkout", remoteURL, ".", "--template", templateDir)
+	if s.Depth > 0 {
+		args = append(args, "--depth", strconv.Itoa(s.Depth))
+	}
+
+	switch revision := cloneRevision(s.Ref, s.SHA); {
+	case revision != "":
+		args = append(args, "--revision", revision)
+	case s.Ref != "":
+		args = append(args, "--branch", s.Ref)
+	}
+
+	return append(args, s.GitCloneFlags...)
+}
+
+// Fully qualified refs clone the SHA because the merge request ref moves with the
+// target branch. Branch jobs keep --branch so that origin/<branch> exists.
+func cloneRevision(ref, sha string) string {
+	if !strings.HasPrefix(ref, "refs/") {
+		return ""
+	}
+
+	if sha != "" {
+		return sha
+	}
+
+	return ref
+}
+
+func cloneRevisionConflict(flags []string) string {
+	for _, flag := range flags {
+		if flag == "--branch" || flag == "--mirror" ||
+			strings.HasPrefix(flag, "--branch=") || strings.HasPrefix(flag, "-b") {
+			return flag
+		}
+	}
+
+	return ""
 }
 
 func (s GetSources) gitCheckout(ctx context.Context, e *env.Env, extraEnv map[string]string) error {

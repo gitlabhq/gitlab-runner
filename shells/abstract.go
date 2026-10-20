@@ -1209,11 +1209,18 @@ func (b *AbstractShell) writeCloneRevisionCmd(w ShellWriter, info common.ShellSc
 	projectDir := build.FullProjectDir()
 	depth := build.GitInfo.Depth
 
+	revision := cloneRevision(build.GitInfo.Ref, build.GitInfo.Sha)
+
+	cloneTarget := build.GitInfo.Ref
+	if revision != "" {
+		cloneTarget = revision
+	}
+
 	switch {
 	case depth > 0:
-		w.Noticef("Cloning repository for %s with git depth set to %d...", build.GitInfo.Ref, depth)
-	case build.GitInfo.Ref != "":
-		w.Noticef("Cloning repository for %s...", build.GitInfo.Ref)
+		w.Noticef("Cloning repository for %s with git depth set to %d...", cloneTarget, depth)
+	case cloneTarget != "":
+		w.Noticef("Cloning repository for %s...", cloneTarget)
 	default:
 		w.Noticef("Cloning repository...")
 	}
@@ -1222,6 +1229,10 @@ func (b *AbstractShell) writeCloneRevisionCmd(w ShellWriter, info common.ShellSc
 	userAgent := fmt.Sprintf("http.userAgent=%s %s %s/%s", v.Name, v.Version, v.OS, v.Architecture)
 
 	cloneArgs := []string{"-c", userAgent}
+	// git parses --revision before it knows the remote's object format
+	if objectFormat := build.GetRepositoryObjectFormat(); objectFormat != common.DefaultObjectFormat {
+		cloneArgs = append(cloneArgs, "-c", "init.defaultObjectFormat="+objectFormat)
+	}
 	// Force Git to send credentials proactively instead of waiting for a 401.
 	// This ensures the username is propagated to Gitaly for public projects.
 	cloneArgs = append(cloneArgs, b.proactiveAuthArgs(w, build)...)
@@ -1231,17 +1242,52 @@ func (b *AbstractShell) writeCloneRevisionCmd(w ShellWriter, info common.ShellSc
 		cloneArgs = append(cloneArgs, "--depth", strconv.Itoa(depth))
 	}
 
-	if strings.HasPrefix(build.GitInfo.Ref, "refs/") {
-		cloneArgs = append(cloneArgs, "--revision", build.GitInfo.Ref)
-	} else if build.GitInfo.Ref != "" {
+	extraFlags := build.GetGitCloneFlags()
+
+	switch {
+	case revision != "":
+		if conflict := cloneRevisionConflict(extraFlags); conflict != "" {
+			w.Warningf(
+				"GIT_CLONE_EXTRA_FLAGS contains %s, which git clone does not accept together with --revision (used to clone %s)",
+				conflict, cloneTarget,
+			)
+		}
+
+		cloneArgs = append(cloneArgs, "--revision", revision)
+	case build.GitInfo.Ref != "":
 		cloneArgs = append(cloneArgs, "--branch", build.GitInfo.Ref)
 	}
 
-	cloneArgs = append(cloneArgs, build.GetGitCloneFlags()...)
+	cloneArgs = append(cloneArgs, extraFlags...)
 
 	w.Command("git", cloneArgs...)
 
 	w.Cd(projectDir)
+}
+
+// Fully qualified refs clone the SHA because the merge request ref moves with the
+// target branch. Branch jobs keep --branch so that origin/<branch> exists.
+func cloneRevision(ref, sha string) string {
+	if !strings.HasPrefix(ref, "refs/") {
+		return ""
+	}
+
+	if sha != "" {
+		return sha
+	}
+
+	return ref
+}
+
+func cloneRevisionConflict(flags []string) string {
+	for _, flag := range flags {
+		if flag == "--branch" || flag == "--mirror" ||
+			strings.HasPrefix(flag, "--branch=") || strings.HasPrefix(flag, "-b") {
+			return flag
+		}
+	}
+
+	return ""
 }
 
 // includeExternalGitConfig runs the git config command, to add a include.path setting to targetFile to include fileToInclude.

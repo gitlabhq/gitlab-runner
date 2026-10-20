@@ -946,6 +946,185 @@ func TestGetSources_HasRemoteFlag(t *testing.T) {
 	}
 }
 
+func TestCloneRevision(t *testing.T) {
+	const sha = "0123456789abcdef0123456789abcdef01234567"
+
+	tests := map[string]struct {
+		ref      string
+		sha      string
+		expected string
+	}{
+		"merge request ref with sha":    {"refs/merge-requests/42/merge", sha, sha},
+		"merge request ref without sha": {"refs/merge-requests/42/merge", "", "refs/merge-requests/42/merge"},
+		"fully qualified branch ref":    {"refs/heads/main", sha, sha},
+		"branch name":                   {"main", sha, ""},
+		"tag name":                      {"v1.0.0", sha, ""},
+		"empty ref":                     {"", sha, ""},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			assert.Equal(t, tc.expected, cloneRevision(tc.ref, tc.sha))
+		})
+	}
+}
+
+func TestCloneRevisionConflict(t *testing.T) {
+	tests := map[string]struct {
+		flags    []string
+		expected string
+	}{
+		"none":            {[]string{"--no-tags", "--filter=blob:none"}, ""},
+		"branch":          {[]string{"--no-tags", "--branch", "main"}, "--branch"},
+		"branch equals":   {[]string{"--branch=main"}, "--branch=main"},
+		"short branch":    {[]string{"-b", "main"}, "-b"},
+		"attached branch": {[]string{"-bmain"}, "-bmain"},
+		"mirror":          {[]string{"--mirror"}, "--mirror"},
+		"first wins":      {[]string{"--mirror", "--branch", "main"}, "--mirror"},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			assert.Equal(t, tc.expected, cloneRevisionConflict(tc.flags))
+		})
+	}
+}
+
+func TestGetSources_CloneArgs(t *testing.T) {
+	const (
+		remoteURL   = "https://gitlab.example.com/group/project.git"
+		templateDir = "/tmp/tmpl"
+		sha         = "0123456789abcdef0123456789abcdef01234567"
+	)
+
+	tests := map[string]struct {
+		gs       GetSources
+		expected []string
+	}{
+		"merge request ref clones the sha": {
+			gs:       GetSources{Ref: "refs/merge-requests/42/merge", SHA: sha},
+			expected: []string{"clone", "--no-checkout", remoteURL, ".", "--template", templateDir, "--revision", sha},
+		},
+		"qualified ref without a sha clones the ref": {
+			gs:       GetSources{Ref: "refs/heads/main"},
+			expected: []string{"clone", "--no-checkout", remoteURL, ".", "--template", templateDir, "--revision", "refs/heads/main"},
+		},
+		"plain branch keeps --branch": {
+			gs:       GetSources{Ref: "main", SHA: sha},
+			expected: []string{"clone", "--no-checkout", remoteURL, ".", "--template", templateDir, "--branch", "main"},
+		},
+		"depth is included before the revision": {
+			gs:       GetSources{Ref: "refs/merge-requests/42/merge", SHA: sha, Depth: 1},
+			expected: []string{"clone", "--no-checkout", remoteURL, ".", "--template", templateDir, "--depth", "1", "--revision", sha},
+		},
+		"sha256 repository sets the object format": {
+			gs:       GetSources{Ref: "refs/merge-requests/42/merge", SHA: sha, ObjectFormat: "sha256"},
+			expected: []string{"-c", "init.defaultObjectFormat=sha256", "clone", "--no-checkout", remoteURL, ".", "--template", templateDir, "--revision", sha},
+		},
+		"extra clone flags are appended last": {
+			gs:       GetSources{Ref: "main", GitCloneFlags: []string{"--filter=blob:none"}},
+			expected: []string{"clone", "--no-checkout", remoteURL, ".", "--template", templateDir, "--branch", "main", "--filter=blob:none"},
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			assert.Equal(t, tc.expected, tc.gs.cloneArgs(remoteURL, templateDir))
+		})
+	}
+}
+
+func TestGetSources_GitClone(t *testing.T) {
+	if !gitVersionAtLeast(t.Context(), newTestEnv(t, "bash"), gitMinVersionCloneWithRef) {
+		t.Skip("git older than " + gitMinVersionCloneWithRef)
+	}
+
+	runGit := func(t *testing.T, dir string, args ...string) string {
+		t.Helper()
+
+		cmd := exec.CommandContext(t.Context(), "git", args...)
+		cmd.Dir = dir
+		out, err := cmd.CombinedOutput()
+		require.NoError(t, err, string(out))
+
+		return strings.TrimSpace(string(out))
+	}
+
+	newOrigin := func(t *testing.T, objectFormat string) (string, string) {
+		origin := t.TempDir()
+		runGit(t, origin, "init", "-q", "-b", "main", "--object-format="+objectFormat)
+		runGit(t, origin, "config", "user.email", "test@example.com")
+		runGit(t, origin, "config", "user.name", "Test")
+		runGit(t, origin, "commit", "-q", "--allow-empty", "-m", "base")
+		runGit(t, origin, "commit", "-q", "--allow-empty", "-m", "pipeline")
+		pipelineSHA := runGit(t, origin, "rev-parse", "HEAD")
+		runGit(t, origin, "reset", "-q", "--hard", "HEAD~1")
+		runGit(t, origin, "commit", "-q", "--allow-empty", "-m", "moved")
+		runGit(t, origin, "update-ref", "refs/merge-requests/1/merge", "HEAD")
+
+		return origin, pipelineSHA
+	}
+
+	tests := map[string]struct {
+		objectFormat   string
+		cloneFlags     []string
+		expectErr      bool
+		expectedStderr []string
+	}{
+		"clones the sha although the merge request ref has moved": {
+			objectFormat: "sha1",
+		},
+		"sha256 repository": {
+			objectFormat: "sha256",
+		},
+		"warns when GIT_CLONE_EXTRA_FLAGS clashes with --revision": {
+			objectFormat:   "sha1",
+			cloneFlags:     []string{"--branch", "main"},
+			expectErr:      true,
+			expectedStderr: []string{"GIT_CLONE_EXTRA_FLAGS contains --branch"},
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			origin, pipelineSHA := newOrigin(t, tc.objectFormat)
+			e := newTestEnv(t, "bash")
+			gs := GetSources{
+				Ref:           "refs/merge-requests/1/merge",
+				SHA:           pipelineSHA,
+				ObjectFormat:  tc.objectFormat,
+				GitCloneFlags: tc.cloneFlags,
+			}
+
+			err := gs.gitClone(t.Context(), e, t.TempDir(), fileURL(origin), nil)
+
+			stderr := e.Stderr.(*bytes.Buffer).String()
+			for _, expected := range tc.expectedStderr {
+				assert.Contains(t, stderr, expected)
+			}
+
+			if tc.expectErr {
+				assert.Error(t, err)
+				return
+			}
+
+			require.NoError(t, err)
+			runGit(t, e.WorkingDir, "cat-file", "-e", pipelineSHA+"^{commit}")
+		})
+	}
+}
+
+// fileURL makes git use the file transport, so --depth and --revision take effect.
+// A bare local path is cloned by copying every object instead.
+func fileURL(path string) string {
+	path = filepath.ToSlash(path)
+	if !strings.HasPrefix(path, "/") {
+		path = "/" + path
+	}
+
+	return "file://" + path
+}
+
 func TestIsShallowRepo(t *testing.T) {
 	tests := map[string]struct {
 		setup    func(t *testing.T) string
