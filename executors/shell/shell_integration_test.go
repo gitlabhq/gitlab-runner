@@ -2090,14 +2090,17 @@ func TestBuildInvokeBinaryHelper(t *testing.T) {
 
 func TestGitCloneOrFetch(t *testing.T) {
 	if !test.CommandVersionIsAtLeast(t, "2.49.0", "git", "version") {
-		t.Skip("git version is not 2.49.0")
+		t.Skip("git older than 2.49.0")
 	}
 
 	tests := map[string]struct {
-		revision    string
-		sha         string
-		depth       int
-		assertError bool
+		revision          string
+		sha               string
+		depth             int
+		cloneFlags        string
+		fetchFails        bool
+		nativeCloneFails  bool
+		nativeCloneOutput []string
 	}{
 		"main branch matching sha": {
 			revision: "main",
@@ -2113,15 +2116,29 @@ func TestGitCloneOrFetch(t *testing.T) {
 			depth:    1,
 		},
 		"main refs previous sha with depth 1": {
-			revision:    "refs/heads/main",
-			sha:         "035c3a26fadbc7bd2f4101c84812a8b6e722f562",
-			depth:       1,
-			assertError: true,
+			revision:   "refs/heads/main",
+			sha:        "035c3a26fadbc7bd2f4101c84812a8b6e722f562",
+			depth:      1,
+			fetchFails: true,
 		},
 		"main refs wrong sha": {
-			revision:    "refs/heads/main",
-			sha:         "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-			assertError: true,
+			revision:         "refs/heads/main",
+			sha:              "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+			fetchFails:       true,
+			nativeCloneFails: true,
+		},
+		"main refs with --branch in GIT_CLONE_EXTRA_FLAGS": {
+			revision:          "refs/heads/main",
+			sha:               "1ea27a9695f80d7816d9e8ce025d9b2df83d0dd7",
+			cloneFlags:        "--branch main",
+			nativeCloneFails:  true,
+			nativeCloneOutput: []string{"GIT_CLONE_EXTRA_FLAGS contains --branch"},
+		},
+		// git accepts --branch twice, the last one wins
+		"main branch with --branch in GIT_CLONE_EXTRA_FLAGS": {
+			revision:   "main",
+			sha:        "1ea27a9695f80d7816d9e8ce025d9b2df83d0dd7",
+			cloneFlags: "--branch main",
 		},
 	}
 
@@ -2145,16 +2162,29 @@ func TestGitCloneOrFetch(t *testing.T) {
 					if tt.depth > 0 {
 						build.GitInfo.Depth = tt.depth
 					}
+					if tt.cloneFlags != "" {
+						build.Variables = append(build.Variables, spec.Variable{
+							Key:   "GIT_CLONE_EXTRA_FLAGS",
+							Value: tt.cloneFlags,
+						})
+					}
+
+					nativeClone := build.IsFeatureFlagOn(featureflags.UseGitNativeClone)
 
 					out, err := buildtest.RunBuildReturningOutput(t, build)
-					if tt.assertError {
+					if (nativeClone && tt.nativeCloneFails) || (!nativeClone && tt.fetchFails) {
 						assert.Error(t, err)
+						if nativeClone {
+							for _, expected := range tt.nativeCloneOutput {
+								assert.Contains(t, out, expected)
+							}
+						}
 						return
 					}
 
 					assert.NoError(t, err)
 
-					if build.IsFeatureFlagOn(featureflags.UseGitNativeClone) {
+					if nativeClone {
 						assert.Contains(t, out, "Cloning into")
 					} else {
 						assert.Contains(t, out, "Fetching changes")
@@ -2165,6 +2195,79 @@ func TestGitCloneOrFetch(t *testing.T) {
 			})
 		})
 	}
+}
+
+func TestGitCloneMovedMergeRef(t *testing.T) {
+	if !test.CommandVersionIsAtLeast(t, "2.49.0", "git", "version") {
+		t.Skip("git older than 2.49.0")
+	}
+
+	runGit := func(t *testing.T, dir string, args ...string) string {
+		t.Helper()
+
+		cmd := exec.Command("git", args...)
+		cmd.Dir = dir
+		out, err := cmd.CombinedOutput()
+		require.NoError(t, err, string(out))
+
+		return strings.TrimSpace(string(out))
+	}
+
+	for _, objectFormat := range []string{"sha1", "sha256"} {
+		t.Run(objectFormat, func(t *testing.T) {
+			t.Parallel()
+
+			origin := tempDir(t)
+			runGit(t, origin, "init", "-q", "-b", "main", "--object-format="+objectFormat)
+			runGit(t, origin, "config", "user.email", "test@example.com")
+			runGit(t, origin, "config", "user.name", "Test")
+			runGit(t, origin, "commit", "-q", "--allow-empty", "-m", "base")
+			runGit(t, origin, "commit", "-q", "--allow-empty", "-m", "pipeline")
+			pipelineSHA := runGit(t, origin, "rev-parse", "HEAD")
+			runGit(t, origin, "reset", "-q", "--hard", "HEAD~1")
+			runGit(t, origin, "commit", "-q", "--allow-empty", "-m", "moved")
+			runGit(t, origin, "update-ref", "refs/merge-requests/1/merge", "HEAD")
+
+			shellstest.OnEachShell(t, func(t *testing.T, shell string) {
+				t.Parallel()
+				buildtest.WithEachFeatureFlag(t, func(t *testing.T, setup buildtest.BuildSetupFn) {
+					t.Parallel()
+
+					jobResponse, err := common.GetRemoteBuildResponse(`echo "Hello World"`)
+					require.NoError(t, err)
+					build := newBuild(t, jobResponse, shell)
+					setup(t, build)
+
+					build.GitInfo = spec.GitInfo{
+						RepoURL:          fileURL(origin),
+						Ref:              "refs/merge-requests/1/merge",
+						Sha:              pipelineSHA,
+						Depth:            1,
+						Refspecs:         []string{"+" + pipelineSHA + ":refs/pipelines/1"},
+						RepoObjectFormat: objectFormat,
+					}
+
+					out, err := buildtest.RunBuildReturningOutput(t, build)
+					require.NoError(t, err, out)
+					assert.Contains(t, out, fmt.Sprintf("Checking out %s as detached HEAD", pipelineSHA[:8]))
+					if build.IsFeatureFlagOn(featureflags.UseGitNativeClone) {
+						assert.Contains(t, out, "Cloning repository for "+pipelineSHA)
+					}
+				}, featureflags.UseGitNativeClone)
+			})
+		})
+	}
+}
+
+// fileURL makes git use the file transport, so --depth and --revision take effect.
+// A bare local path is cloned by copying every object instead.
+func fileURL(path string) string {
+	path = filepath.ToSlash(path)
+	if !strings.HasPrefix(path, "/") {
+		path = "/" + path
+	}
+
+	return "file://" + path
 }
 
 func TestBuildPwshHandlesSyntaxErrors(t *testing.T) {

@@ -1640,6 +1640,11 @@ func TestGitCloneFlags(t *testing.T) {
 			depth:                 2,
 			expectedGitCloneFlags: []any{"--no-tags", "--filter=blob:none"},
 		},
+		"user supplied --branch does not clash, because a branch job never clones by --revision": {
+			value:                 "--branch feature",
+			depth:                 0,
+			expectedGitCloneFlags: []any{"--branch", "feature"},
+		},
 		"disabled": {
 			value: "none",
 			depth: 0,
@@ -5316,4 +5321,208 @@ func TestAbstractShell_writeBootVerifyCacheProbe_UniqueKeys(t *testing.T) {
 	}
 
 	assert.NotEqual(t, keys[0], keys[1])
+}
+
+func TestCloneRevision(t *testing.T) {
+	const sha = "0123456789abcdef0123456789abcdef01234567"
+
+	tests := map[string]struct {
+		ref      string
+		sha      string
+		expected string
+	}{
+		"merge request ref with sha":    {"refs/merge-requests/42/merge", sha, sha},
+		"merge request ref without sha": {"refs/merge-requests/42/merge", "", "refs/merge-requests/42/merge"},
+		"fully qualified branch ref":    {"refs/heads/main", sha, sha},
+		"branch name":                   {"main", sha, ""},
+		"tag name":                      {"v1.0.0", sha, ""},
+		"empty ref":                     {"", sha, ""},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			assert.Equal(t, tc.expected, cloneRevision(tc.ref, tc.sha))
+		})
+	}
+}
+
+func TestCloneRevisionConflict(t *testing.T) {
+	tests := map[string]struct {
+		flags    []string
+		expected string
+	}{
+		"none":            {[]string{"--no-tags", "--filter=blob:none"}, ""},
+		"branch":          {[]string{"--no-tags", "--branch", "main"}, "--branch"},
+		"branch equals":   {[]string{"--branch=main"}, "--branch=main"},
+		"short branch":    {[]string{"-b", "main"}, "-b"},
+		"attached branch": {[]string{"-bmain"}, "-bmain"},
+		"mirror":          {[]string{"--mirror"}, "--mirror"},
+		"first wins":      {[]string{"--mirror", "--branch", "main"}, "--mirror"},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			assert.Equal(t, tc.expected, cloneRevisionConflict(tc.flags))
+		})
+	}
+}
+
+func TestCloneRevisionPrefersPipelineSha(t *testing.T) {
+	const (
+		dummyProjectDir = "./"
+		dummyRepoUrl    = "https://gitlab.com/my/repo.git"
+		templateDir     = "/some/template/dir"
+		pipelineSha     = "01234567abcdef"
+		mergeRef        = "refs/merge-requests/42/merge"
+	)
+
+	tests := map[string]struct {
+		sha            string
+		ref            string
+		objectFormat   string
+		expectedNotice string
+		expectedConfig []any
+		expectedArgs   []any
+	}{
+		"merged results pipeline clones the sha, not the mutable merge ref": {
+			sha:            pipelineSha,
+			ref:            mergeRef,
+			expectedNotice: pipelineSha,
+			expectedArgs:   []any{"--revision", pipelineSha},
+		},
+		"sha256 repository tells git the object format before it parses the sha": {
+			sha:            pipelineSha,
+			ref:            mergeRef,
+			objectFormat:   "sha256",
+			expectedNotice: pipelineSha,
+			expectedConfig: []any{"-c", "init.defaultObjectFormat=sha256"},
+			expectedArgs:   []any{"--revision", pipelineSha},
+		},
+		"branch pipeline keeps cloning the branch so local and remote-tracking refs exist": {
+			sha:            pipelineSha,
+			ref:            "main",
+			expectedNotice: "main",
+			expectedArgs:   []any{"--branch", "main"},
+		},
+		"without a sha a fully qualified ref is still used": {
+			ref:            mergeRef,
+			expectedNotice: mergeRef,
+			expectedArgs:   []any{"--revision", mergeRef},
+		},
+		"without a sha a branch name is still used": {
+			ref:            "main",
+			expectedNotice: "main",
+			expectedArgs:   []any{"--branch", "main"},
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			shell := AbstractShell{}
+
+			build := &common.Build{
+				Runner: &common.RunnerConfig{},
+				Job: spec.Job{
+					GitInfo: spec.GitInfo{
+						Sha:              test.sha,
+						Ref:              test.ref,
+						RepoURL:          dummyRepoUrl,
+						RepoObjectFormat: test.objectFormat,
+					},
+				},
+				BuildDir: dummyProjectDir,
+			}
+			build.SafeDirectoryCheckout = true
+
+			v := common.AppVersion
+			userAgent := fmt.Sprintf("http.userAgent=%s %s %s/%s", v.Name, v.Version, v.OS, v.Architecture)
+			command := []any{"-c", userAgent}
+			command = append(command, test.expectedConfig...)
+			command = append(command, "clone", "--no-checkout", dummyRepoUrl, dummyProjectDir, "--template", templateDir)
+			command = append(command, test.expectedArgs...)
+
+			mockWriter := NewMockShellWriter(t)
+			mockWriter.EXPECT().Noticef("Cloning repository for %s...", test.expectedNotice).Once()
+			mockWriter.EXPECT().Command("git", command...).Once()
+			mockWriter.EXPECT().Cd(mock.Anything).Once()
+
+			shell.writeCloneRevisionCmd(mockWriter, common.ShellScriptInfo{Build: build}, templateDir, dummyRepoUrl)
+		})
+	}
+}
+
+func TestCloneRevisionWarnsAboutConflictingCloneFlags(t *testing.T) {
+	const (
+		dummyProjectDir = "./"
+		dummyRepoUrl    = "https://gitlab.com/my/repo.git"
+		templateDir     = "/some/template/dir"
+		pipelineSha     = "01234567abcdef"
+		mergeRef        = "refs/merge-requests/42/merge"
+	)
+
+	tests := map[string]struct {
+		extraFlags       string
+		expectedConflict string
+		expectedFlags    []any
+	}{
+		"--branch": {
+			extraFlags:       "--branch feature",
+			expectedConflict: "--branch",
+			expectedFlags:    []any{"--branch", "feature"},
+		},
+		"--branch=": {
+			extraFlags:       "--branch=feature",
+			expectedConflict: "--branch=feature",
+			expectedFlags:    []any{"--branch=feature"},
+		},
+		"-b": {
+			extraFlags:       "-b feature",
+			expectedConflict: "-b",
+			expectedFlags:    []any{"-b", "feature"},
+		},
+		"-b with an attached value": {
+			extraFlags:       "-bfeature",
+			expectedConflict: "-bfeature",
+			expectedFlags:    []any{"-bfeature"},
+		},
+		"--mirror": {
+			extraFlags:       "--mirror",
+			expectedConflict: "--mirror",
+			expectedFlags:    []any{"--mirror"},
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			shell := AbstractShell{}
+
+			build := &common.Build{
+				Runner: &common.RunnerConfig{},
+				Job: spec.Job{
+					GitInfo: spec.GitInfo{Sha: pipelineSha, Ref: mergeRef, RepoURL: dummyRepoUrl},
+					Variables: spec.Variables{
+						{Key: "GIT_CLONE_EXTRA_FLAGS", Value: test.extraFlags},
+					},
+				},
+				BuildDir: dummyProjectDir,
+			}
+			build.SafeDirectoryCheckout = true
+
+			v := common.AppVersion
+			userAgent := fmt.Sprintf("http.userAgent=%s %s %s/%s", v.Name, v.Version, v.OS, v.Architecture)
+			command := []any{"-c", userAgent, "clone", "--no-checkout", dummyRepoUrl, dummyProjectDir, "--template", templateDir, "--revision", pipelineSha}
+			command = append(command, test.expectedFlags...)
+
+			mockWriter := NewMockShellWriter(t)
+			mockWriter.EXPECT().Noticef("Cloning repository for %s...", pipelineSha).Once()
+			mockWriter.EXPECT().Warningf(
+				"GIT_CLONE_EXTRA_FLAGS contains %s, which git clone does not accept together with --revision (used to clone %s)",
+				test.expectedConflict, pipelineSha,
+			).Once()
+			mockWriter.EXPECT().Command("git", command...).Once()
+			mockWriter.EXPECT().Cd(mock.Anything).Once()
+
+			shell.writeCloneRevisionCmd(mockWriter, common.ShellScriptInfo{Build: build}, templateDir, dummyRepoUrl)
+		})
+	}
 }
