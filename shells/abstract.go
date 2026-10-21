@@ -37,6 +37,7 @@ const (
 	gitlabCacheEnvFileName    = "gitlab_runner_cache_env"
 	gitDir                    = ".git"
 	gitTemplateDir            = "git-template"
+	defaultFetchRefspec       = "+refs/heads/*:refs/remotes/origin/*"
 	gitMinVersionCloneWithRef = "2.49"
 )
 
@@ -1157,20 +1158,7 @@ func (b *AbstractShell) writeRefspecFetchCmd(w ShellWriter, info common.ShellScr
 	b.setupExistingRepoConfig(w)
 	w.EndIf()
 
-	v := common.AppVersion
-	userAgent := fmt.Sprintf("http.userAgent=%s %s %s/%s", v.Name, v.Version, v.OS, v.Architecture)
-
-	fetchArgs := []string{"-c", userAgent}
-	// Force Git to send credentials proactively instead of waiting for a 401.
-	// This ensures the username is propagated to Gitaly for public projects.
-	fetchArgs = append(fetchArgs, b.proactiveAuthArgs(w, build)...)
-	fetchArgs = append(fetchArgs, "fetch", "origin", "--no-recurse-submodules")
-	fetchArgs = append(fetchArgs, build.GitInfo.Refspecs...)
-	if depth > 0 {
-		fetchArgs = append(fetchArgs, "--depth", strconv.Itoa(depth))
-	}
-
-	fetchArgs = append(fetchArgs, build.GetGitFetchFlags()...) //nolint:gocritic
+	fetchArgs := b.refspecFetchArgs(w, build)
 
 	if depth <= 0 {
 		fetchUnshallowArgs := append(fetchArgs, "--unshallow") //nolint:gocritic
@@ -1183,6 +1171,23 @@ func (b *AbstractShell) writeRefspecFetchCmd(w ShellWriter, info common.ShellScr
 	} else {
 		w.Command("git", fetchArgs...)
 	}
+}
+
+func (b *AbstractShell) refspecFetchArgs(w ShellWriter, build *common.Build) []string {
+	v := common.AppVersion
+	userAgent := fmt.Sprintf("http.userAgent=%s %s %s/%s", v.Name, v.Version, v.OS, v.Architecture)
+
+	args := []string{"-c", userAgent}
+	// Force Git to send credentials proactively instead of waiting for a 401.
+	// This ensures the username is propagated to Gitaly for public projects.
+	args = append(args, b.proactiveAuthArgs(w, build)...)
+	args = append(args, "fetch", "origin", "--no-recurse-submodules")
+	args = append(args, build.GitInfo.Refspecs...)
+	if build.GitInfo.Depth > 0 {
+		args = append(args, "--depth", strconv.Itoa(build.GitInfo.Depth))
+	}
+
+	return append(args, build.GetGitFetchFlags()...)
 }
 
 func (b *AbstractShell) writeCloneCmdIfPossible(w ShellWriter, info common.ShellScriptInfo, templateDir, remoteURL string) {
@@ -1263,20 +1268,26 @@ func (b *AbstractShell) writeCloneRevisionCmd(w ShellWriter, info common.ShellSc
 	w.Command("git", cloneArgs...)
 
 	w.Cd(projectDir)
+
+	if build.GitInfo.Sha != "" {
+		// a --revision clone writes no fetch refspec, git remote add would have
+		w.Command("git", "config", "remote.origin.fetch", defaultFetchRefspec)
+		w.Command("git", b.refspecFetchArgs(w, build)...)
+	}
 }
 
-// Fully qualified refs clone the SHA because the merge request ref moves with the
-// target branch. Branch jobs keep --branch so that origin/<branch> exists.
+// The SHA is cloned, and the refs fetched afterwards, because the ref can move
+// while the job is queued. A deleted branch still fails the fetch.
 func cloneRevision(ref, sha string) string {
-	if !strings.HasPrefix(ref, "refs/") {
-		return ""
-	}
-
 	if sha != "" {
 		return sha
 	}
 
-	return ref
+	if strings.HasPrefix(ref, "refs/") {
+		return ref
+	}
+
+	return ""
 }
 
 func cloneRevisionConflict(flags []string) string {

@@ -1640,11 +1640,6 @@ func TestGitCloneFlags(t *testing.T) {
 			depth:                 2,
 			expectedGitCloneFlags: []any{"--no-tags", "--filter=blob:none"},
 		},
-		"user supplied --branch does not clash, because a branch job never clones by --revision": {
-			value:                 "--branch feature",
-			depth:                 0,
-			expectedGitCloneFlags: []any{"--branch", "feature"},
-		},
 		"disabled": {
 			value: "none",
 			depth: 0,
@@ -1673,24 +1668,29 @@ func TestGitCloneFlags(t *testing.T) {
 			}
 
 			if test.depth == 0 {
-				mockWriter.EXPECT().Noticef("Cloning repository for %s...", dummyRef).Once()
+				mockWriter.EXPECT().Noticef("Cloning repository for %s...", dummySha).Once()
 			} else {
-				mockWriter.EXPECT().Noticef("Cloning repository for %s with git depth set to %d...", dummyRef, test.depth).Once()
+				mockWriter.EXPECT().Noticef("Cloning repository for %s with git depth set to %d...", dummySha, test.depth).Once()
 			}
 
 			v := common.AppVersion
 			userAgent := fmt.Sprintf("http.userAgent=%s %s %s/%s", v.Name, v.Version, v.OS, v.Architecture)
 			command := []any{"-c", userAgent, "clone", "--no-checkout", dummyRepoUrl, dummyProjectDir, "--template", templateDir}
+			fetch := []any{"-c", userAgent, "fetch", "origin", "--no-recurse-submodules"}
 
 			if test.depth > 0 {
 				command = append(command, "--depth", strconv.Itoa(test.depth))
+				fetch = append(fetch, "--depth", strconv.Itoa(test.depth))
 			}
 
-			command = append(command, "--branch", dummyRef)
+			command = append(command, "--revision", dummySha)
 			command = append(command, test.expectedGitCloneFlags...)
+			fetch = append(fetch, "--prune", "--quiet")
 
 			mockWriter.EXPECT().Cd(mock.Anything).Once()
 			mockWriter.EXPECT().Command("git", command...).Once()
+			mockWriter.EXPECT().Command("git", "config", "remote.origin.fetch", "+refs/heads/*:refs/remotes/origin/*").Once()
+			mockWriter.EXPECT().Command("git", fetch...).Once()
 
 			shell.writeCloneRevisionCmd(mockWriter, shellScriptInfo, templateDir, dummyRepoUrl)
 		})
@@ -1744,18 +1744,22 @@ func TestGitProactiveAuth(t *testing.T) {
 				Build: build,
 			}
 
-			mockWriter.EXPECT().Noticef("Cloning repository for %s...", dummyRef).Once()
+			mockWriter.EXPECT().Noticef("Cloning repository for %s...", dummySha).Once()
 
 			v := common.AppVersion
 			userAgent := fmt.Sprintf("http.userAgent=%s %s %s/%s", v.Name, v.Version, v.OS, v.Architecture)
 
-			command := []any{"-c", userAgent, "clone", "--no-checkout", dummyRepoUrl, dummyProjectDir, "--template", templateDir, "--branch", dummyRef}
+			config := []any{"-c", userAgent}
 			if test.expectProactiveAuth {
-				command = []any{"-c", userAgent, "-c", "http.https://gitlab.com.proactiveAuth=basic", "clone", "--no-checkout", dummyRepoUrl, dummyProjectDir, "--template", templateDir, "--branch", dummyRef}
+				config = append(config, "-c", "http.https://gitlab.com.proactiveAuth=basic")
 			}
+			command := append(append([]any{}, config...), "clone", "--no-checkout", dummyRepoUrl, dummyProjectDir, "--template", templateDir, "--revision", dummySha)
+			fetch := append(append([]any{}, config...), "fetch", "origin", "--no-recurse-submodules", "--prune", "--quiet")
 
 			mockWriter.EXPECT().Cd(mock.Anything).Once()
 			mockWriter.EXPECT().Command("git", command...).Once()
+			mockWriter.EXPECT().Command("git", "config", "remote.origin.fetch", "+refs/heads/*:refs/remotes/origin/*").Once()
+			mockWriter.EXPECT().Command("git", fetch...).Once()
 
 			shell.writeCloneRevisionCmd(mockWriter, shellScriptInfo, templateDir, dummyRepoUrl)
 		})
@@ -5333,10 +5337,11 @@ func TestCloneRevision(t *testing.T) {
 	}{
 		"merge request ref with sha":    {"refs/merge-requests/42/merge", sha, sha},
 		"merge request ref without sha": {"refs/merge-requests/42/merge", "", "refs/merge-requests/42/merge"},
-		"fully qualified branch ref":    {"refs/heads/main", sha, sha},
-		"branch name":                   {"main", sha, ""},
-		"tag name":                      {"v1.0.0", sha, ""},
-		"empty ref":                     {"", sha, ""},
+		"branch name with sha":          {"main", sha, sha},
+		"branch name without sha":       {"main", "", ""},
+		"tag name with sha":             {"v1.0.0", sha, sha},
+		"tag name without sha":          {"v1.0.0", "", ""},
+		"empty ref":                     {"", sha, sha},
 	}
 
 	for name, tc := range tests {
@@ -5376,19 +5381,24 @@ func TestCloneRevisionPrefersPipelineSha(t *testing.T) {
 		mergeRef        = "refs/merge-requests/42/merge"
 	)
 
+	refspecs := []string{"+" + pipelineSha + ":refs/pipelines/7", "+refs/heads/main:refs/remotes/origin/main"}
+
 	tests := map[string]struct {
 		sha            string
 		ref            string
+		depth          int
 		objectFormat   string
 		expectedNotice string
 		expectedConfig []any
 		expectedArgs   []any
+		expectedFetch  []any
 	}{
 		"merged results pipeline clones the sha, not the mutable merge ref": {
 			sha:            pipelineSha,
 			ref:            mergeRef,
 			expectedNotice: pipelineSha,
 			expectedArgs:   []any{"--revision", pipelineSha},
+			expectedFetch:  []any{"fetch", "origin", "--no-recurse-submodules", refspecs[0], refspecs[1], "--prune", "--quiet"},
 		},
 		"sha256 repository tells git the object format before it parses the sha": {
 			sha:            pipelineSha,
@@ -5397,12 +5407,22 @@ func TestCloneRevisionPrefersPipelineSha(t *testing.T) {
 			expectedNotice: pipelineSha,
 			expectedConfig: []any{"-c", "init.defaultObjectFormat=sha256"},
 			expectedArgs:   []any{"--revision", pipelineSha},
+			expectedFetch:  []any{"fetch", "origin", "--no-recurse-submodules", refspecs[0], refspecs[1], "--prune", "--quiet"},
 		},
-		"branch pipeline keeps cloning the branch so local and remote-tracking refs exist": {
+		"branch pipeline clones the sha and fetches the branch ref": {
 			sha:            pipelineSha,
 			ref:            "main",
-			expectedNotice: "main",
-			expectedArgs:   []any{"--branch", "main"},
+			expectedNotice: pipelineSha,
+			expectedArgs:   []any{"--revision", pipelineSha},
+			expectedFetch:  []any{"fetch", "origin", "--no-recurse-submodules", refspecs[0], refspecs[1], "--prune", "--quiet"},
+		},
+		"depth applies to the clone and the fetch": {
+			sha:            pipelineSha,
+			ref:            "main",
+			depth:          1,
+			expectedNotice: pipelineSha,
+			expectedArgs:   []any{"--depth", "1", "--revision", pipelineSha},
+			expectedFetch:  []any{"fetch", "origin", "--no-recurse-submodules", refspecs[0], refspecs[1], "--depth", "1", "--prune", "--quiet"},
 		},
 		"without a sha a fully qualified ref is still used": {
 			ref:            mergeRef,
@@ -5426,6 +5446,8 @@ func TestCloneRevisionPrefersPipelineSha(t *testing.T) {
 					GitInfo: spec.GitInfo{
 						Sha:              test.sha,
 						Ref:              test.ref,
+						Depth:            test.depth,
+						Refspecs:         refspecs,
 						RepoURL:          dummyRepoUrl,
 						RepoObjectFormat: test.objectFormat,
 					},
@@ -5442,9 +5464,17 @@ func TestCloneRevisionPrefersPipelineSha(t *testing.T) {
 			command = append(command, test.expectedArgs...)
 
 			mockWriter := NewMockShellWriter(t)
-			mockWriter.EXPECT().Noticef("Cloning repository for %s...", test.expectedNotice).Once()
+			if test.depth > 0 {
+				mockWriter.EXPECT().Noticef("Cloning repository for %s with git depth set to %d...", test.expectedNotice, test.depth).Once()
+			} else {
+				mockWriter.EXPECT().Noticef("Cloning repository for %s...", test.expectedNotice).Once()
+			}
 			mockWriter.EXPECT().Command("git", command...).Once()
 			mockWriter.EXPECT().Cd(mock.Anything).Once()
+			if test.expectedFetch != nil {
+				mockWriter.EXPECT().Command("git", "config", "remote.origin.fetch", "+refs/heads/*:refs/remotes/origin/*").Once()
+				mockWriter.EXPECT().Command("git", append([]any{"-c", userAgent}, test.expectedFetch...)...).Once()
+			}
 
 			shell.writeCloneRevisionCmd(mockWriter, common.ShellScriptInfo{Build: build}, templateDir, dummyRepoUrl)
 		})
@@ -5521,6 +5551,8 @@ func TestCloneRevisionWarnsAboutConflictingCloneFlags(t *testing.T) {
 			).Once()
 			mockWriter.EXPECT().Command("git", command...).Once()
 			mockWriter.EXPECT().Cd(mock.Anything).Once()
+			mockWriter.EXPECT().Command("git", "config", "remote.origin.fetch", "+refs/heads/*:refs/remotes/origin/*").Once()
+			mockWriter.EXPECT().Command("git", "-c", userAgent, "fetch", "origin", "--no-recurse-submodules", "--prune", "--quiet").Once()
 
 			shell.writeCloneRevisionCmd(mockWriter, common.ShellScriptInfo{Build: build}, templateDir, dummyRepoUrl)
 		})

@@ -222,6 +222,8 @@ func TestGetSourcesGit_Clone(t *testing.T) {
 
 			actual := runOutput(t, e.WorkingDir, "git", "rev-parse", "HEAD")
 			assert.Equal(t, sha, actual)
+			assert.Equal(t, sha, runOutput(t, e.WorkingDir, "git", "rev-parse", "refs/remotes/origin/"+ref))
+			assert.Equal(t, "+refs/heads/*:refs/remotes/origin/*", runOutput(t, e.WorkingDir, "git", "config", "remote.origin.fetch"))
 
 			if tc.expectShallow {
 				assert.FileExists(t, filepath.Join(e.WorkingDir, ".git", "shallow"))

@@ -956,10 +956,11 @@ func TestCloneRevision(t *testing.T) {
 	}{
 		"merge request ref with sha":    {"refs/merge-requests/42/merge", sha, sha},
 		"merge request ref without sha": {"refs/merge-requests/42/merge", "", "refs/merge-requests/42/merge"},
-		"fully qualified branch ref":    {"refs/heads/main", sha, sha},
-		"branch name":                   {"main", sha, ""},
-		"tag name":                      {"v1.0.0", sha, ""},
-		"empty ref":                     {"", sha, ""},
+		"branch name with sha":          {"main", sha, sha},
+		"branch name without sha":       {"main", "", ""},
+		"tag name with sha":             {"v1.0.0", sha, sha},
+		"tag name without sha":          {"v1.0.0", "", ""},
+		"empty ref":                     {"", sha, sha},
 	}
 
 	for name, tc := range tests {
@@ -1009,8 +1010,12 @@ func TestGetSources_CloneArgs(t *testing.T) {
 			gs:       GetSources{Ref: "refs/heads/main"},
 			expected: []string{"clone", "--no-checkout", remoteURL, ".", "--template", templateDir, "--revision", "refs/heads/main"},
 		},
-		"plain branch keeps --branch": {
+		"branch job clones the sha": {
 			gs:       GetSources{Ref: "main", SHA: sha},
+			expected: []string{"clone", "--no-checkout", remoteURL, ".", "--template", templateDir, "--revision", sha},
+		},
+		"branch job without a sha keeps --branch": {
+			gs:       GetSources{Ref: "main"},
 			expected: []string{"clone", "--no-checkout", remoteURL, ".", "--template", templateDir, "--branch", "main"},
 		},
 		"depth is included before the revision": {
@@ -1099,6 +1104,7 @@ func TestGetSources_GitClone(t *testing.T) {
 			err := gs.gitClone(t.Context(), e, t.TempDir(), fileURL(origin), nil)
 
 			stderr := e.Stderr.(*bytes.Buffer).String()
+			assert.Contains(t, stderr, "Cloning repository for "+pipelineSHA)
 			for _, expected := range tc.expectedStderr {
 				assert.Contains(t, stderr, expected)
 			}
