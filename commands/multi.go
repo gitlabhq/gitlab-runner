@@ -755,6 +755,8 @@ func (mr *RunCommand) run() {
 	}
 	mr.bootVerifyReady.Store(true)
 
+	stopSweep := mr.startRuntimeEnvironmentSweep()
+
 	startWorker := make(chan int)
 	stopWorker := make(chan bool)
 	go mr.startWorkers(startWorker, stopWorker, runners)
@@ -777,6 +779,9 @@ func (mr *RunCommand) run() {
 		}
 	}
 
+	// The sweep uses the providers, so it must stop before they shut down.
+	stopSweep()
+
 	// Workers exit when their current job is done; providers need not wait for that.
 	mr.beginShutdownOfExecutorProviders()
 
@@ -790,6 +795,30 @@ func (mr *RunCommand) run() {
 	close(mr.runFinished)
 
 	mr.log().Info("Can exit now!")
+}
+
+// startRuntimeEnvironmentSweep starts the suspended environment cleanup loop
+// and returns a function that stops it and waits for it to exit.
+func (mr *RunCommand) startRuntimeEnvironmentSweep() func() {
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan struct{})
+
+	loop := &runtimeEnvironmentSweepLoop{
+		providers: mr.executorProviders,
+		config:    mr.configfile.Config,
+		now:       time.Now,
+		log:       mr.log(),
+	}
+
+	go func() {
+		defer close(done)
+		loop.run(ctx, runtimeEnvironmentSweepInterval)
+	}()
+
+	return func() {
+		cancel()
+		<-done
+	}
 }
 
 func (mr *RunCommand) initUsedExecutorProviders() {

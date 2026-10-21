@@ -96,6 +96,13 @@ const (
 	// falls through to UnknownFailure.
 	RunnerInterrupted spec.JobFailureReason = "runner_interrupted"
 
+	// RuntimeEnvironmentUnavailable indicates that a job resuming a suspended
+	// environment found it gone: expired past the runner's TTL, released, or
+	// lost. It tells the orchestrator that the environment cannot be resumed.
+	// GitLab instances that do not support it get RunnerSystemFailure, which is
+	// how failed resumes were reported before.
+	RuntimeEnvironmentUnavailable spec.JobFailureReason = "runtime_environment_unavailable"
+
 	// When defining new job failure reasons, consider if its meaning is
 	// extracted from the scope of already existing one. If yes - update
 	// the failureReasonsCompatibilityMap variable below.
@@ -117,6 +124,7 @@ var (
 		ConfigurationError,
 		RunnerExternalDependencyFailure,
 		RunnerInterrupted,
+		RuntimeEnvironmentUnavailable,
 		JobCanceled,
 	}
 
@@ -129,6 +137,7 @@ var (
 		ImagePullFailure:                RunnerSystemFailure,
 		ConfigurationError:              ScriptFailure,
 		RunnerExternalDependencyFailure: RunnerSystemFailure,
+		RuntimeEnvironmentUnavailable:   RunnerSystemFailure,
 	}
 
 	// A small list of failure reasons that are supported by all
