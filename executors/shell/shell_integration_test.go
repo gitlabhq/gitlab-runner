@@ -2134,11 +2134,12 @@ func TestGitCloneOrFetch(t *testing.T) {
 			nativeCloneFails:  true,
 			nativeCloneOutput: []string{"GIT_CLONE_EXTRA_FLAGS contains --branch"},
 		},
-		// git accepts --branch twice, the last one wins
 		"main branch with --branch in GIT_CLONE_EXTRA_FLAGS": {
-			revision:   "main",
-			sha:        "1ea27a9695f80d7816d9e8ce025d9b2df83d0dd7",
-			cloneFlags: "--branch main",
+			revision:          "main",
+			sha:               "1ea27a9695f80d7816d9e8ce025d9b2df83d0dd7",
+			cloneFlags:        "--branch main",
+			nativeCloneFails:  true,
+			nativeCloneOutput: []string{"GIT_CLONE_EXTRA_FLAGS contains --branch"},
 		},
 	}
 
@@ -2197,7 +2198,7 @@ func TestGitCloneOrFetch(t *testing.T) {
 	}
 }
 
-func TestGitCloneMovedMergeRef(t *testing.T) {
+func TestGitCloneMovedRef(t *testing.T) {
 	if !test.CommandVersionIsAtLeast(t, "2.49.0", "git", "version") {
 		t.Skip("git older than 2.49.0")
 	}
@@ -2213,49 +2214,94 @@ func TestGitCloneMovedMergeRef(t *testing.T) {
 		return strings.TrimSpace(string(out))
 	}
 
-	for _, objectFormat := range []string{"sha1", "sha256"} {
-		t.Run(objectFormat, func(t *testing.T) {
-			t.Parallel()
+	// main is force pushed past the pipeline SHA, and the merge request ref is
+	// rewritten to the new tip, as GitLab does when the target branch moves.
+	newOrigin := func(t *testing.T, objectFormat string) (origin, pipelineSHA, movedSHA string) {
+		origin = tempDir(t)
+		runGit(t, origin, "init", "-q", "-b", "main", "--object-format="+objectFormat)
+		runGit(t, origin, "config", "user.email", "test@example.com")
+		runGit(t, origin, "config", "user.name", "Test")
+		runGit(t, origin, "commit", "-q", "--allow-empty", "-m", "base")
+		runGit(t, origin, "commit", "-q", "--allow-empty", "-m", "pipeline")
+		pipelineSHA = runGit(t, origin, "rev-parse", "HEAD")
+		runGit(t, origin, "tag", "v1.0.0")
+		runGit(t, origin, "reset", "-q", "--hard", "HEAD~1")
+		runGit(t, origin, "commit", "-q", "--allow-empty", "-m", "moved")
+		movedSHA = runGit(t, origin, "rev-parse", "HEAD")
+		runGit(t, origin, "update-ref", "refs/merge-requests/1/merge", "HEAD")
 
-			origin := tempDir(t)
-			runGit(t, origin, "init", "-q", "-b", "main", "--object-format="+objectFormat)
-			runGit(t, origin, "config", "user.email", "test@example.com")
-			runGit(t, origin, "config", "user.name", "Test")
-			runGit(t, origin, "commit", "-q", "--allow-empty", "-m", "base")
-			runGit(t, origin, "commit", "-q", "--allow-empty", "-m", "pipeline")
-			pipelineSHA := runGit(t, origin, "rev-parse", "HEAD")
-			runGit(t, origin, "reset", "-q", "--hard", "HEAD~1")
-			runGit(t, origin, "commit", "-q", "--allow-empty", "-m", "moved")
-			runGit(t, origin, "update-ref", "refs/merge-requests/1/merge", "HEAD")
+		return origin, pipelineSHA, movedSHA
+	}
 
-			shellstest.OnEachShell(t, func(t *testing.T, shell string) {
+	tests := map[string]struct {
+		ref      string
+		refspecs []string
+	}{
+		"merge request ref": {
+			ref:      "refs/merge-requests/1/merge",
+			refspecs: []string{"+%s:refs/pipelines/1"},
+		},
+		"force pushed branch": {
+			ref:      "main",
+			refspecs: []string{"+%s:refs/pipelines/1", "+refs/heads/main:refs/remotes/origin/main"},
+		},
+		"tag": {
+			ref:      "v1.0.0",
+			refspecs: []string{"+%s:refs/pipelines/1", "+refs/tags/v1.0.0:refs/tags/v1.0.0"},
+		},
+	}
+
+	for name, tt := range tests {
+		for _, objectFormat := range []string{"sha1", "sha256"} {
+			t.Run(name+"/"+objectFormat, func(t *testing.T) {
 				t.Parallel()
-				buildtest.WithEachFeatureFlag(t, func(t *testing.T, setup buildtest.BuildSetupFn) {
+
+				origin, pipelineSHA, movedSHA := newOrigin(t, objectFormat)
+
+				refspecs := make([]string, 0, len(tt.refspecs))
+				for _, refspec := range tt.refspecs {
+					refspecs = append(refspecs, strings.ReplaceAll(refspec, "%s", pipelineSHA))
+				}
+
+				shellstest.OnEachShell(t, func(t *testing.T, shell string) {
 					t.Parallel()
+					buildtest.WithEachFeatureFlag(t, func(t *testing.T, setup buildtest.BuildSetupFn) {
+						t.Parallel()
 
-					jobResponse, err := common.GetRemoteBuildResponse(`echo "Hello World"`)
-					require.NoError(t, err)
-					build := newBuild(t, jobResponse, shell)
-					setup(t, build)
+						jobResponse, err := common.GetRemoteBuildResponse(`echo "Hello World"`)
+						require.NoError(t, err)
+						build := newBuild(t, jobResponse, shell)
+						setup(t, build)
 
-					build.GitInfo = spec.GitInfo{
-						RepoURL:          fileURL(origin),
-						Ref:              "refs/merge-requests/1/merge",
-						Sha:              pipelineSHA,
-						Depth:            1,
-						Refspecs:         []string{"+" + pipelineSHA + ":refs/pipelines/1"},
-						RepoObjectFormat: objectFormat,
-					}
+						build.GitInfo = spec.GitInfo{
+							RepoURL:          fileURL(origin),
+							Ref:              tt.ref,
+							Sha:              pipelineSHA,
+							Depth:            1,
+							Refspecs:         refspecs,
+							RepoObjectFormat: objectFormat,
+						}
 
-					out, err := buildtest.RunBuildReturningOutput(t, build)
-					require.NoError(t, err, out)
-					assert.Contains(t, out, fmt.Sprintf("Checking out %s as detached HEAD", pipelineSHA[:8]))
-					if build.IsFeatureFlagOn(featureflags.UseGitNativeClone) {
-						assert.Contains(t, out, "Cloning repository for "+pipelineSHA)
-					}
-				}, featureflags.UseGitNativeClone)
+						out, err := buildtest.RunBuildReturningOutput(t, build)
+						require.NoError(t, err, out)
+						assert.Contains(t, out, fmt.Sprintf("Checking out %s as detached HEAD", pipelineSHA[:8]))
+						if build.IsFeatureFlagOn(featureflags.UseGitNativeClone) {
+							assert.Contains(t, out, "Cloning repository for "+pipelineSHA)
+						}
+
+						projectDir := build.FullProjectDir()
+						assert.Equal(t, pipelineSHA, runGit(t, projectDir, "rev-parse", "HEAD"))
+						if tt.ref == "main" {
+							assert.Equal(t, movedSHA, runGit(t, projectDir, "rev-parse", "refs/remotes/origin/main"))
+						}
+						if tt.ref == "v1.0.0" {
+							assert.Equal(t, pipelineSHA, runGit(t, projectDir, "rev-parse", "refs/tags/v1.0.0"))
+						}
+						assert.Equal(t, "+refs/heads/*:refs/remotes/origin/*", runGit(t, projectDir, "config", "remote.origin.fetch"))
+					}, featureflags.UseGitNativeClone)
+				})
 			})
-		})
+		}
 	}
 }
 

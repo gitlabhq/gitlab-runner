@@ -39,6 +39,7 @@ const (
 	globalGitConfigSeedFile = ".glr.gconf"
 
 	gitMinVersionCloneWithRef = "2.49"
+	defaultFetchRefspec       = "+refs/heads/*:refs/remotes/origin/*"
 	templateDirName           = "git-template"
 
 	gitStrategyNone  = "none"
@@ -206,7 +207,8 @@ func (s GetSources) getSourcesOnce(ctx context.Context, e *env.Env, gitEnv map[s
 
 	remoteURL := s.remoteURLWithoutCreds()
 
-	if s.GitStrategy == gitStrategyClone && s.UseNativeClone && gitVersionAtLeast(ctx, e, gitMinVersionCloneWithRef) {
+	nativeClone := s.GitStrategy == gitStrategyClone && s.UseNativeClone && gitVersionAtLeast(ctx, e, gitMinVersionCloneWithRef)
+	if nativeClone {
 		if err := s.gitClone(ctx, e, templateDir, remoteURL, gitEnv); err != nil {
 			return err
 		}
@@ -214,6 +216,16 @@ func (s GetSources) getSourcesOnce(ctx context.Context, e *env.Env, gitEnv map[s
 		if err := s.gitInit(ctx, e, templateDir, remoteURL, extConfigFile, gitEnv); err != nil {
 			return err
 		}
+	}
+
+	if nativeClone && s.SHA != "" {
+		// a --revision clone writes no fetch refspec, git remote add would have
+		if err := git(ctx, e, gitEnv, "config", "remote.origin.fetch", defaultFetchRefspec); err != nil {
+			return fmt.Errorf("git config remote.origin.fetch: %w", err)
+		}
+	}
+
+	if !nativeClone || s.SHA != "" {
 		if err := s.gitFetch(ctx, e, gitEnv); err != nil {
 			return err
 		}
@@ -712,18 +724,18 @@ func (s GetSources) cloneArgs(remoteURL, templateDir string) []string {
 	return append(args, s.GitCloneFlags...)
 }
 
-// Fully qualified refs clone the SHA because the merge request ref moves with the
-// target branch. Branch jobs keep --branch so that origin/<branch> exists.
+// The SHA is cloned, and the refs fetched afterwards, because the ref can move
+// while the job is queued. A deleted branch still fails the fetch.
 func cloneRevision(ref, sha string) string {
-	if !strings.HasPrefix(ref, "refs/") {
-		return ""
-	}
-
 	if sha != "" {
 		return sha
 	}
 
-	return ref
+	if strings.HasPrefix(ref, "refs/") {
+		return ref
+	}
+
+	return ""
 }
 
 func cloneRevisionConflict(flags []string) string {
