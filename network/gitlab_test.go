@@ -2107,8 +2107,18 @@ func TestPatchTraceCantConnect(t *testing.T) {
 	server, client, config := getPatchServer(t, handler)
 	server.Close()
 
+	logger, hook := test.NewNullLogger()
+	config.Logger = logger
+
 	result := client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken}, patchTraceContent, 0, false)
 	assert.Equal(t, PatchFailed, result.State)
+
+	entry := hook.LastEntry()
+	require.NotNil(t, entry)
+	assert.Equal(t, logrus.ErrorLevel, entry.Level)
+	assert.EqualValues(t, 1, entry.Data["job"])
+	assert.Equal(t, fmt.Sprintf("0-%d", len(patchTraceContent)-1), entry.Data["sent-log"])
+	assert.NotEmpty(t, entry.Data[correlationIDLogField])
 }
 
 func TestPatchTraceUpdatedTrace(t *testing.T) {
