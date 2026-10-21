@@ -860,7 +860,10 @@ func (n *GitLabClient) PatchTrace(
 		},
 	)
 	if err != nil {
-		config.Log().Errorln("Appending trace to coordinator...", "error", err.Error())
+		baseLog.WithFields(logrus.Fields{
+			"sent-log":            contentRange,
+			correlationIDLogField: correlationID,
+		}).Errorln("Appending trace to coordinator...", "error", err.Error())
 		return common.NewPatchTraceResult(startOffset, common.PatchFailed, 0)
 	}
 
