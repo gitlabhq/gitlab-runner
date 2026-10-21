@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"time"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common/buildlogger"
 	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
@@ -100,6 +101,19 @@ type SuspendableExecutor interface {
 	// Resume rebuilds the workload state from the fields produced by a prior
 	// Suspend call.
 	Resume(ctx context.Context, fields url.Values) error
+}
+
+// RuntimeEnvironmentSweeper is implemented by executor providers that can
+// find and remove suspended environments past the TTL. The runner manager
+// calls it periodically for every runner with suspendable environments
+// enabled. Implementations discover environments from the backing
+// infrastructure, not from memory, so cleanup survives a manager restart.
+type RuntimeEnvironmentSweeper interface {
+	// SweepRuntimeEnvironments removes this runner's suspended environments
+	// whose expiry stamp is sweepable at now (see RuntimeEnvironmentSweepable).
+	// Environments still in use by a job and environments without an expiry
+	// stamp must be left alone.
+	SweepRuntimeEnvironments(ctx context.Context, config *RunnerConfig, now time.Time) error
 }
 
 var ErrExecutorStepRunnerConnectNotSupported = fmt.Errorf("executor does not support step-runner connect")

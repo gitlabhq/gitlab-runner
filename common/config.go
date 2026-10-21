@@ -1515,6 +1515,8 @@ type RunnerSettings struct {
 	GetSourcesTimeout  *time.Duration `toml:"get_sources_timeout,omitempty" json:"get_sources_timeout,omitempty" long:"get-sources-timeout" env:"RUNNER_GET_SOURCES_TIMEOUT" description:"Timeout for the get_sources stage of a job. Accepts duration strings like \"30s\" and \"1h30m\". If unset, zero, or greater than the job timeout, defaults to the job timeout."`
 	DebugTraceDisabled bool           `toml:"debug_trace_disabled,omitempty" json:"debug_trace_disabled" long:"debug-trace-disabled" env:"RUNNER_DEBUG_TRACE_DISABLED" description:"When set to true Runner will disable the possibility of using the CI_DEBUG_TRACE feature"`
 
+	RuntimeEnvironmentTTL *time.Duration `toml:"runtime_environment_ttl,omitempty" json:"runtime_environment_ttl,omitempty" long:"runtime-environment-ttl" env:"RUNNER_RUNTIME_ENVIRONMENT_TTL" description:"How long a suspended environment may live, counted from when its first job was prepared. The expiry is stamped on the environment when it is created, so changing this value affects only new environments. Resumes past the expiry are refused, and the cleanup loop removes suspended environments past it. Accepts duration strings like \"72h\". If unset or zero, defaults to 168h (7 days). Must not exceed 720h (30 days)."`
+
 	SafeDirectoryCheckout *bool `toml:"safe_directory_checkout,omitempty" json:"safe_directory_checkout,omitempty" long:"safe-directory-checkout" env:"RUNNER_SAFE_DIRECTORY_CHECKOUT" description:"When set to true, Git global configuration will get a safe.directory directive pointing the job's working directory'"`
 	UseGitPackfileURIs    *bool `toml:"use_git_packfile_uris,omitempty" json:"use_git_packfile_uris,omitempty" long:"use-git-packfile-uris" env:"RUNNER_USE_GIT_PACKFILE_URIS" description:"When set to true, Git fetch.uriProtocols is set to https, allowing the Git client to download packfiles the server offers as URIs. Defaults to false"`
 	CleanGitConfig        *bool `toml:"clean_git_config,omitempty" json:"clean_git_config,omitempty" long:"clean-git-config" env:"RUNNER_CLEAN_GIT_CONFIG" description:"Clean git configuration before and after the build. Defaults to true, except the shell executor is used or the git strategy is \"none\""`
@@ -3109,6 +3111,7 @@ func (c *RunnerConfig) Validate() error {
 		"machine warm-up":                   c.validateMachineWarmup,
 		"machine creation breaker":          c.validateMachineCreationBreaker,
 		"allowed_docker_credential_helpers": c.validateAllowedDockerCredentialHelpers,
+		"runtime_environment_ttl":           c.validateRuntimeEnvironmentTTL,
 	} {
 		err := v()
 		if err != nil {
