@@ -71,7 +71,7 @@ linters:
       # analyzers will be enabled as issues are resolved
       disable:
         - atomictypes
-        - fmtappendf
+        - errorsastype
     revive:
       rules:
         - name: unused-parameter

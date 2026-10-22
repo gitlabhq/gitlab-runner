@@ -66,7 +66,7 @@ ${BASE_BINARY_PATH}.linux-amd64-fips: GOOS=linux
 ${BASE_BINARY_PATH}.linux-amd64-fips: GOARCH=amd64
 ${BASE_BINARY_PATH}.linux-amd64-fips: APP_NAME := "gitlab-runner-helper"
 ${BASE_BINARY_PATH}.linux-amd64-fips: $(HELPER_GO_FILES)
-	GOOS=$(GOOS) GOARCH=$(GOARCH) CGO_ENABLED=1 GOEXPERIMENT=boringcrypto go build -tags fips -trimpath -ldflags "$(GO_LDFLAGS)" -o $@ $(PKG)/apps/gitlab-runner-helper
+	GOOS=$(GOOS) GOARCH=$(GOARCH) CGO_ENABLED=1 GOEXPERIMENT=boringcrypto GOFIPS140=off go build -tags fips -trimpath -ldflags "$(GO_LDFLAGS)" -o $@ $(PKG)/apps/gitlab-runner-helper
 
 $(BASE_BINARY_PATH)-%: GOOS=$(firstword $(subst -, ,$*))
 $(BASE_BINARY_PATH)-%: GOARCH=$(lastword $(subst -, ,$(basename $*)))
