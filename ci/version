@@ -11,6 +11,16 @@ if echo "${exact_tag}" | grep -qE "^[0-9]+\.[0-9]+\.[0-9]+(-rc[0-9]+)?$"; then
 fi
 
 last_tag=$(git describe --abbrev=0 --exclude='*-rc*' --exclude='helpers/runner_wrapper/api/v*')
+
+# VERSION is written when a stable branch is cut and not updated by patch
+# releases, so a patch tag can be newer than it. The next release is then the
+# patch after that tag.
+tag_version=${last_tag#v}
+if [[ "${tag_version}" =~ ^([0-9]+\.[0-9]+)\.([0-9]+)$ ]] &&
+    [[ "$(printf '%s\n%s\n' "${version}" "${tag_version}" | sort -V | tail -n 1)" == "${tag_version}" ]]; then
+    version="${BASH_REMATCH[1]}.$((BASH_REMATCH[2] + 1))"
+fi
+
 commits=$(git rev-list --count "${last_tag}..HEAD")
 revision=$(git rev-parse --short=8 HEAD || echo unknown)
 
