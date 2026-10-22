@@ -3,6 +3,7 @@ package kubernetes
 import (
 	"context"
 	_ "embed"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/url"
@@ -11,6 +12,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
@@ -20,6 +22,7 @@ import (
 	kubeerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 )
 
 var _ common.SuspendableExecutor = (*executor)(nil)
@@ -384,6 +387,13 @@ func (s *executor) ensureSuspendResources(ctx context.Context) error {
 		if err := s.ensureSuspendRootfsPVC(ctx); err != nil {
 			return fmt.Errorf("creating suspend PVC: %w", err)
 		}
+		// The label only lets the cleanup loop delete the namespace later.
+		// Missing cleanup permissions must not break suspend, so warn and
+		// carry on: the labelled PVC is still swept, only the namespace stays.
+		if err := s.labelRuntimeEnvironmentNamespace(ctx); err != nil {
+			s.BuildLogger.Warningln(fmt.Sprintf(
+				"failed to label build namespace for suspended environment cleanup: %v", err))
+		}
 	}
 	if err := s.createOverlayConfigMap(ctx); err != nil {
 		return fmt.Errorf("creating overlay ConfigMap: %w", err)
@@ -422,6 +432,14 @@ func (s *executor) buildSuspendPVC(name string, storageQty resource.Quantity) *a
 	pvc := &api.PersistentVolumeClaim{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
+			Labels: map[string]string{
+				common.RuntimeEnvironmentRunnerIDLabel: s.runtimeEnvironmentRunnerID(),
+				// Stamped once: the PVC outlives every suspend and resume,
+				// so resumes and the cleanup loop check this expiry rather
+				// than whatever TTL their own manager is configured with.
+				common.RuntimeEnvironmentExpiresAtLabel: common.FormatRuntimeEnvironmentExpiry(
+					s.Config.RuntimeEnvironmentExpiresAt(time.Now())),
+			},
 		},
 		Spec: api.PersistentVolumeClaimSpec{
 			AccessModes: []api.PersistentVolumeAccessMode{api.ReadWriteOnce},
@@ -438,6 +456,47 @@ func (s *executor) buildSuspendPVC(name string, storageQty resource.Quantity) *a
 	}
 
 	return pvc
+}
+
+func (s *executor) runtimeEnvironmentRunnerID() string {
+	return strconv.FormatInt(s.Build.Runner.ID, 10)
+}
+
+// labelRuntimeEnvironmentNamespace marks a per-job namespace as part of a
+// suspended environment so the cleanup loop can delete it once its PVC is
+// gone. It runs only after the PVC exists, so the loop never sees a labelled
+// namespace that is still being set up.
+func (s *executor) labelRuntimeEnvironmentNamespace(ctx context.Context) error {
+	if !s.Config.Kubernetes.NamespacePerJob {
+		return nil
+	}
+
+	patch, err := labelsMergePatch(map[string]string{
+		common.RuntimeEnvironmentRunnerIDLabel: s.runtimeEnvironmentRunnerID(),
+	})
+	if err != nil {
+		return err
+	}
+
+	//nolint:gocritic // kubeAPI annotation, not commented-out code
+	// kubeAPI: namespaces, patch, FF_SUSPENDABLE_ENVIRONMENTS=true,kubernetes.NamespacePerJob=true
+	_, err = s.kubeClient.CoreV1().Namespaces().Patch(ctx, s.configurationOverwrites.namespace,
+		types.MergePatchType, patch, metav1.PatchOptions{})
+	if err != nil {
+		return fmt.Errorf("patch namespace %q: %w", s.configurationOverwrites.namespace, err)
+	}
+	return nil
+}
+
+// labelsMergePatch builds a JSON merge patch that sets metadata.labels.
+func labelsMergePatch(labels map[string]string) ([]byte, error) {
+	patch, err := json.Marshal(map[string]any{
+		"metadata": map[string]any{"labels": labels},
+	})
+	if err != nil {
+		return nil, fmt.Errorf("marshal labels patch: %w", err)
+	}
+	return patch, nil
 }
 
 func (s *executor) deleteSuspendRootfsPVC(ctx context.Context) {
@@ -572,9 +631,9 @@ func (s *executor) Suspend(_ context.Context) (url.Values, error) {
 }
 
 // Resume restores workload state from fields produced by a prior Suspend() call.
-// SECURITY: callers must validate RunnerID and SystemID from the full RuntimeEnvironmentKey
-// before calling this method. Resume() only validates executor-specific fields
-// (namespace, PVC name). Identity validation is the caller's responsibility.
+// SECURITY: callers must validate RunnerID from the full RuntimeEnvironmentKey
+// before calling this method. Resume() checks the namespace and the PVC:
+// the PVC must exist, belong to this runner, and not be expired or deleted.
 func (s *executor) Resume(ctx context.Context, fields url.Values) error {
 	if s.configurationOverwrites == nil {
 		return errors.New("resume: executor not initialized")
@@ -597,11 +656,21 @@ func (s *executor) Resume(ctx context.Context, fields url.Values) error {
 	// creation.
 	//nolint:gocritic // kubeAPI annotation, not commented-out code
 	// kubeAPI: namespaces, get, FF_SUSPENDABLE_ENVIRONMENTS=true
-	if _, err := s.kubeClient.CoreV1().Namespaces().Get(ctx, ns, metav1.GetOptions{}); err != nil {
+	namespace, err := s.kubeClient.CoreV1().Namespaces().Get(ctx, ns, metav1.GetOptions{})
+	if err != nil {
 		if kubeerrors.IsNotFound(err) {
-			return fmt.Errorf("resume: namespace %q no longer exists; the suspended environment cannot be resumed", ns)
+			return common.NewRuntimeEnvironmentUnavailableError(fmt.Errorf(
+				"resume: namespace %q no longer exists; the suspended environment cannot be resumed", ns))
 		}
-		return fmt.Errorf("resume: checking namespace %q exists: %w", ns, err)
+		return permanentIfForbidden(fmt.Errorf("resume: checking namespace %q exists: %w", ns, err))
+	}
+	if namespace.DeletionTimestamp != nil {
+		return common.NewRuntimeEnvironmentUnavailableError(fmt.Errorf(
+			"resume: namespace %q is being deleted; the suspended environment cannot be resumed", ns))
+	}
+
+	if err := s.checkSuspendPVCResumable(ctx, ns, pvc); err != nil {
+		return err
 	}
 
 	// A resume pod cannot honor a configured namespace override: the
@@ -621,8 +690,74 @@ func (s *executor) Resume(ctx context.Context, fields url.Values) error {
 	return nil
 }
 
+// checkSuspendPVCResumable refuses a resume onto a PVC that is gone, being
+// deleted, owned by another runner, or past the expiry stamped on it when it
+// was created. A PVC without a valid stamp cannot be checked, so it is refused
+// too. The cleanup loop waits a grace period past the expiry before deleting.
+// A resume whose pod mounts the PVC inside that period is not affected by
+// cleanup.
+func (s *executor) checkSuspendPVCResumable(ctx context.Context, ns, name string) error {
+	//nolint:gocritic // kubeAPI annotation, not commented-out code
+	// kubeAPI: persistentvolumeclaims, get, FF_SUSPENDABLE_ENVIRONMENTS=true
+	pvc, err := s.kubeClient.CoreV1().PersistentVolumeClaims(ns).Get(ctx, name, metav1.GetOptions{})
+	if kubeerrors.IsNotFound(err) {
+		return common.NewRuntimeEnvironmentUnavailableError(fmt.Errorf(
+			"resume: PVC %q no longer exists in namespace %q", name, ns))
+	}
+	if err != nil {
+		return permanentIfForbidden(fmt.Errorf("resume: getting PVC %q in namespace %q: %w", name, ns, err))
+	}
+
+	if pvc.DeletionTimestamp != nil {
+		return common.NewRuntimeEnvironmentUnavailableError(fmt.Errorf(
+			"resume: PVC %q in namespace %q is being deleted", name, ns))
+	}
+
+	// The key names the PVC, but only the label ties it to a runner: in a
+	// shared namespace a key could otherwise name another runner's PVC.
+	owner, want := pvc.Labels[common.RuntimeEnvironmentRunnerIDLabel], s.runtimeEnvironmentRunnerID()
+	if owner == "" {
+		return common.NewRuntimeEnvironmentUnavailableError(fmt.Errorf(
+			"resume: PVC %q in namespace %q has no runner ID label", name, ns))
+	}
+	if owner != want {
+		return common.NewRuntimeEnvironmentUnavailableError(fmt.Errorf(
+			"resume: PVC %q in namespace %q belongs to runner %q, not this runner %q", name, ns, owner, want))
+	}
+
+	stamp := pvc.Labels[common.RuntimeEnvironmentExpiresAtLabel]
+	if stamp == "" {
+		return common.NewRuntimeEnvironmentUnavailableError(fmt.Errorf(
+			"resume: PVC %q in namespace %q has no expiry stamp", name, ns))
+	}
+
+	expiresAt, err := common.ParseRuntimeEnvironmentExpiry(stamp)
+	if err != nil {
+		return common.NewRuntimeEnvironmentUnavailableError(fmt.Errorf(
+			"resume: PVC %q in namespace %q: %w", name, ns, err))
+	}
+
+	if err := common.CheckRuntimeEnvironmentExpiry(expiresAt, time.Now()); err != nil {
+		return fmt.Errorf("resume: PVC %q in namespace %q: %w", name, ns, err)
+	}
+	return nil
+}
+
+// permanentIfForbidden turns a Forbidden API error into a BuildError so
+// prepare is not retried: a missing RBAC permission does not fix itself
+// between attempts. Other errors are returned unchanged and stay retryable.
+func permanentIfForbidden(err error) error {
+	if !kubeerrors.IsForbidden(err) {
+		return err
+	}
+	return &common.BuildError{
+		Inner:         fmt.Errorf("%w (check the RBAC permissions of the runner's service account)", err),
+		FailureReason: common.ConfigurationError,
+	}
+}
+
 // prepareResume is called from Prepare() when the build carries an RuntimeEnvironmentKey.
-// It parses the key, validates runner and system identity, and delegates state
+// It parses the key, validates the runner ID, and delegates state
 // restoration to Resume(). It is a no-op for first-run jobs.
 func (s *executor) prepareResume(options common.ExecutorPrepareOptions) error {
 	raw := options.Build.RuntimeEnvironmentKey()
@@ -639,10 +774,8 @@ func (s *executor) prepareResume(options common.ExecutorPrepareOptions) error {
 		return fmt.Errorf("prepareResume: environment key runner ID %d does not match this runner ID %d",
 			envKey.RunnerID, s.Build.Runner.ID)
 	}
-	if envKey.SystemID != s.Build.Runner.GetSystemID() {
-		return fmt.Errorf("prepareResume: environment key system ID %q does not match this system ID %q",
-			envKey.SystemID, s.Build.Runner.GetSystemID())
-	}
+	// The system ID is not checked: it changes when a manager moves to another
+	// machine, and any manager of the registration may resume its environments.
 
 	return s.Resume(options.Context, envKey.Fields)
 }

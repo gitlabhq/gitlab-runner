@@ -124,8 +124,8 @@ You can either:
 | apps/deployments | create (`kubernetes.autoscaler`), delete (`kubernetes.autoscaler`), get (`kubernetes.autoscaler`), list (`kubernetes.autoscaler`), update (`kubernetes.autoscaler`) |
 | configmaps | create (`FF_SUSPENDABLE_ENVIRONMENTS=true`), delete (`FF_SUSPENDABLE_ENVIRONMENTS=true`), get (`FF_SUSPENDABLE_ENVIRONMENTS=true`), update (`FF_SUSPENDABLE_ENVIRONMENTS=true`) |
 | events | list (`hostUsers=false`, `print_pod_warning_events=true`), watch (`FF_PRINT_POD_EVENTS=true`) |
-| namespaces | create (`kubernetes.NamespacePerJob=true`), delete (`kubernetes.NamespacePerJob=true`), get (`FF_SUSPENDABLE_ENVIRONMENTS=true`) |
-| persistentvolumeclaims | create (`FF_SUSPENDABLE_ENVIRONMENTS=true`), delete (`FF_SUSPENDABLE_ENVIRONMENTS=true`) |
+| namespaces | create (`kubernetes.NamespacePerJob=true`), delete (`kubernetes.NamespacePerJob=true`), get (`FF_SUSPENDABLE_ENVIRONMENTS=true`), patch (`FF_SUSPENDABLE_ENVIRONMENTS=true`, `kubernetes.NamespacePerJob=true`) |
+| persistentvolumeclaims | create (`FF_SUSPENDABLE_ENVIRONMENTS=true`), delete (`FF_SUSPENDABLE_ENVIRONMENTS=true`), get (`FF_SUSPENDABLE_ENVIRONMENTS=true`) |
 | pods | create, delete, get, list ([using Informers](#informers)), watch ([using Informers](#informers), `FF_KUBERNETES_HONOR_ENTRYPOINT=true`, `FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false`) |
 | pods/attach | create (`FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false`), delete (`FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false`), get (`FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false`), patch (`FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false`) |
 | pods/exec | create, delete, get, patch |
@@ -175,11 +175,13 @@ rules:
   - "create" # Required when `kubernetes.NamespacePerJob=true`
   - "delete" # Required when `kubernetes.NamespacePerJob=true`
   - "get" # Required when `FF_SUSPENDABLE_ENVIRONMENTS=true`
+  - "patch" # Required when `FF_SUSPENDABLE_ENVIRONMENTS=true`, `kubernetes.NamespacePerJob=true`
 - apiGroups: [""]
   resources: ["persistentvolumeclaims"]
   verbs:
   - "create" # Required when `FF_SUSPENDABLE_ENVIRONMENTS=true`
   - "delete" # Required when `FF_SUSPENDABLE_ENVIRONMENTS=true`
+  - "get" # Required when `FF_SUSPENDABLE_ENVIRONMENTS=true`
 - apiGroups: [""]
   resources: ["pods"]
   verbs:
