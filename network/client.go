@@ -209,9 +209,9 @@ func (n *client) createTransport() {
 	// create transport
 	transport := &http.Transport{
 		Proxy: http.ProxyFromEnvironment,
-		Dial: func(network, addr string) (net.Conn, error) {
+		DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
 			logrus.Debugln("Dialing:", network, addr, "...")
-			return dialer.Dial(network, addr)
+			return dialer.DialContext(ctx, network, addr)
 		},
 		TLSClientConfig:       &tlsConfig,
 		MaxIdleConns:          100,
