@@ -674,7 +674,7 @@ To change the longest time a runner can stay idle, change the `unhealthy_interva
 
 To change the number of failed requests before the worker is disabled, change the
 `unhealthy_requests_limit` setting.
-For more information, see [How `check_interval` works](advanced-configuration.md#how-check_interval-works).
+For more information, see [How `check_interval` works](#how-check_interval-works).
 
 ### Prepare stage timeout
 
