@@ -388,13 +388,15 @@ This approach allows developers to optimize resource usage per job while maintai
 | `init_permissions_container_security_context` | Sets a container security context for the init-permissions container. [Read more about security context](#set-a-security-policy-for-the-pod). |
 | `namespace`                                   | Namespace in which to run Kubernetes Pods. |
 | `namespace_per_job`                           | Isolate jobs in separate namespaces. If enabled, `namespace` and `namespace_overwrite_allowed` are ignored. |
-| `namespace_overwrite_allowed`                 | Regular expression to validate the contents of the namespace overwrite environment variable (documented below). When empty, it disables the namespace overwrite feature. |
+| `namespace_overwrite_allowed`                 | Go regular expression that the value of the `KUBERNETES_NAMESPACE_OVERWRITE` variable must match. It matches any part of the value unless you anchor it with `^` and `$`. When empty, it disables the namespace overwrite feature. For more information, see [regular expressions in overwrite settings](#regular-expressions-in-overwrite-settings) and [overwrite the Kubernetes namespace](#overwrite-the-kubernetes-namespace). |
 | `node_selector`                               | A `table` of `key=value` pairs in the format of `string=string` (`string:string` in the case of environment variables). Setting this limits the creation of pods to Kubernetes nodes matching all the `key=value` pairs. [Read more about using node selectors](#specify-the-node-to-execute-builds). |
+| `node_selector_overwrite_allowed`             | Go regular expression that each `KUBERNETES_NODE_SELECTOR_*` variable must match. It is matched against the whole `key=value` string of the variable, and matches any part of it unless you anchor it with `^` and `$`. When empty, it disables the node selector overwrite feature. For more information, see [regular expressions in overwrite settings](#regular-expressions-in-overwrite-settings) and [overwrite the node selector](#overwrite-the-node-selector). |
 | `node_tolerations`                            | A `table` of `"key=value" = "Effect"` pairs in the format of `string=string:string`. Setting this allows pods to schedule to nodes with all or a subset of tolerated taints. Only one toleration can be supplied through environment variable configuration. The `key`, `value`, and `effect` match with the corresponding field names in Kubernetes pod toleration configuration. |
+| `node_tolerations_overwrite_allowed`          | Go regular expression that each `KUBERNETES_NODE_TOLERATIONS_*` variable must match. It is matched against the whole value of the variable, effect included, and matches any part of it unless you anchor it with `^` and `$`. When empty, it disables the node tolerations overwrite feature. For more information, see [regular expressions in overwrite settings](#regular-expressions-in-overwrite-settings) and [overwrite pod tolerations](#overwrite-pod-tolerations). |
 | `pod_annotations`                             | A `table` of `key=value` pairs in the format of `string=string`. The `table` contains a list of annotations to be added to each build pod created by the runner. The value of these can include environment variables for expansion. Pod annotations can be overwritten in each build. |
-| `pod_annotations_overwrite_allowed`           | Regular expression to validate the contents of the pod annotations overwrite environment variable. When empty, it disables the pod annotations overwrite feature. |
+| `pod_annotations_overwrite_allowed`           | Go regular expression that each `KUBERNETES_POD_ANNOTATIONS_*` variable must match. It is matched against the whole `key=value` string of the variable, and matches any part of it unless you anchor it with `^` and `$`. When empty, it disables the pod annotations overwrite feature. For more information, see [regular expressions in overwrite settings](#regular-expressions-in-overwrite-settings). |
 | `pod_labels`                                  | A `table` of `key=value` pairs in the format of `string=string`. The `table` contains a list of labels to be added to each build pod created by the runner. The value of these can include environment variables for expansion. Pod labels can be overwritten in each build by using `pod_labels_overwrite_allowed`. |
-| `pod_labels_overwrite_allowed`                | Regular expression to validate the contents of the pod labels overwrite environment variable. When empty, it disables the pod labels overwrite feature. Note that pod labels in the `runner.gitlab.com` label namespace cannot be overwritten. |
+| `pod_labels_overwrite_allowed`                | Go regular expression that each `KUBERNETES_POD_LABELS_*` variable must match. It is matched against the whole `key=value` string of the variable, and matches any part of it unless you anchor it with `^` and `$`. When empty, it disables the pod labels overwrite feature. Pod labels in the `runner.gitlab.com` label namespace cannot be overwritten. For more information, see [regular expressions in overwrite settings](#regular-expressions-in-overwrite-settings). |
 | `pod_security_context`                        | Configured through the configuration file, this sets a pod security context for the build pod. [Read more about security context](#set-a-security-policy-for-the-pod). |
 | `pod_termination_grace_period_seconds`        | Pod-level setting which determines the duration in seconds which the pod has to terminate gracefully. After this, the processes are forcibly halted with a kill signal. Ignored if `terminationGracePeriodSeconds` is specified. |
 | `poll_interval`                               | How frequently, in seconds, the runner polls the Kubernetes pod it has just created to check its status (default = 3). |
@@ -408,7 +410,7 @@ This approach allows developers to optimize resource usage per job while maintai
 | `service_container_security_context`          | Sets a container security context for the service containers. [Read more about security context](#set-a-security-policy-for-the-pod). |
 | `scheduler_name`                              | Scheduler to use for scheduling build pods. |
 | `service_account`                             | Default service account job/executor pods use to talk to Kubernetes API. |
-| `service_account_overwrite_allowed`           | Regular expression to validate the contents of the service account overwrite environment variable. When empty, it disables the service account overwrite feature. |
+| `service_account_overwrite_allowed`           | Go regular expression that the value of the `KUBERNETES_SERVICE_ACCOUNT_OVERWRITE` variable must match. It matches any part of the value unless you anchor it with `^` and `$`. When empty, it disables the service account overwrite feature. For more information, see [regular expressions in overwrite settings](#regular-expressions-in-overwrite-settings) and [overwrite the Kubernetes default service account](#overwrite-the-kubernetes-default-service-account). |
 | `services`                                    | List of [services](https://docs.gitlab.com/ci/services/) attached to the build container using the [sidecar pattern](https://learn.microsoft.com/en-us/azure/architecture/patterns/sidecar). Read more about [using services](#define-a-list-of-services). |
 | `use_service_account_image_pull_secrets`      | When enabled, the pod created by the executor lacks `imagePullSecrets`. This causes the pod to be created using the [`imagePullSecrets` from the service account](https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/#add-image-pull-secret-to-service-account), if set. |
 | `suspend_pvc_size`                            | Size of the PVC created for suspendable job environments. The PVC stores the overlayfs upper layer, the builds directory, and any service container data directories configured with `suspend_data_path`. Defaults to `20Gi`. |
@@ -443,7 +445,7 @@ concurrent = 4
     key_file = "/etc/ssl/kubernetes/api.key"
     ca_file = "/etc/ssl/kubernetes/ca.crt"
     namespace = "gitlab"
-    namespace_overwrite_allowed = "ci-.*"
+    namespace_overwrite_allowed = "^ci-.*$"
     bearer_token_overwrite_allowed = true
     privileged = true
     cpu_limit = "1"
@@ -465,6 +467,42 @@ concurrent = 4
       "custom.toleration=value" = "NoSchedule"
       "empty.value=" = "PreferNoSchedule"
       "onlyKey" = ""
+```
+
+### Regular expressions in overwrite settings
+
+The `namespace_overwrite_allowed`, `service_account_overwrite_allowed`, `pod_labels_overwrite_allowed`,
+`pod_annotations_overwrite_allowed`, `node_selector_overwrite_allowed`, and `node_tolerations_overwrite_allowed`
+settings are [Go regular expressions](https://pkg.go.dev/regexp/syntax).
+A job can overwrite one of these values only when its CI/CD variable matches the expression in the setting.
+
+An expression matches a value when it matches any part of the value.
+To match the whole value, start the expression with `^` and end it with `$`.
+For example:
+
+- `ci-.*` matches `ci-review`, and also `review-ci-apps`, because `review-ci-apps` contains `ci-`.
+- `^ci-.*$` matches `ci-review`, but not `review-ci-apps`.
+
+For pod labels, pod annotations, and node selectors, the expression is matched against the whole
+`key=value` string of the variable, not against the key alone.
+For node tolerations, it is matched against the whole value of the variable, for example `dedicated=ci:NoSchedule`.
+For example:
+
+- `^team$` does not match `team=build`, because the value includes `=build`.
+- `^team=(build|test)$` matches `team=build` and `team=test`, and no other key or value.
+- `^kubernetes\.io/arch=.*$` matches any value of the `kubernetes.io/arch` key, but not `beta.kubernetes.io/arch=amd64`.
+
+An anchored expression still allows every value that it matches.
+For example, `^ci-.*$` allows every namespace whose name starts with `ci-`.
+To allow only specific values, list them, for example `^(ci-builds|ci-review)$`.
+To run each job in a namespace of its own instead, use `namespace_per_job`.
+
+If an expression contains a backslash, write it in the `config.toml` file as a literal string, in single quotes.
+In a basic string, in double quotes, TOML reads the backslash as the start of an escape sequence:
+
+```toml
+[runners.kubernetes]
+  node_selector_overwrite_allowed = '^kubernetes\.io/arch=.*$'
 ```
 
 ## Pre-warm cluster capacity with pause pods
@@ -736,6 +774,7 @@ To overwrite Kubernetes pod tolerations:
 
 1. In the `config.toml` or Helm `values.yaml` file, to enable the overwrite of CI job pod tolerations, define a regular expression for `node_tolerations_overwrite_allowed`.
    This regular expression validates the values of CI variable names that start with `KUBERNETES_NODE_TOLERATIONS_`.
+   For more information, see [regular expressions in overwrite settings](#regular-expressions-in-overwrite-settings).
 
    ```toml
    runners:
@@ -762,6 +801,7 @@ To overwrite Kubernetes pod tolerations:
 To overwrite Kubernetes pod labels for each CI/CD job:
 
 1. In the `.config.yaml` file, define a regular expression for `pod_labels_overwrite_allowed`.
+   For more information, see [regular expressions in overwrite settings](#regular-expressions-in-overwrite-settings).
 1. In the `.gitlab-ci.yml` file, set the `KUBERNETES_POD_LABELS_*` variables with values of
    `key=value`. The pod labels are overwritten to the `key=value`. You can apply multiple values:
 
@@ -780,6 +820,7 @@ To overwrite Kubernetes pod labels for each CI/CD job:
 To overwrite Kubernetes pod annotations for each CI/CD job:
 
 1. In the `.config.yaml` file, define a regular expression for `pod_annotations_overwrite_allowed`.
+   For more information, see [regular expressions in overwrite settings](#regular-expressions-in-overwrite-settings).
 1. In the `.gitlab-ci.yml` file, set the `KUBERNETES_POD_ANNOTATIONS_*` variables and use `key=value` for the value.
    Pod annotations are overwritten to the `key=value`. You can specify multiple annotations:
 
@@ -1690,6 +1731,16 @@ for either:
 
 If you don't set either, the overwrite is disabled.
 
+To allow only the service accounts you name, anchor the expression and list the names.
+For example, to allow only `ci-service-account` and `ci-deploy`:
+
+```toml
+[runners.kubernetes]
+  service_account_overwrite_allowed = "^(ci-service-account|ci-deploy)$"
+```
+
+For more information, see [regular expressions in overwrite settings](#regular-expressions-in-overwrite-settings).
+
 ### Set the `RuntimeClass`
 
 Use `runtime_class_name` to set the [`RuntimeClass`](https://kubernetes.io/docs/concepts/containers/runtime-class/) for each job container.
@@ -1902,6 +1953,9 @@ To overwrite the node selector:
            node_selector_overwrite_allowed = ".*"
    ```
 
+   The value is a regular expression, and `.*` allows any node selector.
+   For more information, see [regular expressions in overwrite settings](#regular-expressions-in-overwrite-settings).
+
 1. In the `.gitlab-ci.yml` file, define the variable to overwrite the node selector:
 
    ```yaml
@@ -1945,7 +1999,7 @@ listen_address = ':9252'
     pod_labels_overwrite_allowed = ""
     service_account_overwrite_allowed = ""
     pod_annotations_overwrite_allowed = ""
-    node_selector_overwrite_allowed = "kubernetes.io/arch=.*" # <--- allows overwrite of the architecture
+    node_selector_overwrite_allowed = '^kubernetes\.io/arch=.*$' # <--- allows overwrite of the architecture
 ```
 
 {{< /tab >}}
@@ -2844,5 +2898,8 @@ To use only designated namespaces during CI runs, in the `config.toml` file, def
 ```toml
 [runners.kubernetes]
     ...
-    namespace_overwrite_allowed = "ci-.*"
+    namespace_overwrite_allowed = "^ci-.*$"
 ```
+
+Without the `^` and `$` anchors, `ci-.*` also allows a namespace like `review-ci-apps`.
+For more information, see [regular expressions in overwrite settings](#regular-expressions-in-overwrite-settings).

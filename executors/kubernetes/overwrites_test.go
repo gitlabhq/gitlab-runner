@@ -10,6 +10,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	api "k8s.io/api/core/v1"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
@@ -677,6 +678,145 @@ func TestOverwrites(t *testing.T) {
 			values, err := createOverwrites(test.Config, variables, logger)
 			assert.ErrorIs(t, err, test.Error)
 			assert.Equal(t, test.Expected, values)
+		})
+	}
+}
+
+// TestOverwritesAllowedPatternMatching pins how the *_overwrite_allowed
+// settings match, as the Kubernetes executor documentation describes it:
+// the setting is a Go regular expression that matches anywhere in the
+// requested value unless it is anchored with ^ and $, and for pod labels,
+// pod annotations, node selectors and node tolerations it is matched
+// against the whole variable value, the key included.
+func TestOverwritesAllowedPatternMatching(t *testing.T) {
+	logger := stdoutLogger()
+
+	tests := []struct {
+		name     string
+		config   common.KubernetesConfig
+		variable spec.Variable
+		refused  bool
+		got      func(o *overwrites) any
+		want     any
+	}{
+		{
+			name:     "namespace pattern matches anywhere in the value",
+			config:   common.KubernetesConfig{NamespaceOverwriteAllowed: "ci-.*"},
+			variable: spec.Variable{Key: NamespaceOverwriteVariableName, Value: "review-ci-apps"},
+			got:      func(o *overwrites) any { return o.namespace },
+			want:     "review-ci-apps",
+		},
+		{
+			name:     "anchored namespace pattern refuses a value it matches only in part",
+			config:   common.KubernetesConfig{NamespaceOverwriteAllowed: "^ci-.*$"},
+			variable: spec.Variable{Key: NamespaceOverwriteVariableName, Value: "review-ci-apps"},
+			refused:  true,
+		},
+		{
+			name:     "anchored namespace pattern accepts a value it matches whole",
+			config:   common.KubernetesConfig{NamespaceOverwriteAllowed: "^ci-.*$"},
+			variable: spec.Variable{Key: NamespaceOverwriteVariableName, Value: "ci-feature"},
+			got:      func(o *overwrites) any { return o.namespace },
+			want:     "ci-feature",
+		},
+		{
+			name:     "service account pattern matches anywhere in the value",
+			config:   common.KubernetesConfig{ServiceAccountOverwriteAllowed: "ci-builder"},
+			variable: spec.Variable{Key: ServiceAccountOverwriteVariableName, Value: "ci-builder-2"},
+			got:      func(o *overwrites) any { return o.serviceAccount },
+			want:     "ci-builder-2",
+		},
+		{
+			name:     "anchored service account pattern accepts the exact name",
+			config:   common.KubernetesConfig{ServiceAccountOverwriteAllowed: "^ci-builder$"},
+			variable: spec.Variable{Key: ServiceAccountOverwriteVariableName, Value: "ci-builder"},
+			got:      func(o *overwrites) any { return o.serviceAccount },
+			want:     "ci-builder",
+		},
+		{
+			name:     "anchored service account pattern refuses a longer name",
+			config:   common.KubernetesConfig{ServiceAccountOverwriteAllowed: "^ci-builder$"},
+			variable: spec.Variable{Key: ServiceAccountOverwriteVariableName, Value: "ci-builder-2"},
+			refused:  true,
+		},
+		{
+			name:     "node selector pattern matches anywhere in key=value",
+			config:   common.KubernetesConfig{NodeSelectorOverwriteAllowed: "kubernetes.io/arch=.*"},
+			variable: spec.Variable{Key: NodeSelectorOverwriteVariablePrefix + "ARCH", Value: "beta.kubernetes.io/arch=amd64"},
+			got:      func(o *overwrites) any { return o.nodeSelector },
+			want:     map[string]string{"beta.kubernetes.io/arch": "amd64"},
+		},
+		{
+			name:     "anchored node selector pattern refuses another key",
+			config:   common.KubernetesConfig{NodeSelectorOverwriteAllowed: `^kubernetes\.io/arch=.*$`},
+			variable: spec.Variable{Key: NodeSelectorOverwriteVariablePrefix + "ARCH", Value: "beta.kubernetes.io/arch=amd64"},
+			refused:  true,
+		},
+		{
+			name:     "anchored node selector pattern accepts its key",
+			config:   common.KubernetesConfig{NodeSelectorOverwriteAllowed: `^kubernetes\.io/arch=.*$`},
+			variable: spec.Variable{Key: NodeSelectorOverwriteVariablePrefix + "ARCH", Value: "kubernetes.io/arch=arm64"},
+			got:      func(o *overwrites) any { return o.nodeSelector },
+			want:     map[string]string{"kubernetes.io/arch": "arm64"},
+		},
+		{
+			name:     "pod label pattern is matched against key=value, not the key alone",
+			config:   common.KubernetesConfig{PodLabelsOverwriteAllowed: "^team$"},
+			variable: spec.Variable{Key: PodLabelsOverwriteVariablePrefix + "1", Value: "team=build"},
+			refused:  true,
+		},
+		{
+			name:     "pod label pattern accepts a key=value it matches whole",
+			config:   common.KubernetesConfig{PodLabelsOverwriteAllowed: "^team=(build|test)$"},
+			variable: spec.Variable{Key: PodLabelsOverwriteVariablePrefix + "1", Value: "team=build"},
+			got:      func(o *overwrites) any { return o.podLabels },
+			want:     map[string]string{"team": "build"},
+		},
+		{
+			name:     "pod label pattern refuses a value it does not list",
+			config:   common.KubernetesConfig{PodLabelsOverwriteAllowed: "^team=(build|test)$"},
+			variable: spec.Variable{Key: PodLabelsOverwriteVariablePrefix + "1", Value: "team=deploy"},
+			refused:  true,
+		},
+		{
+			name:     "pod annotation pattern can match in the value part",
+			config:   common.KubernetesConfig{PodAnnotationsOverwriteAllowed: `example\.com/`},
+			variable: spec.Variable{Key: PodAnnotationsOverwriteVariablePrefix + "1", Value: "description=example.com/build"},
+			got:      func(o *overwrites) any { return o.podAnnotations },
+			want:     map[string]string{"description": "example.com/build"},
+		},
+		{
+			name:     "anchored pod annotation pattern refuses a match in the value part",
+			config:   common.KubernetesConfig{PodAnnotationsOverwriteAllowed: `^example\.com/[a-z-]+=`},
+			variable: spec.Variable{Key: PodAnnotationsOverwriteVariablePrefix + "1", Value: "description=example.com/build"},
+			refused:  true,
+		},
+		{
+			name:     "node toleration pattern is matched against key=value:effect",
+			config:   common.KubernetesConfig{NodeTolerationsOverwriteAllowed: "^dedicated=ci$"},
+			variable: spec.Variable{Key: NodeTolerationsOverwriteVariablePrefix + "1", Value: "dedicated=ci:NoSchedule"},
+			refused:  true,
+		},
+		{
+			name:     "node toleration pattern accepts the whole key=value:effect",
+			config:   common.KubernetesConfig{NodeTolerationsOverwriteAllowed: "^dedicated=ci:NoSchedule$"},
+			variable: spec.Variable{Key: NodeTolerationsOverwriteVariablePrefix + "1", Value: "dedicated=ci:NoSchedule"},
+			got:      func(o *overwrites) any { return o.nodeTolerations },
+			want:     map[string]string{"dedicated=ci": "NoSchedule"},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			o, err := createOverwrites(&tc.config, spec.Variables{tc.variable}, logger)
+			if tc.refused {
+				assert.ErrorIs(t, err, new(malformedOverwriteError))
+				assert.Nil(t, o)
+				return
+			}
+
+			require.NoError(t, err)
+			assert.Equal(t, tc.want, tc.got(o))
 		})
 	}
 }
