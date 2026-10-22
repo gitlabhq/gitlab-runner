@@ -1,3 +1,10 @@
+## v19.5.1 (2026-10-22)
+
+### Maintenance
+
+- Update Go to 1.26.10 and golangci-lint to 2.14.0 [!7681](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/7681)
+- Bump base images to 0.0.58 [!7683](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/7683)
+
 ## v19.5.0 (2026-10-14)
 
 ### New features
