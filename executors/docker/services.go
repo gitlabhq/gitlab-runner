@@ -242,7 +242,15 @@ func (e *executor) runServiceHealthCheckContainer(service *serviceInfo, timeout 
 	if err != nil {
 		return fmt.Errorf("create service container: %w", err)
 	}
-	defer func() { _ = e.removeContainer(e.Context, resp.ID) }()
+	// Remove the health check container with a context that outlives the job. When the
+	// job is cancelled or times out, e.Context is already done: removing with it fails,
+	// and as the health check container is not tracked in e.temporary, Cleanup() would
+	// not remove it either, leaking it (possibly still running) on the host.
+	defer func() {
+		ctx, cancel := context.WithTimeout(context.WithoutCancel(e.Context), dockerCleanupTimeout)
+		defer cancel()
+		_ = e.removeContainer(ctx, resp.ID)
+	}()
 
 	e.BuildLogger.Debugln(fmt.Sprintf("Starting service healthcheck container %s (%s)...", containerName, resp.ID))
 	err = e.dockerConn.ContainerStart(e.Context, resp.ID, client.ContainerStartOptions{})

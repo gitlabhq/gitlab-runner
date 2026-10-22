@@ -4,6 +4,7 @@ package docker
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -29,6 +30,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/common/buildlogger"
 	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/pull"
+	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/wait"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/container/helperimage"
 	service_test "gitlab.com/gitlab-org/gitlab-runner/helpers/container/services/test"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
@@ -1073,6 +1075,56 @@ func TestCreateService(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Equal(t, freshID, info.ID)
+}
+
+func TestRunServiceHealthCheckContainer_RemovesContainerWhenJobIsCancelled(t *testing.T) {
+	c := docker.NewMockClient(t)
+	e := newTestExecutor(t, c)
+
+	jobCtx, cancelJob := context.WithCancel(t.Context())
+	e.Context = jobCtx
+
+	waiter := wait.NewMockKillWaiter(t)
+	e.waiter = waiter
+
+	const healthCheckID = "health-check-container-id"
+	service := &serviceInfo{
+		ID:    "0000000000000000000000000000000000000000000000000000000000000000",
+		Name:  "service",
+		IP:    []string{"172.17.0.4"},
+		Ports: []int{80},
+	}
+
+	c.On("ImageInspectWithRaw", mock.Anything, mock.Anything, mock.Anything).
+		Return(image.InspectResponse{ID: "helper-image-id"}, []byte{}, nil).Once()
+	c.On("ContainerCreate", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+		Return(container.CreateResponse{ID: healthCheckID}, nil).Once()
+	c.On("ContainerStart", mock.Anything, healthCheckID, client.ContainerStartOptions{}).
+		Return(nil).Once()
+
+	// The job is cancelled while the runner waits for the service.
+	waiter.EXPECT().Wait(mock.Anything, healthCheckID).
+		RunAndReturn(func(context.Context, string) error {
+			cancelJob()
+			return context.Canceled
+		}).Once()
+
+	c.On("ContainerLogs", mock.Anything, healthCheckID, mock.Anything).
+		Return(nil, context.Canceled).Once()
+
+	// Removal must not use the cancelled job context, or it fails and the
+	// health check container is leaked.
+	notCancelled := mock.MatchedBy(func(ctx context.Context) bool { return ctx.Err() == nil })
+	c.On("NetworkList", notCancelled, mock.Anything).
+		Return([]network.Summary{}, nil).Once()
+	c.On("ContainerRemove", notCancelled, healthCheckID, mock.Anything).
+		Return(nil).Once()
+
+	err := e.runServiceHealthCheckContainer(service, time.Minute)
+
+	var healthCheckErr *serviceHealthCheckError
+	require.ErrorAs(t, err, &healthCheckErr)
+	assert.ErrorIs(t, healthCheckErr.Inner, context.Canceled)
 }
 
 func TestResumeServices(t *testing.T) {
