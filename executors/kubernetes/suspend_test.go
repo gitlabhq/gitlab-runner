@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -282,6 +283,9 @@ func TestResume_ValidFields_SetsPVCNameAndIsResume(t *testing.T) {
 	_, err := e.kubeClient.CoreV1().Namespaces().Create(t.Context(),
 		&api.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "resume-ns"}}, metav1.CreateOptions{})
 	require.NoError(t, err)
+	_, err = e.kubeClient.CoreV1().PersistentVolumeClaims("resume-ns").Create(t.Context(),
+		resumePVC(time.Now().Add(time.Hour)), metav1.CreateOptions{})
+	require.NoError(t, err)
 
 	err = e.Resume(t.Context(), url.Values{
 		envKeyPVC:       {"rootfs-pvc"},
@@ -341,15 +345,6 @@ func TestPrepareResume_Error(t *testing.T) {
 			}.String(),
 			wantErrContains: "runner ID",
 		},
-		{
-			name: "system ID mismatch",
-			envKey: common.RuntimeEnvironmentKey{
-				RunnerID: 7,
-				SystemID: "other-system",
-				Fields:   url.Values{envKeyPVC: {"rootfs-pvc"}},
-			}.String(),
-			wantErrContains: "system ID",
-		},
 	}
 
 	for _, tc := range tests {
@@ -366,6 +361,28 @@ func TestPrepareResume_Error(t *testing.T) {
 			assert.Contains(t, err.Error(), tc.wantErrContains)
 		})
 	}
+}
+
+// A key issued by another manager of the registration (another system ID)
+// resumes: only the runner ID scopes an environment.
+func TestPrepareResume_AcceptsKeyFromAnotherSystem(t *testing.T) {
+	e := newTestExecutorForResume(t)
+	_, err := e.kubeClient.CoreV1().Namespaces().Create(t.Context(),
+		&api.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "resume-ns"}}, metav1.CreateOptions{})
+	require.NoError(t, err)
+	pvc := resumePVC(time.Now().Add(time.Hour))
+	pvc.Labels[common.RuntimeEnvironmentRunnerIDLabel] = e.runtimeEnvironmentRunnerID()
+	_, err = e.kubeClient.CoreV1().PersistentVolumeClaims("resume-ns").Create(t.Context(), pvc, metav1.CreateOptions{})
+	require.NoError(t, err)
+
+	e.Build.Job.SuspendOptions.RuntimeEnvironmentKey = common.RuntimeEnvironmentKey{
+		RunnerID: 7,
+		SystemID: "other-system",
+		Fields:   url.Values{envKeyPVC: {"rootfs-pvc"}, envKeyNamespace: {"resume-ns"}},
+	}.String()
+
+	require.NoError(t, e.prepareResume(common.ExecutorPrepareOptions{Context: t.Context(), Build: e.Build}))
+	assert.True(t, e.isResume)
 }
 
 func TestResume_FieldValidation_Error(t *testing.T) {
