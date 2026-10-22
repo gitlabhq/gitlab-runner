@@ -81,7 +81,7 @@ Si `IdleCount` est défini sur une valeur supérieure à `0`, des VM inactives s
 
 Pour limiter le nombre de machines virtuelles (VM) créées par l'exécuteur Docker Machine, utilisez le paramètre `limit` dans la section `[[runners]]` du fichier `config.toml`.
 
-Le paramètre `concurrent` **ne limite pas** le nombre de VM.
+Le paramètre `concurrent` ne limite pas le nombre de machines virtuelles.
 
 Un processus peut être configuré pour gérer plusieurs workers de runner. Pour plus d'informations, consultez [Configuration de base : un gestionnaire de runner, un runner](../fleet_scaling/_index.md#basic-configuration-one-runner-manager-one-runner).
 

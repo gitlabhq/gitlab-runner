@@ -175,9 +175,15 @@ Le tableau suivant inclut un résumé des métriques de GitLab Runner. La liste 
 
 | Nom de la métrique                                                    | Description |
 |----------------------------------------------------------------|-------------|
-| `gitlab_runner_api_request_statuses_total`                     | Le nombre total de requêtes API, partitionné par runner, point de terminaison et statut. |
-| `gitlab_runner_autoscaling_machine_creation_duration_seconds`  | Histogramme du temps de création des machines. |
+| `gitlab_runner_api_request_attempts_total`                     | Le nombre total de tentatives HTTP effectuées lors des requêtes API, partitionné par `runner`, `runner_name`, `system_id`, `endpoint`, `status` et `method`. `gitlab_runner_api_request_statuses_total` n'enregistre que la réponse finale de chaque requête. Ce compteur inclut chaque tentative, de sorte que les réponses `429` et `5xx` ayant fait l'objet d'une nouvelle tentative sont visibles ici. Les tentatives n'ayant obtenu aucune réponse HTTP, par exemple en cas d'échec de connexion ou TLS, ont `status="error"`. Les requêtes effectuées en dehors d'un contexte de runner (register, verify, unregister, artifacts) ont le chemin API normalisé comme `endpoint` et des labels de runner vides. |
+| `gitlab_runner_api_request_retries_total`                      | Le nombre total de tentatives HTTP effectuées lors des requêtes API, partitionné par `path` et `method`. Malgré son nom, ce compteur comptabilise toutes les tentatives, y compris la première. Privilégiez `gitlab_runner_api_request_attempts_total`, qui contient également le statut. |
+| `gitlab_runner_api_request_statuses_total`                     | Le nombre total de requêtes API, partitionné par `runner`, `runner_name`, `system_id`, `endpoint`, `status` et `method`. |
+| `gitlab_runner_autoscaling_idle_target`                        | Le nombre de machines disponibles que l'autoscaler cherche à maintenir après application de `IdleScaleFactor` et `IdleCountMin`. |
+| `gitlab_runner_autoscaling_machine_creation_duration_seconds`  | Histogramme du temps de création des machines, partitionné par `target_zone`, `target_region`, `target_project` et `target_machine_type`. |
+| `gitlab_runner_autoscaling_machine_failed_creation_duration_seconds` | Histogramme du temps de création des machines en échec, avec les mêmes labels que `gitlab_runner_autoscaling_machine_creation_duration_seconds`. |
+| `gitlab_runner_autoscaling_machine_creation_phase_duration_seconds` | Histogramme du temps de création des machines pour chaque phase de Docker Machine. Nécessite le feature flag `FF_DOCKER_MACHINE_JSON_OUTPUT`. Pour plus d'informations, consultez [la section `[machine]`](../configuration/advanced-configuration.md#the-machine-section). |
 | `gitlab_runner_autoscaling_machine_states`                     | Le nombre de machines par état dans ce fournisseur. |
+| `gitlab_runner_autoscaling_max_growth_rate`                    | Le nombre maximum de machines pouvant être simultanément en état de création (0 = illimité). |
 | `gitlab_runner_concurrent`                                     | La valeur du paramètre de concurrence. |
 | `gitlab_runner_errors_total`                                   | Le nombre d'erreurs interceptées. Cette métrique est un compteur qui suit les lignes de log. La métrique inclut le label `level`. Les valeurs possibles sont `warning` et `error`. Si vous prévoyez d'inclure cette métrique, utilisez `rate()` ou `increase()` lors de l'observation. En d'autres termes, si vous constatez que le taux d'avertissements ou d'erreurs augmente, cela pourrait indiquer un problème nécessitant une investigation plus approfondie. |
 | `gitlab_runner_jobs`                                           | Indique combien de jobs sont en cours d'exécution (avec différentes portées dans les labels). |
@@ -191,7 +197,8 @@ Le tableau suivant inclut un résumé des métriques de GitLab Runner. La liste 
 | `gitlab_runner_job_router_circuit_breaker_trips_total`         | Le nombre de fois où le disjoncteur du Job Router s'est déclenché en position ouverte. |
 | `gitlab_runner_job_router_discovery_cache_events_total`        | Le nombre de recherches dans le cache de découverte du Job Router, partitionné par `result` (`hit` ou `miss`). |
 | `gitlab_runner_job_router_fallbacks_total`                     | Le nombre de demandes de job qui ont basculé du Job Router vers l'interrogation directe de GitLab, partitionné par `reason` (`no_discovery`, `breaker_open`, `dial_failed`, `breaker_tripped` ou `router_disabled`). |
-| `gitlab_runner_job_router_get_job_duration_seconds`            | Histogramme des durées des requêtes `GetJob` du Job Router côté runner. |
+| `gitlab_runner_job_router_get_job_duration_seconds`            | Histogramme des durées de requêtes `GetJob` du Job Router côté runner, partitionné par `runner`, `system_id` et `result` (`job`, `no_job` ou `error`). |
+| `gitlab_runner_job_router_get_job_requests_total`              | Le nombre de requêtes `GetJob` du Job Router côté runner, partitionné par `runner`, `system_id` et le statut gRPC `code` (`OK`, `ResourceExhausted` pour une requête soumise à une limite de débit, `Unavailable`, etc.). |
 | `gitlab_runner_limit`                                          | La valeur actuelle du paramètre de limite. |
 | `gitlab_runner_request_concurrency`                            | Le nombre actuel de requêtes simultanées pour un nouveau job. |
 | `gitlab_runner_request_concurrency_exceeded_total`             | Nombre de requêtes excédentaires au-dessus de la limite `request_concurrency` configurée. |
@@ -203,6 +210,9 @@ Le tableau suivant inclut un résumé des métriques de GitLab Runner. La liste 
 | `process_start_time_seconds`                                   | Heure de démarrage du processus, mesurée en secondes depuis l'époque Unix. |
 | `process_virtual_memory_bytes`                                 | Taille de la mémoire virtuelle en octets. |
 | `process_virtual_memory_max_bytes`                             | Quantité maximale de mémoire virtuelle disponible en octets. |
+
+> [!note]
+> Dans GitLab Runner 19.4 et versions ultérieures, `gitlab_runner_autoscaling_machine_creation_duration_seconds` et `gitlab_runner_autoscaling_machine_failed_creation_duration_seconds` ont les labels `target_zone`, `target_region`, `target_project` et `target_machine_type`. Les requêtes qui traitaient ces histogrammes comme une série unique doivent d'abord effectuer une agrégation, par exemple `histogram_quantile(0.95, sum by (le) (rate(gitlab_runner_autoscaling_machine_creation_duration_seconds_bucket[5m])))`. Les machines dont l'état Docker Machine n'a pas pu être lu ont des valeurs de label vides.
 
 ### Conseils de configuration du tableau de bord Grafana {#grafana-dashboard-configuration-tips}
 
