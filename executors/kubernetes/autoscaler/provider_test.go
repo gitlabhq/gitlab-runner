@@ -266,3 +266,32 @@ func TestProvider_ConfigReload_ReplacesManager(t *testing.T) {
 	require.NotNil(t, manager2)
 	assert.NotSame(t, manager1, manager2, "config reload should create new manager")
 }
+
+type sweepingExecutorProvider struct {
+	*common.MockExecutorProvider
+	*common.MockRuntimeEnvironmentSweeper
+}
+
+func TestProvider_SweepRuntimeEnvironments(t *testing.T) {
+	cfg := &common.RunnerConfig{Name: "r"}
+	now := time.Date(2026, 10, 7, 0, 0, 0, 0, time.UTC)
+
+	t.Run("forwards to a wrapped sweeper", func(t *testing.T) {
+		inner := &sweepingExecutorProvider{
+			MockExecutorProvider:          common.NewMockExecutorProvider(t),
+			MockRuntimeEnvironmentSweeper: common.NewMockRuntimeEnvironmentSweeper(t),
+		}
+		inner.MockRuntimeEnvironmentSweeper.EXPECT().
+			SweepRuntimeEnvironments(mock.Anything, cfg, now).
+			Return(assert.AnError).
+			Once()
+
+		err := NewProvider(inner).SweepRuntimeEnvironments(t.Context(), cfg, now)
+		assert.ErrorIs(t, err, assert.AnError)
+	})
+
+	t.Run("no-op when the wrapped provider cannot sweep", func(t *testing.T) {
+		err := NewProvider(common.NewMockExecutorProvider(t)).SweepRuntimeEnvironments(t.Context(), cfg, now)
+		assert.NoError(t, err)
+	})
+}

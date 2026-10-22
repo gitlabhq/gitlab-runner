@@ -162,20 +162,18 @@ func waitForRunningContainer(ctx context.Context, client kubernetes.Interface, t
 	return nil
 }
 
-func closeKubeClient(client kubernetes.Interface) bool {
+func closeKubeClient(client kubernetes.Interface) {
 	if client == nil {
-		return false
+		return
 	}
 	// kubeAPI: ignore
 	rest, ok := client.CoreV1().RESTClient().(*restclient.RESTClient)
 	if !ok || rest == nil || rest.Client == nil || rest.Client.Transport == nil {
-		return false
+		return
 	}
 	if transport, ok := rest.Client.Transport.(*http.Transport); ok {
 		transport.CloseIdleConnections()
-		return true
 	}
-	return false
 }
 
 func isRunning(pod *api.Pod, containers ...string) (bool, error) {

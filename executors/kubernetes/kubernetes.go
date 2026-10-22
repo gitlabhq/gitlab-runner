@@ -4105,6 +4105,10 @@ func NewProvider() common.ExecutorProvider {
 			FeaturesUpdater:  featuresFn,
 			DefaultShellName: executorOptions.Shell.Shell,
 		},
+		getKubeConfig: getKubeClientConfig,
+		newKubeClient: func(config *restclient.Config) (kubernetes.Interface, error) {
+			return kubernetes.NewForConfig(config)
+		},
 	}
 
 	return autoscaler.NewProvider(baseProvider)
