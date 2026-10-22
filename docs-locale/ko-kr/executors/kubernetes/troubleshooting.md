@@ -320,7 +320,22 @@ runners:
 ```
 
 > [!note]
-`emptyDir` 대신 [지원되는 볼륨 유형](_index.md#configure-volume-types)을 사용할 수 있습니다. 명시적으로 처리되지 않고 빌드 아티팩트로 저장되는 모든 파일이 일반적으로 일시적이므로 `emptyDir`은 대부분의 경우에 작동합니다.
+> `emptyDir` 대신 [지원되는 볼륨 유형](_index.md#configure-volume-types)을 사용할 수 있습니다. 명시적으로 처리되지 않고 빌드 아티팩트로 저장되는 모든 파일이 일반적으로 일시적이므로 `emptyDir`은 대부분의 경우에 작동합니다.
+
+## 오류: `could not lock config file` 또는 `unable to access '~/.gitconfig'` {#error-could-not-lock-config-file-or-unable-to-access-gitconfig}
+
+비루트 이미지를 사용하는 작업은 `HOME`이 빌드 사용자가 액세스할 수 없는 디렉터리를 가리킬 때 실패할 수 있습니다. 예를 들어 `/root` 또는 `/`입니다. 특정 오류는 Git 작업 및 GitLab 러너 버전에 따라 달라집니다:
+
+- `error: could not lock config file /root/.gitconfig: Permission denied`은 Git이 전역 구성을 쓸 때 발생합니다. 예를 들어 작업 스크립트의 `git config --global` 또는 `safe.directory` 설정입니다.
+- `fatal: unable to access '/root/.gitconfig': Permission denied`은 [`FF_GIT_URLS_WITHOUT_TOKENS` 기능 플래그](../../configuration/feature-flags.md)가 활성화된 GitLab 러너 19.2의 모든 Git 명령에서 발생합니다.
+
+Kubernetes는 보안 컨텍스트의 사용자로부터 `HOME`을 파생하지 않으므로 명시적인 `HOME`이 없는 비루트 이미지는 이미지에서 정의된 값을 유지합니다.
+
+이 문제를 해결하려면 빌드 사용자에게 쓰기 가능한 홈 디렉터리를 제공하세요:
+
+- 볼륨을 마운트하고 `HOME`을 가리키세요. [읽기 전용 루트 파일 시스템 섹션](#for-the-build-pod)을 참조하세요.
+- 이미지에서 `HOME`을 설정합니다. 예를 들어 `ENV HOME=/home/user`입니다.
+- `HOME`을 `pre_build_script`에서 내보냅니다. 예를 들어 `export HOME="$(mktemp -d)"`입니다. 이는 작업 스크립트의 Git 명령만 다룹니다. 소스 가져오기는 다루지 않습니다.
 
 ## 오류: `failed to share mount point: /: permission denied` {#error-failed-to-share-mount-point--permission-denied}
 
@@ -342,7 +357,7 @@ AppArmor이 rootlesskit이 rootless 환경을 설정하는 데 필요한 마운�
 ```
 
 > [!warning]
-`Unconfined`는 빌드 컨테이너의 AppArmor 격리를 비활성화하고 격리를 줄입니다.
+> `Unconfined`는 빌드 컨테이너의 AppArmor 격리를 비활성화하고 격리를 줄입니다.
 
 보안 정책에서 격리가 필요한 경우 rootlesskit이 필요로 하는 작업만 허용하는 `Localhost` 프로필을 사용하세요:
 

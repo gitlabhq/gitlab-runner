@@ -7,8 +7,8 @@ title: GitLab 러너 Helm 차트 구성
 
 {{< details >}}
 
-- 티어: Free, Premium, Ultimate
-- 제공 서비스: GitLab.com, GitLab Self-Managed, GitLab Dedicated
+- 계층:  Free, Premium, Ultimate
+- 제공:  GitLab.com, GitLab Self-Managed, GitLab Dedicated
 
 {{< /details >}}
 
@@ -167,7 +167,7 @@ Helm 차트 캐싱에 대한 자세한 내용은 [`values.yaml`](https://gitlab.
 1. [PVC를 생성](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#persistentvolumeclaims)하고 작업 포드가 실행될 네임스페이스에서 생성합니다.
 
    > [!note]
-여러 작업 포드가 동일한 캐시 PVC에 액세스하려는 경우 `ReadWriteMany` 액세스 모드가 있어야 합니다.
+   > 여러 작업 포드가 동일한 캐시 PVC에 액세스하려는 경우 `ReadWriteMany` 액세스 모드가 있어야 합니다.
 
 1. PVC를 `/cache` 디렉터리에 마운트합니다:
 
@@ -309,13 +309,13 @@ runners:
    ```
 
 > [!note]
-`imagePullSecrets`의 값은 Kubernetes 리소스의 규칙과 같이 `name` 태그로 접두사가 붙지 않습니다. 이 값은 하나의 레지스트리 자격 증명만 사용하더라도 하나 이상의 시크릿 이름 배열이 필요합니다.
+> `imagePullSecrets`의 값은 Kubernetes 리소스의 규칙과 같이 `name` 태그로 접두사가 붙지 않습니다. 이 값은 하나의 레지스트리 자격 증명만 사용하더라도 하나 이상의 시크릿 이름 배열이 필요합니다.
 
 `imagePullSecrets`을 생성하는 방법에 대한 자세한 내용은 Kubernetes 설명서에서 [개인 레지스트리에서 이미지 가져오기](https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/)를 참조하세요.
 
 작업 Pod가 생성되면 GitLab 러너는 자동으로 두 단계에서 이미지 액세스를 처리합니다:
 
-1. GitLab 러너는 기존 Docker 자격 증명을 Kubernetes 시크릿으로 변환하여 레지스트리에서 이미지를 가져올 수 있습니다. 또한 수동으로 구성된 imagePullSecrets이 클러스터에 실제로 존재하는지 확인합니다. 정적으로 정의된 자격 증명, 자격 증명 저장소 또는 자격 증명 도우미에 대한 자세한 내용은 [개인 컨테이너 레지스트리에서 이미지 액세스](https://docs.gitlab.com/ci/docker/using_docker_images/#access-an-image-from-a-private-container-registry)를 참조하세요.
+1. GitLab 러너는 기존 Docker 자격 증명을 Kubernetes 시크릿으로 변환하여 레지스트리에서 이미지를 가져올 수 있습니다. 또한 수동으로 구성된 imagePullSecrets이 클러스터에 실제로 존재하는지 확인합니다. 정적으로 정의된 자격 증명, 자격 증명 저장소 또는 자격 증명 도우미에 대한 자세한 내용은 [개인 컨테이너 레지스트리에서 이미지 액세스](https://docs.gitlab.com/ci/docker/using_docker_images/#access-an-image-from-a-private-container-registry)를 참조하세요. 기본적으로 GitLab Runner는 작업의 `DOCKER_AUTH_CONFIG`에서 참조하는 자격 증명 도우미 또는 자격 증명 저장소를 실행하지 않습니다. 이러한 도우미는 러너 관리자가 실행되는 호스트에서 이진 파일로 실행됩니다. 특정 레지스트리에 대해 특정 도우미를 허용하려면 러너 `config.toml`의 `[[runners]]` 섹션에서 [`allowed_docker_credential_helpers`](../configuration/advanced-configuration.md#restrict-docker-credential-helpers)을 구성하세요. 예를 들어 `runners.config` 템플릿에서 구성할 수 있습니다.
 1. GitLab 러너는 작업 Pod를 생성하고 `imagePullSecrets` 및 변환된 Docker 자격 증명을 순서대로 연결합니다.
 
 Kubernetes가 컨테이너 이미지를 가져와야 할 때 작동하는 자격 증명을 찾을 때까지 자격 증명을 하나씩 시도합니다.

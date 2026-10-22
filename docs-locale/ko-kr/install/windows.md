@@ -8,8 +8,8 @@ title: Windows에 GitLab 러너 설치
 
 {{< details >}}
 
-- 티어: Free, Premium, Ultimate
-- 제공 서비스: GitLab.com, GitLab Self-Managed, GitLab Dedicated
+- 계층:  Free, Premium, Ultimate
+- 제공:  GitLab.com, GitLab Self-Managed, GitLab Dedicated
 
 {{< /details >}}
 
@@ -29,7 +29,7 @@ Windows에서 GitLab 러너를 설치하고 실행하려면 다음이 필요합�
 1. GitLab 러너를 서비스로 설치하고 시작합니다. 기본 제공 시스템 계정(권장) 또는 사용자 계정을 사용하여 서비스를 실행할 수 있습니다.
 
    > [!note]
-Windows 서비스는 대화형 데스크톱 세션을 제공하지 않습니다. GUI 또는 데스크톱 자동화 테스트를 실행하려면 [GUI 테스트 및 대화형 데스크톱 세션](#gui-tests-and-interactive-desktop-sessions)을 참조하세요.
+   > Windows 서비스는 대화형 데스크톱 세션을 제공하지 않습니다. GUI 또는 데스크톱 자동화 테스트를 실행하려면 [GUI 테스트 및 대화형 데스크톱 세션](#gui-tests-and-interactive-desktop-sessions)을 참조하세요.
 
    **Run service using Built-in System Account** (1단계에서 생성된 예제 디렉터리 아래, `C:\GitLab-Runner`)
 
@@ -212,7 +212,7 @@ before_script:
 
 GitLab CI용 웹 인터페이스는 UNIX ANSI 터미널을 에뮬레이션합니다(최소한 부분적으로). `gitlab-runner`은(는) 빌드의 모든 출력을 웹 인터페이스로 직접 파이프합니다. 즉, 있는 모든 ANSI 색상 코드가 적용됩니다.
 
-이전 버전의 Windows 명령 프롬프트 터미널(Windows 10 버전 1511 이전)은 ANSI 색상 코드를 지원하지 않습니다. 대신 win32([`ANSI.SYS`](https://en.wikipedia.org/wiki/ANSI.SYS)) 호출을 사용하며, 이는 표시될 문자열에 **not**. 크로스 플랫폼 프로그램을 작성할 때 개발자는 일반적으로 기본적으로 ANSI 색상 코드를 사용합니다. 이러한 코드는 Windows 시스템에서 실행할 때 win32 호출로 변환되며, 예를 들어 [Colorama](https://pypi.org/project/colorama/)입니다.
+이전 버전의 Windows 명령 프롬프트 터미널(Windows 10 버전 1511 이전)은 ANSI 색상 코드를 지원하지 않습니다. 이들은 win32 ([`ANSI.SYS`](https://en.wikipedia.org/wiki/ANSI.SYS)) 호출을 대신 사용하며, 이는 표시될 문자열에 없습니다. 크로스 플랫폼 프로그램을 작성할 때 개발자는 일반적으로 기본적으로 ANSI 색상 코드를 사용합니다. 이러한 코드는 Windows 시스템에서 실행할 때 win32 호출로 변환되며, 예를 들어 [Colorama](https://pypi.org/project/colorama/)가 있습니다.
 
 프로그램이 위의 작업을 수행하는 경우 CI 빌드에 대해 해당 변환을 비활성화하여 ANSI 코드가 문자열에 유지되도록 해야 합니다.
 

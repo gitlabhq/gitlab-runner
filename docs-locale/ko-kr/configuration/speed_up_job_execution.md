@@ -157,7 +157,7 @@ Azure Blob Storage를 분산 캐시로 사용하려면 [러너의 `config.toml` 
 | 변수 | 속도 권장 | 설명 |
 |----------|------------------------|-------------|
 | `CACHE_COMPRESSION_LEVEL` | `fastest` 또는 `fast` | CPU가 감소하고 업로드 또는 다운로드가 더 빨라집니다. 아카이브가 더 큽니다. 기본값은 `default`입니다. |
-| `CACHE_COMPRESSION_FORMAT` | `zip` | `zip`은(는) 생성 속도가 더 빠릅니다. `tarzstd`는 더 나은 압축 비율을 제공하지만 더 느릴 수 있습니다. |
+| `CACHE_COMPRESSION_FORMAT` | `zip` (소규모 캐시) 또는 `zipzstd` (대규모 캐시, 멀티코어) | `zipzstd`은(는) 병렬로 압축하며 멀티코어 러너의 대규모 캐시에서 `zip`보다 빠릅니다. 그러나 Zstandard 오버헤드로 인해 단일 코어 러너 또는 소규모 캐시에서 속도가 느려질 수 있습니다. 병렬 `zipzstd` 추출이 기본값입니다(압축은 항상 병렬로 수행됩니다). `FF_USE_FASTZIP` 기능 플래그를 비활성화하면 추출이 단일 스레드입니다. `tarzstd`은(는) 최고의 압축 비율을 제공하지만 더 느릴 수 있습니다. |
 
 `.gitlab-ci.yml`의 예제 구성:
 

@@ -65,7 +65,6 @@ Helm 차트에서 러너를 설치하려면:
    helm repo add gitlab https://charts.gitlab.io
    ```
 
-1. Helm 2를 사용하는 경우, `helm init`로 Helm을 초기화합니다.
 1. 액세스할 수 있는 러너 버전을 확인합니다:
 
    ```shell
@@ -81,10 +80,6 @@ Helm 차트에서 러너를 설치하려면:
 1. 러너를 `values.yaml` 파일에서 [구성](#configure-gitlab-runner-with-the-helm-chart)한 후, 필요에 따라 매개변수를 변경하여 다음 명령을 실행합니다:
 
    ```shell
-   # For Helm 2
-   helm install --namespace <NAMESPACE> --name gitlab-runner -f <CONFIG_VALUES_FILE> gitlab/gitlab-runner
-
-   # For Helm 3
    helm install --namespace <NAMESPACE> gitlab-runner -f <CONFIG_VALUES_FILE> gitlab/gitlab-runner
    ```
 
@@ -94,13 +89,9 @@ Helm 차트에서 러너를 설치하려면:
 
 ### 사용 가능한 러너 Helm 차트 버전 확인 {#check-available-gitlab-runner-helm-chart-versions}
 
-Helm 차트와 러너는 동일한 버전 관리를 따르지 않습니다. 두 버전 간의 버전 매핑을 확인하려면 Helm 버전에 대한 명령을 실행합니다:
+Helm 차트와 러너는 동일한 버전 관리를 따르지 않습니다. 두 버전 간의 매핑을 확인하려면 이 명령을 실행하세요:
 
 ```shell
-# For Helm 2
-helm search -l gitlab/gitlab-runner
-
-# For Helm 3
 helm search repo -l gitlab/gitlab-runner
 ```
 
@@ -116,6 +107,23 @@ gitlab/gitlab-runner  0.61.3        16.8.1      GitLab Runner
 gitlab/gitlab-runner  0.61.2        16.8.0      GitLab Runner
 ...
 ```
+
+### OCI 레지스트리에서 GitLab Runner 설치 {#install-gitlab-runner-from-an-oci-registry}
+
+Helm 차트 버전 0.92.2 이상은 OCI(Open Container Initiative) 아티팩트로도 제공됩니다. GitLab Helm 리포지토리를 추가하는 대신 이 방법을 사용하세요.
+
+[Helm 차트를 사용하여 GitLab Runner 구성](#configure-gitlab-runner-with-the-helm-chart)을 완료한 후 `values.yaml` 파일에서 이 명령을 실행하고 필요에 따라 매개변수를 변경하세요:
+
+```shell
+helm install --namespace <NAMESPACE> gitlab-runner \
+  oci://registry.gitlab.com/charts/charts.gitlab.io/release/gitlab-runner \
+  --version <RUNNER_HELM_CHART_VERSION> \
+  -f <CONFIG_VALUES_FILE>
+```
+
+- `<NAMESPACE>`: GitLab Runner를 설치할 Kubernetes 네임스페이스입니다.
+- `<RUNNER_HELM_CHART_VERSION>`: 설치할 차트 버전입니다. `0.92.2` 이상을 사용하세요.
+- `<CONFIG_VALUES_FILE>`: 사용자 지정 구성을 포함하는 values 파일의 경로입니다.
 
 ## Helm 차트를 사용하여 러너 업그레이드 {#upgrade-gitlab-runner-with-the-helm-chart}
 

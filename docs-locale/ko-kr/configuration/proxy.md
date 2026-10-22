@@ -201,6 +201,12 @@ GitLab 러너가 `429 Too Many Requests` 응답을 받으면 다음 재시도 �
 
 러너는 실패한 요청을 최대 5회까지 재시도합니다. 모든 재시도가 실패하면 러너는 최종 응답에서 오류를 기록합니다.
 
+각 재시도된 응답은 `status`, `attempt`, `max_attempts`, `correlation_id`, `retry_after`, 그리고 `ratelimit_reset_time` 필드와 함께 기록됩니다. `correlation_id`을(를) 사용하여 GitLab API 로그에서 일치하는 요청을 찾습니다. 모든 시도(재시도된 것 포함)는 `gitlab_runner_api_request_attempts_total` 지표에 HTTP 상태와 함께 계산됩니다. 속도 제한은 `gitlab_runner_api_request_attempts_total{status="429"}`로 표시되며, 최종 시도가 성공한 경우에도 표시됩니다.
+
+작업 요청(`POST /api/v4/jobs/request`)은 예외입니다. 작업 요청에 대한 `429` 응답은 재시도되지 않습니다. 러너는 `Checking for jobs... rate limited`을(를) `warning` 수준에서 기록하고, `request_concurrency` 슬롯을 해제한 다음, 일반적인 `check_interval` 이후에 다시 폴링합니다. 슬롯을 유지하면서 `Retry-After` 기간을 기다리면 속도 제한 기간 동안 전체 러너 관리자의 작업 픽업 속도가 감소합니다.
+
+러너가 Job Router(`FF_USE_JOB_ROUTER`)를 통해 작업을 요청할 때도 동일하게 적용됩니다. GitLab Relay(KAS)는 속도가 제한된 작업 요청을 `Retry-After` 값과 함께 러너에게 즉시 반환하고, 러너는 동일한 `Checking for jobs... rate limited` 줄을 기록합니다. 요청은 `gitlab_runner_job_router_get_job_requests_total`에 `code="ResourceExhausted"`와 함께 계산됩니다.
+
 ### 지원되는 헤더 형식 {#supported-header-formats}
 
 | 헤더                | 형식              | 예                         |
