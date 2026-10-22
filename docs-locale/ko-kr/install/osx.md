@@ -270,7 +270,9 @@ gitlab-runner start
 
 ### 오류: `couldn't build CA Chain` {#error-couldnt-build-ca-chain}
 
-이 오류는 GitLab Runner v15.5.0으로 업그레이드한 후에 발생할 수 있습니다. 전체 오류 메시지는 다음과 같습니다:
+이 오류는 GitLab Runner 15.5.0부터 16.3까지 영향을 미칩니다. GitLab Runner 16.4 이상에서는 `FF_RESOLVE_FULL_TLS_CHAIN`가 `false`로 기본 설정되며 오류가 더 이상 발생하지 않습니다. 기능 플래그는 더 이상 사용되지 않으며 GitLab Runner 20.0에서 제거될 예정입니다.
+
+전체 오류 메시지는 다음과 같습니다:
 
 ```plaintext
 ERROR: Error on fetching TLS Data from API response... error  error=couldn't build CA Chain:
@@ -283,8 +285,8 @@ runner=x7kDEc9Q
 
 이 오류를 해결하려면:
 
-1. GitLab Runner v15.5.1 이상으로 업그레이드합니다.
-1. 업그레이드할 수 없는 경우 [`[runners.feature_flags]` 구성](../configuration/feature-flags.md#enable-feature-flag-in-runner-configuration)에서 `FF_RESOLVE_FULL_TLS_CHAIN`을 `false`로 설정합니다:
+1. 플래그가 `false`로 기본 설정되는 GitLab Runner 16.4 이상으로 업그레이드하세요.
+1. GitLab Runner 15.5.1부터 16.3까지는 [`[runners.feature_flags]` 구성](../configuration/feature-flags.md#enable-feature-flag-in-runner-configuration)에서 `FF_RESOLVE_FULL_TLS_CHAIN`을 `false`로 설정합니다:
 
    ```toml
    [[runners]]

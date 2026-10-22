@@ -265,7 +265,7 @@ systemctl restart docker.service
 
 Ubuntu 또는 Alpine 이외의 운영 체제의 경우 운영 체제의 설명서를 참조하여 신뢰할 수 있는 인증서를 설치하는 적절한 명령을 찾으세요.
 
-GitLab 러너 버전 및 Docker 호스트 환경에 따라 `FF_RESOLVE_FULL_TLS_CHAIN` 기능 플래그를 비활성화해야 할 수도 있습니다.
+GitLab Runner 15.5.1~16.3에서는 Docker 호스트 환경에 따라 `FF_RESOLVE_FULL_TLS_CHAIN` 기능 플래그를 비활성화해야 할 수도 있습니다. GitLab Runner 16.4 이상에서는 플래그가 기본값으로 `false`입니다. 이 플래그는 사용이 중단되었으며 GitLab Runner 20.0에서 제거될 예정입니다.
 
 ### `apt-get: not found` 작업 오류 {#apt-get-not-found-errors-in-jobs}
 
