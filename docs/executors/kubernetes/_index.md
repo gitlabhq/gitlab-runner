@@ -124,9 +124,9 @@ You can either:
 | apps/deployments | create (`kubernetes.autoscaler`), delete (`kubernetes.autoscaler`), get (`kubernetes.autoscaler`), list (`kubernetes.autoscaler`), update (`kubernetes.autoscaler`) |
 | configmaps | create (`FF_SUSPENDABLE_ENVIRONMENTS=true`), delete (`FF_SUSPENDABLE_ENVIRONMENTS=true`), get (`FF_SUSPENDABLE_ENVIRONMENTS=true`), update (`FF_SUSPENDABLE_ENVIRONMENTS=true`) |
 | events | list (`hostUsers=false`, `print_pod_warning_events=true`), watch (`FF_PRINT_POD_EVENTS=true`) |
-| namespaces | create (`kubernetes.NamespacePerJob=true`), delete (`kubernetes.NamespacePerJob=true`), get (`FF_SUSPENDABLE_ENVIRONMENTS=true`), patch (`FF_SUSPENDABLE_ENVIRONMENTS=true`, `kubernetes.NamespacePerJob=true`) |
-| persistentvolumeclaims | create (`FF_SUSPENDABLE_ENVIRONMENTS=true`), delete (`FF_SUSPENDABLE_ENVIRONMENTS=true`), get (`FF_SUSPENDABLE_ENVIRONMENTS=true`) |
-| pods | create, delete, get, list ([using Informers](#informers)), watch ([using Informers](#informers), `FF_KUBERNETES_HONOR_ENTRYPOINT=true`, `FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false`) |
+| namespaces | create (`kubernetes.NamespacePerJob=true`), delete (`kubernetes.NamespacePerJob=true`), get (`FF_SUSPENDABLE_ENVIRONMENTS=true`), list (`FF_SUSPENDABLE_ENVIRONMENTS=true`, `kubernetes.NamespacePerJob=true`), patch (`FF_SUSPENDABLE_ENVIRONMENTS=true`, `kubernetes.NamespacePerJob=true`) |
+| persistentvolumeclaims | create (`FF_SUSPENDABLE_ENVIRONMENTS=true`), delete (`FF_SUSPENDABLE_ENVIRONMENTS=true`), get (`FF_SUSPENDABLE_ENVIRONMENTS=true`), list (`FF_SUSPENDABLE_ENVIRONMENTS=true`) |
+| pods | create, delete, get, list ([using Informers](#informers), `FF_SUSPENDABLE_ENVIRONMENTS=true`), watch ([using Informers](#informers), `FF_KUBERNETES_HONOR_ENTRYPOINT=true`, `FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false`) |
 | pods/attach | create (`FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false`), delete (`FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false`), get (`FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false`), patch (`FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false`) |
 | pods/exec | create, delete, get, patch |
 | pods/log | get (`FF_CONCRETE=true`, `FF_KUBERNETES_HONOR_ENTRYPOINT=true`, `FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false`, `FF_WAIT_FOR_POD_TO_BE_REACHABLE=true`), list (`FF_KUBERNETES_HONOR_ENTRYPOINT=true`, `FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false`) |
@@ -175,6 +175,7 @@ rules:
   - "create" # Required when `kubernetes.NamespacePerJob=true`
   - "delete" # Required when `kubernetes.NamespacePerJob=true`
   - "get" # Required when `FF_SUSPENDABLE_ENVIRONMENTS=true`
+  - "list" # Required when `FF_SUSPENDABLE_ENVIRONMENTS=true`, `kubernetes.NamespacePerJob=true`
   - "patch" # Required when `FF_SUSPENDABLE_ENVIRONMENTS=true`, `kubernetes.NamespacePerJob=true`
 - apiGroups: [""]
   resources: ["persistentvolumeclaims"]
@@ -182,13 +183,14 @@ rules:
   - "create" # Required when `FF_SUSPENDABLE_ENVIRONMENTS=true`
   - "delete" # Required when `FF_SUSPENDABLE_ENVIRONMENTS=true`
   - "get" # Required when `FF_SUSPENDABLE_ENVIRONMENTS=true`
+  - "list" # Required when `FF_SUSPENDABLE_ENVIRONMENTS=true`
 - apiGroups: [""]
   resources: ["pods"]
   verbs:
   - "create"
   - "delete"
   - "get"
-  - "list" # Required when using Informers (https://docs.gitlab.com/runner/executors/kubernetes/#informers)
+  - "list" # Required when `FF_SUSPENDABLE_ENVIRONMENTS=true`, using Informers (https://docs.gitlab.com/runner/executors/kubernetes/#informers)
   - "watch" # Required when `FF_KUBERNETES_HONOR_ENTRYPOINT=true`, `FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false`, using Informers (https://docs.gitlab.com/runner/executors/kubernetes/#informers)
 - apiGroups: [""]
   resources: ["pods/attach"]
@@ -243,6 +245,8 @@ Additional details:
 
 - The `event` permission is needed only for GitLab 16.2.1 and later.
 - The `namespace` permission is needed only when enabling namespace isolation by using `namespace_per_job`.
+  With `namespace_per_job`, use a `ClusterRole` and `ClusterRoleBinding`. The runner creates, deletes,
+  and lists resources across namespaces, which a namespaced `Role` cannot grant.
 - The `pods/log` permission is only needed when one of the following scenarios are true:
   - The [`FF_KUBERNETES_HONOR_ENTRYPOINT` feature flag](../../configuration/feature-flags.md) is enabled.
   - The [`FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY` feature flag](../../configuration/feature-flags.md)

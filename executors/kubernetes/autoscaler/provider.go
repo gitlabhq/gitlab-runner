@@ -3,6 +3,7 @@ package autoscaler
 import (
 	"context"
 	"sync"
+	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
@@ -13,8 +14,11 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 )
 
-// Compile-time interface assertion.
-var _ common.ManagedExecutorProvider = (*Provider)(nil)
+// Compile-time interface assertions.
+var (
+	_ common.ManagedExecutorProvider   = (*Provider)(nil)
+	_ common.RuntimeEnvironmentSweeper = (*Provider)(nil)
+)
 
 // Provider wraps an ExecutorProvider to add pause pod management.
 type Provider struct {
@@ -76,6 +80,17 @@ func (p *Provider) Shutdown(ctx context.Context, _ *common.Config) {
 		delete(p.managers, token)
 	}
 	wg.Wait()
+}
+
+// SweepRuntimeEnvironments forwards to the wrapped provider. The embedded
+// interface does not promote methods outside common.ExecutorProvider, so
+// without this the sweep loop would never see the Kubernetes implementation.
+func (p *Provider) SweepRuntimeEnvironments(ctx context.Context, config *common.RunnerConfig, now time.Time) error {
+	sweeper, ok := p.ExecutorProvider.(common.RuntimeEnvironmentSweeper)
+	if !ok {
+		return nil
+	}
+	return sweeper.SweepRuntimeEnvironments(ctx, config, now)
 }
 
 // Acquire acquires resources and ensures pause pod manager is running.
