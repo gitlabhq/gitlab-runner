@@ -39,6 +39,8 @@ Ces paramètres sont globaux. Ils s'appliquent à tous les runners.
 | `concurrent`         | Limite le nombre de jobs pouvant s'exécuter simultanément, sur tous les runners enregistrés. Chaque section `[[runners]]` peut définir sa propre limite, mais cette valeur fixe un maximum pour toutes ces valeurs combinées. Par exemple, une valeur de `10` signifie qu'au plus 10 jobs peuvent s'exécuter simultanément. `0` est interdit. Si vous utilisez cette valeur, le processus du runner se termine avec une erreur critique. Consultez le fonctionnement de ce paramètre avec l'[exécuteur Docker Machine](autoscale.md#limit-the-number-of-vms-created-by-the-docker-machine-executor) , l'[exécuteur Instance](../executors/instance.md) , l'[exécuteur Docker Autoscaler](../executors/docker_autoscaler.md#example-aws-autoscaling-for-1-job-per-instance) et la [configuration `runners.custom_build_dir`](#the-runnerscustom_build_dir-section). |
 | `log_level`          | Définit le niveau de journalisation. Les options sont `debug`, `info`, `warn`, `error`, `fatal` et `panic`. Ce paramètre a une priorité inférieure au niveau défini par les arguments de ligne de commande `--debug`, `-l` ou `--log-level`. |
 | `log_format`         | Spécifie le format des journaux. Les options sont `runner`, `text` et `json`. Ce paramètre a une priorité inférieure au format défini par l'argument de ligne de commande `--log-format`. La valeur par défaut est `runner`, qui contient des codes d'échappement ANSI pour la coloration. |
+| `log_field_schema_version` | Définit la version du schéma des champs de log. Les champs standardisés dans cette version ou dans une version antérieure utilisent leurs noms standardisés. Les champs standardisés dans une version ultérieure conservent leurs noms hérités. La valeur par défaut est `0`, ce qui conserve tous les noms hérités. Pour la version de chaque champ, consultez le [tableau des champs LabKit](https://gitlab.com/gitlab-org/labkit/-/blob/master/v2/fields/fields.go). |
+| `log_field_dual_emit_target` | Émet à la fois le nom hérité et le nom standardisé pour les champs standardisés dans une version supérieure à `log_field_schema_version`, jusqu'à cette version incluse. Les champs couverts par `log_field_schema_version` n'émettent que le nom standardisé. Doit être supérieur à `log_field_schema_version`, ou `0` pour désactiver la double émission. La valeur par défaut est `0`. Pour migrer par étapes, définissez d'abord cette valeur sur la version cible et laissez `log_field_schema_version` inchangé. Une fois que tous les consommateurs de logs ont lu les noms standardisés, définissez `log_field_schema_version` sur la version cible et remettez cette valeur à `0`. |
 | `check_interval`     | Définit la durée de l'intervalle, en secondes, entre les vérifications du runner pour les nouveaux jobs. La valeur par défaut est `3`. Si défini à `0` ou inférieur, la valeur par défaut est utilisée. |
 | `sentry_dsn`         | Active le suivi de toutes les erreurs au niveau système dans Sentry. Si ce paramètre n'est pas défini, le runner utilise par défaut la variable d'environnement `SENTRY_DSN`. La valeur dans `config.toml` est prioritaire sur la variable d'environnement. La variable d'environnement est utilisée telle quelle, sans expansion. Les références comme `$OTHER_VAR` ne sont donc pas interpolées. |
 | `connection_max_age` | La durée maximale pendant laquelle une connexion TLS keepalive au serveur GitLab doit rester ouverte avant de se reconnecter. La valeur par défaut est `15m` pour 15 minutes. Si défini à `0` ou inférieur, la connexion persiste aussi longtemps que possible. |
@@ -75,13 +77,13 @@ Symptômes :
 Scénarios problématiques courants :
 
 - Goulot d'étranglement par famine des workers : Le paramètre `concurrent` est inférieur au nombre de runners (goulot d'étranglement sévère)
-- Goulot d'étranglement des requêtes : Les runners avec `request_concurrency=1` provoquent des délais de jobs pendant le long polling
+- Goulot d'étranglement des requêtes : les runners avec `request_concurrency=1` provoquent des délais dans les jobs lors du long polling. Cela s'applique que `FF_USE_ADAPTIVE_REQUEST_CONCURRENCY` soit activé ou non, car l'algorithme AIMD adaptatif limite la concurrence effective au plafond `request_concurrency` configuré. Avec `request_concurrency=1`, le plafond et le plancher sont tous deux à 1, donc le feature flag n'a aucun effet.
 - Goulot d'étranglement de la limite de build : Les runners avec des paramètres `limit` faibles (≤2) combinés avec `request_concurrency=1`
 
 GitLab Runner détecte automatiquement les scénarios problématiques et fournit des solutions adaptées dans les messages d'avertissement. Les solutions courantes incluent :
 
 - Augmenter le paramètre `concurrent` pour dépasser le nombre de runners.
-- Définir la valeur `request_concurrency` pour les runners à fort volume à une valeur supérieure à 1 (la valeur par défaut est 1). Envisagez d'activer [la surveillance des runners](../monitoring/_index.md) pour comprendre l'état de votre système et trouver la meilleure valeur pour le paramètre. Le feature flag `FF_USE_ADAPTIVE_REQUEST_CONCURRENCY` ajuste automatiquement `request_concurrency` en fonction de la charge de travail et est activé par défaut. Si vous l'avez désactivé, envisagez de le réactiver. Pour des informations sur la concurrence adaptative, consultez la [documentation sur les feature flags](feature-flags.md).
+- Définir la valeur `request_concurrency` pour les runners à fort volume à une valeur supérieure à 1 (la valeur par défaut est 1). Envisagez d'activer [la surveillance des runners](../monitoring/_index.md) pour comprendre l'état de votre système et trouver la meilleure valeur pour le paramètre. Une fois que `request_concurrency` est supérieur à 1, le feature flag `FF_USE_ADAPTIVE_REQUEST_CONCURRENCY` (activé par défaut) ajuste la concurrence effective dans ce plafond à l'aide de l'AIMD. Augmenter `request_concurrency` au-dessus de 1 est un prérequis ; le feature flag ne peut pas augmenter le plafond seul. Si vous avez désactivé le feature flag, pensez à le réactiver. Pour en savoir plus sur la concurrence adaptative, consultez la [documentation sur les feature flags](feature-flags.md).
 - Équilibrer les paramètres `limit` avec le volume de jobs attendu.
 
 ##### Exemples de configurations problématiques {#example-problematic-configurations}
@@ -269,16 +271,35 @@ Si vous définissez davantage de runners, l'intervalle de veille est plus court.
 
 La section `[machine]` configure les paramètres globaux pour le fournisseur d'`docker+machine`. Ces paramètres s'appliquent à tous les runners qui utilisent l'exécuteur `docker+machine`.
 
+| Paramètre | Type | Description |
+|-----------|------|-------------|
+| `creation_duration_seconds_buckets` | tableau de nombres flottants | Intervalles d'histogramme pour `gitlab_runner_autoscaling_machine_creation_duration_seconds`. Par défaut : `[30, 37.5, 46.9, 58.6, 73.2, 91.6, 114.4, 143.1, 178.8, 223.5, 279.4, 349.2, 436.6, 545.7]`. |
+| `creation_phase_duration_seconds_buckets` | tableau de nombres flottants | Intervalles d'histogramme pour `gitlab_runner_autoscaling_machine_creation_phase_duration_seconds`. Par défaut : `[1, 2, 5, 10, 20, 40, 80, 160, 320, 640]`. |
+| `disable_creation_phase_metrics` | booléen | Ne pas enregistrer `gitlab_runner_autoscaling_machine_creation_phase_duration_seconds`. Les durées de phase sont toujours journalisées. Par défaut : `false`. |
+
+`gitlab_runner_autoscaling_machine_creation_phase_duration_seconds` décompose la création de machine par phase Docker Machine (`bootstrap`, `pre_create`, `driver_create`, `wait_running`, `wait_ssh`, `detect_os`, `provision`, `docker_check`). Cela nécessite le [feature flag](feature-flags.md) `FF_DOCKER_MACHINE_JSON_OUTPUT` et Docker Machine `0.16.2-gitlab.55` ou ultérieur. Lorsque le feature flag est activé, le runner exécute `docker-machine create` avec `--log-format=json`, journalise les champs de Docker Machine sous `docker_machine` et enregistre les durées des phases. Sans ce feature flag, le runner journalise la sortie de Docker Machine en texte brut comme avant, et l'histogramme des phases ne contient aucun échantillon.
+
+Le label `result` est `success` ou `failure` et reflète le résultat de l'ensemble de `docker-machine create`, et non de la phase individuelle. Lorsqu'une création expire en attendant SSH, les phases terminées avant cette expiration sont également enregistrées avec `result="failure"`.
+
+Les histogrammes sont construits au démarrage du runner. Les modifications apportées à ces paramètres prennent effet après un redémarrage, et non lors d'un rechargement de la configuration.
+
+Exemple :
+
+```toml
+[machine]
+  creation_duration_seconds_buckets = [10, 12.5, 15.6, 19.5, 24.4, 30.5, 38.1, 47.7, 59.6, 74.5, 93.1, 116.4, 145.5, 181.9, 227.4, 284.2, 355.3, 444.1, 555.1]
+```
+
 ### La section `[machine.shutdown_drain]` {#the-machineshutdown_drain-section}
 
 Lorsque le processus du runner s'arrête, les machines inactives du pool sont généralement laissées à s'exécuter. Vous devez les nettoyer en externe (par exemple, via un hook post-stop `systemd`). La section `shutdown_drain` configure le runner pour supprimer automatiquement les machines inactives lors de l'arrêt.
 
 | Paramètre       | Type     | Description |
 |-----------------|----------|-------------|
-| `enabled`       | booléen  | Activer la suppression automatique des machines inactives lors de l'arrêt. Par défaut : `false`. |
-| `concurrency`   | entier  | Nombre de machines à supprimer simultanément. Par défaut : `3`. |
-| `max_retries`   | entier  | Nombre maximum de tentatives par machine. Par défaut : `3`. |
-| `retry_backoff` | durée | Durée de backoff de base entre les tentatives (multipliée par le numéro de tentative). Par défaut : `5s`. |
+| `enabled`       | booléen  | Activer la suppression automatique des machines inactives lors de l'arrêt. Par défaut : `false`. |
+| `concurrency`   | entier  | Nombre de machines à supprimer simultanément. Par défaut : `3`. |
+| `max_retries`   | entier  | Nombre maximum de tentatives par machine. Par défaut : `3`. |
+| `retry_backoff` | durée | Durée de backoff de base entre les tentatives (multipliée par le numéro de tentative). Par défaut : `5s`. |
 
 > [!note]
 > L'opération de vidange utilise le paramètre global [`shutdown_timeout`](#the-global-section). Le délai d'expiration par défaut de 30 secondes est généralement trop court pour vider les machines. Lorsque vous activez le vidage lors de l'arrêt, augmentez `shutdown_timeout` pour laisser suffisamment de temps pour que toutes les machines soient supprimées. Un minimum de 5 minutes est recommandé, mais des pools plus grands peuvent nécessiter des délais d'expiration plus longs. Le runner consigne un avertissement si le délai d'expiration est trop court.
@@ -309,6 +330,22 @@ shutdown_timeout = 600  # 10 minutes - required for draining machines
     MachineName = "auto-scale-%s"
     MachineDriver = "google"
     MachineOptions = ["google-project=my-project", "google-zone=us-central1-a"]
+```
+
+### La section `[machine.heartbeat]` {#the-machineheartbeat-section}
+
+Configure les actualisations du label de vivacité activées par [`HeartbeatInterval`](#the-runnersmachine-section). La limite de concurrence est globale, car les écritures de labels de tous les runners partagent le quota d'API du fournisseur cloud.
+
+| Paramètre     | Type    | Description |
+|---------------|---------|-------------|
+| `concurrency` | entier | Nombre maximal d'actualisations de labels simultanées pour tous les runners. Par défaut : `5`. |
+
+Exemple :
+
+```toml
+[machine]
+  [machine.heartbeat]
+    concurrency = 5
 ```
 
 ## La section `[session_server]` {#the-session_server-section}
@@ -366,6 +403,7 @@ Chaque section `[[runners]]` définit un runner.
 | `builds_dir`                          | Chemin absolu vers un répertoire où les builds sont stockés dans le contexte de l'exécuteur sélectionné. Par exemple, localement, Docker ou SSH.                                                                                                                                                                                                                                                                         |
 | `cache_dir`                           | Chemin absolu vers un répertoire où les caches de build sont stockés dans le contexte de l'exécuteur sélectionné. Par exemple, localement, Docker ou SSH. Si l'exécuteur `docker` est utilisé, ce répertoire doit être inclus dans son paramètre `volumes`.                                                                                                                                                                         |
 | `environment`                         | Ajouter ou remplacer des variables d'environnement.                                                                                                                                                                                                                                                                                                                                                                  |
+| `allowed_docker_credential_helpers`   | Liste d'autorisation des assistants d'identification Docker qu'un `DOCKER_AUTH_CONFIG` fourni par un job peut exécuter sur l'hôte du runner. Chaque assistant est associé aux patterns glob de registres qu'il peut traiter. Par défaut, le runner n'exécute aucun assistant fourni par un job. S'applique aux exécuteurs Docker et Kubernetes. Pour plus d'informations, voir [restreindre les assistants d'identification Docker](#restrict-docker-credential-helpers).                   |
 | `request_concurrency`                 | Limiter le nombre de requêtes simultanées pour de nouveaux jobs depuis GitLab. La valeur par défaut est `1`. Pour plus d'informations sur la façon dont `concurrency`, `limit` et `request_concurrency` interagissent pour contrôler le flux des jobs, consultez l'[article de la base de connaissances sur l'ajustement de la concurrence de GitLab Runner](https://support.gitlab.com/hc/en-us/articles/21324350882076-GitLab-Runner-Concurrency-Tuning-Understanding-request-concurrency).                     |
 | `strict_check_interval`               | En fonctionnement normal, lorsqu'un runner interroge les jobs et en reçoit un, il interroge immédiatement à nouveau jusqu'à ce que le nombre de jobs en cours de traitement corresponde à `concurrent` ou `limit`, ou jusqu'à ce qu'aucun job ne soit disponible. Lorsque vous activez `strict_check_interval`, le runner désactive cette boucle d'interrogation plus rapide que `check_interval` et respecte strictement `check_interval`. La valeur par défaut est `false`.             |
 | `output_limit`                        | Taille maximale du journal de build en kilo-octets. La valeur par défaut est `4096` (4 Mo).                                                                                                                                                                                                                                                                                                                                              |
@@ -378,7 +416,7 @@ Chaque section `[[runners]]` définit un runner.
 | `clean_git_config`                    | Nettoie la configuration Git. Pour plus d'informations, voir [Nettoyage de la configuration Git](#cleaning-git-configuration).                                                                                                                                                                                                                                                                                          |
 | `referees`                            | Workers de surveillance de jobs supplémentaires qui transmettent leurs résultats sous forme d'artefacts de job à GitLab.                                                                                                                                                                                                                                                                                                                            |
 | `unhealthy_requests_limit`            | Le nombre de réponses `unhealthy` aux nouvelles requêtes de jobs après lequel un worker du runner est désactivé.                                                                                                                                                                                                                                                                                                            |
-| `unhealthy_interval`                  | Durée pendant laquelle un worker du runner est désactivé après avoir dépassé la limite des requêtes non saines. Prend en charge la syntaxe telle que `3600 s`, `1 h 30 min` et similaires.                                                                                                                                                                                                                                                      |
+| `unhealthy_interval`                  | Durée maximale pendant laquelle un worker de runner est désactivé après avoir dépassé la limite de requêtes non saines. La première désactivation dure 30 secondes et augmente avec une gigue à chaque vérification échouée, jusqu'à cette valeur. `0` ne désactive jamais le worker. Prend en charge la syntaxe comme `3600 s` et `1 h 30 min`.                                                                                                                                                                                                                                                      |
 | `job_status_final_update_retry_limit` | Le nombre maximum de fois que GitLab Runner peut réessayer d'envoyer le statut final du job à l'instance GitLab.                                                                                                                                                                                                                                                                                                    |
 | `prepare_timeout`                     | Durée maximale autorisée pour l'étape `prepare` (initialisation de l'exécuteur et configuration de l'environnement shell). Accepte une chaîne de durée telle que `30s` ou `1h30m`. Si non défini, nul ou supérieur au délai d'expiration du job, utilise le délai d'expiration du job par défaut. Pour plus d'informations, voir [le délai d'expiration de l'étape de préparation](#prepare-stage-timeout).                                                                                        |
 | `get_sources_timeout`                 | Durée maximale autorisée pour l'étape `get_sources` (clonage ou récupération du dépôt du projet, y compris les sous-modules). Accepte une chaîne de durée telle que `30s` ou `1h30m`. Si non défini, nul ou supérieur au délai d'expiration du job, utilise le délai d'expiration du job par défaut. Pour plus d'informations, voir [get sources timeout](#get-sources-timeout).                                                                          |
@@ -503,11 +541,15 @@ Pour modifier les points de terminaison [Git LFS](https://docs.gitlab.com/topics
 
 ### Fonctionnement de `unhealthy_requests_limit` et `unhealthy_interval` {#how-unhealthy_requests_limit-and-unhealthy_interval-works}
 
-Lorsqu'une instance GitLab est indisponible pendant une longue période (par exemple, lors d'une mise à niveau de version), ses runners deviennent inactifs. Les runners ne reprennent pas le traitement des jobs pendant 30 à 60 minutes après que l'instance GitLab soit à nouveau disponible.
+Lorsque l'instance GitLab rejette une requête de job avec un `403` `unhealthy_requests_limit` fois de suite (par exemple, un jeton expiré ou un échec d'authentification lors d'une mise à niveau de version), le worker du runner cesse de demander des jobs. Les jobs en cours d'exécution ne sont pas affectés. Les erreurs de connexion ne sont pas comptabilisées. Le runner continue à effectuer des requêtes à `check_interval` et reprend dès que l'instance est joignable.
 
-Pour augmenter ou diminuer la durée pendant laquelle les runners sont inactifs, modifiez le paramètre `unhealthy_interval`.
+Le worker est désactivé pendant 30 secondes, puis envoie une requête. Si cette requête échoue, le worker est de nouveau désactivé pour une durée aléatoire comprise entre 30 secondes et deux fois le maximum précédent, jusqu'à `unhealthy_interval`. Une requête réussie réactive le worker et réinitialise l'attente exponentielle. Après un court échec, la prochaine requête est dans 30 secondes. Après un long échec, l'attente s'est accrue vers `unhealthy_interval`, de sorte qu'avec la valeur par défaut d'une heure, le worker reprend le traitement des jobs au plus une heure après que l'instance accepte à nouveau les requêtes. Définissez `unhealthy_interval` sur `0` pour ne jamais désactiver le worker.
 
-Pour modifier le nombre de tentatives de connexion du runner au serveur GitLab et recevoir une mise en veille non saine avant de devenir inactif, modifiez le paramètre `unhealthy_requests_limit`. Pour plus d'informations, voir [Fonctionnement de `check_interval`](advanced-configuration.md#how-check_interval-works).
+Lorsqu'un worker est désactivé, la métrique `gitlab_runner_worker_healthy` est à `0`.
+
+Pour modifier la durée maximale pendant laquelle un runner peut rester inactif, modifiez le paramètre `unhealthy_interval`.
+
+Pour modifier le nombre de requêtes échouées avant la désactivation du worker, modifiez le paramètre `unhealthy_requests_limit`. Pour plus d'informations, voir [Fonctionnement de `check_interval`](advanced-configuration.md#how-check_interval-works).
 
 ### Délai d'expiration de l'étape de préparation {#prepare-stage-timeout}
 
@@ -592,13 +634,21 @@ La section `boot_verify` exécute un job synthétique via le runner au démarrag
 
 | Paramètre             | Type     | Description |
 |-----------------------|----------|-------------|
-| `enabled`             | booléen  | Exécute le canary de démarrage pour ce runner. Par défaut : `false`. |
-| `timeout`             | durée | Délai limite pour le canary. Prend en charge les valeurs telles que `5m` ou `90s`. Par défaut : `5m`. |
-| `acquire_min_backoff` | durée | Délai de backoff minimal entre les tentatives d'acquisition de l'exécuteur. Par défaut : `1s`. |
-| `acquire_max_backoff` | durée | Délai de backoff maximal entre les tentatives d'acquisition de l'exécuteur. Par défaut : `10s`. |
+| `enabled`             | booléen  | Exécute le canary de démarrage pour ce runner. Par défaut : `false`. |
+| `timeout`             | durée | Délai limite pour le canary. Prend en charge les valeurs telles que `5m` ou `90s`. Par défaut : `5m`. |
+| `acquire_min_backoff` | durée | Délai de backoff minimal entre les tentatives d'acquisition de l'exécuteur. Par défaut : `1s`. |
+| `acquire_max_backoff` | durée | Délai de backoff maximal entre les tentatives d'acquisition de l'exécuteur. Par défaut : `10s`. |
+| `verify_auth`         | booléen  | Vérifie depuis le gestionnaire de runner que le jeton du runner s'authentifie auprès du serveur GitLab, avant l'exécution du job synthétique. Tout échec fait échouer le canari. Par défaut : `false`. |
+| `verify_server_url`   | booléen  | Sonde le point de terminaison HTTP Git sous le `clone_url` du runner (en se repliant sur `url`) depuis l'environnement du job. Toute réponse HTTP est acceptée. Les échecs de connexion et TLS font échouer le canari. Par défaut : `false`. |
+| `verify_server_url_insecure` | booléen | Ignore la vérification du certificat TLS dans la sonde d'URL du serveur. Par défaut : `false`. |
+| `verify_cache`        | booléen  | Écrit un objet canari dans le cache configuré et le relit depuis l'environnement du job. Ignoré lorsqu'aucun cache n'est configuré. Par défaut : `false`. |
+| `verify_commands`     | array    | Commandes ajoutées au script du job canari, exécutées dans le conteneur du job avec les périphériques et volumes configurés du runner. Les commandes doivent pouvoir être exécutées sur l'image par défaut du runner. Le premier échec fait échouer le canari. Par défaut : vide. |
+| `verify_helper_version` | booléen | Vérifie que la version du binaire auxiliaire issue de l'environnement du job correspond à la version du runner. Fait échouer le canari en cas d'incompatibilité, ou si les images auxiliaires sont trop anciennes pour effectuer la vérification. Par défaut : `false`. |
 
 > [!note]
 > Le job synthétique s'exécute sur l'image par défaut du runner. Les exécuteurs `docker` et `kubernetes` doivent donc avoir une image par défaut configurée.
+>
+> Les sondes s'exécutent via le binaire auxiliaire et nécessitent une image auxiliaire de la même version que le runner. La sonde d'URL du serveur vérifie TLS par rapport à la chaîne `tls-ca-file` du runner lorsqu'elle est configurée. Sinon, elle vérifie par rapport aux racines système. La sonde de cache laisse un petit objet pour chaque démarrage sous `boot-verify/<runner short token>/`. Faites expirer ces objets avec la politique de cycle de vie du bucket.
 
 Exemple :
 
@@ -614,6 +664,11 @@ Exemple :
     timeout = "5m"
     acquire_min_backoff = "1s"
     acquire_max_backoff = "10s"
+    verify_auth = true
+    verify_server_url = true
+    verify_cache = true
+    verify_commands = ["LD_LIBRARY_PATH=/usr/local/nvidia/lib64 /usr/local/nvidia/bin/nvidia-smi"]
+    verify_helper_version = true
 ```
 
 ## Les exécuteurs {#the-executors}
@@ -658,14 +713,16 @@ Les paramètres suivants définissent les paramètres du conteneur Docker. Ces p
 
 | Paramètre                          | Exemple                                          | Description |
 |------------------------------------|--------------------------------------------------|-------------|
-| `allowed_images`                   | `["ruby:*", "python:*", "php:*"]`                | Liste générique d'images pouvant être spécifiées dans le fichier `.gitlab-ci.yml`. Si absent, toutes les images sont autorisées (équivalent à `["*/*:*"]`). À utiliser avec les exécuteurs [Docker](../executors/docker.md#restrict-docker-images-and-services) ou [Kubernetes](../executors/kubernetes/_index.md#restrict-docker-images-and-services). |
-| `allowed_privileged_images`        |                                                  | Sous-ensemble générique de `allowed_images` qui s'exécute en mode privilégié lorsque `privileged` est activé. Si absent, toutes les images sont autorisées (équivalent à `["*/*:*"]`). À utiliser avec les exécuteurs [Docker](../executors/docker.md#restrict-docker-images-and-services). |
+| `allowed_images`                   | `["ruby:*", "python:*", "php:*"]`                | Liste générique d'images pouvant être spécifiées dans le fichier `.gitlab-ci.yml`. Si absent, toutes les images sont autorisées (équivalent à `["**"]`). À utiliser avec les exécuteurs [Docker](../executors/docker.md#restrict-docker-images-and-services) ou [Kubernetes](../executors/kubernetes/_index.md#restrict-docker-images-and-services). |
+| `allowed_privileged_images`        |                                                  | Sous-ensemble générique de `allowed_images` qui s'exécute en mode privilégié lorsque `privileged` est activé. Si absent, toutes les images sont autorisées (équivalent à `["**"]`). À utiliser avec les exécuteurs [Docker](../executors/docker.md#restrict-docker-images-and-services). |
 | `allowed_pull_policies`            |                                                  | Liste des politiques de tirage pouvant être spécifiées dans le fichier `.gitlab-ci.yml` ou le fichier `config.toml`. Si non spécifié, seules les politiques de tirage spécifiées dans `pull-policy` sont autorisées. À utiliser avec l'exécuteur [Docker](../executors/docker.md#allow-docker-pull-policies). |
-| `allowed_services`                 | `["postgres:9", "redis:*", "mysql:*"]`           | Liste générique de services pouvant être spécifiés dans le fichier `.gitlab-ci.yml`. Si absent, toutes les images sont autorisées (équivalent à `["*/*:*"]`). À utiliser avec les exécuteurs [Docker](../executors/docker.md#restrict-docker-images-and-services) ou [Kubernetes](../executors/kubernetes/_index.md#restrict-docker-images-and-services). |
-| `allowed_privileged_services`      |                                                  | Sous-ensemble générique de `allowed_services` autorisé à s'exécuter en mode privilégié, lorsque `privileged` ou `services_privileged` est activé. Si absent, toutes les images sont autorisées (équivalent à `["*/*:*"]`). À utiliser avec les exécuteurs [Docker](../executors/docker.md#restrict-docker-images-and-services). |
+| `allowed_services`                 | `["postgres:9", "redis:*", "mysql:*"]`           | Liste générique de services pouvant être spécifiés dans le fichier `.gitlab-ci.yml`. Si absent, toutes les images sont autorisées (équivalent à `["**"]`). À utiliser avec les exécuteurs [Docker](../executors/docker.md#restrict-docker-images-and-services) ou [Kubernetes](../executors/kubernetes/_index.md#restrict-docker-images-and-services). |
+| `allowed_privileged_services`      |                                                  | Sous-ensemble générique de `allowed_services` autorisé à s'exécuter en mode privilégié, lorsque `privileged` ou `services_privileged` est activé. Si absent, toutes les images sont autorisées (équivalent à `["**"]`). À utiliser avec les exécuteurs [Docker](../executors/docker.md#restrict-docker-images-and-services). |
 | `cache_dir`                        |                                                  | Répertoire où les caches Docker doivent être stockés. Ce chemin peut être absolu ou relatif au répertoire de travail actuel. Voir `disable_cache` pour plus d'informations. |
-| `cap_add`                          | `["NET_ADMIN"]`                                  | Ajouter des capacités Linux supplémentaires au conteneur. |
-| `cap_drop`                         | `["DAC_OVERRIDE"]`                               | Supprimer des capacités Linux supplémentaires du conteneur. |
+| `cap_add`                          | `["NET_ADMIN"]`                                  | Ajouter des capacités Linux supplémentaires au conteneur. N'a aucun effet lorsque le conteneur s'exécute en mode privilégié. Voir [les capacités en mode privilégié](#capabilities-in-privileged-mode). |
+| `services_cap_add`                 | `["NET_ADMIN"]`                                  | Ajoute des capacités Linux supplémentaires aux conteneurs de services. Si non défini (par défaut), les services utilisent l'ensemble de capacités Docker par défaut. N'a aucun effet lorsqu'un service s'exécute en mode privilégié. Voir [les capacités en mode privilégié](#capabilities-in-privileged-mode). [Introduit](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/7209) dans GitLab Runner 19.4. |
+| `cap_drop`                         | `["DAC_OVERRIDE"]`                               | Supprimer des capacités Linux supplémentaires du conteneur. N'a aucun effet lorsque le conteneur s'exécute en mode privilégié. Voir [les capacités en mode privilégié](#capabilities-in-privileged-mode). |
+| `services_cap_drop`                | `["ALL"]`                                        | Supprime des capacités Linux des conteneurs de services. Si non défini (par défaut), les services utilisent l'ensemble de capacités Docker par défaut. N'a aucun effet lorsqu'un service s'exécute en mode privilégié. Voir [les capacités en mode privilégié](#capabilities-in-privileged-mode). [Introduit](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/7209) dans GitLab Runner 19.4. |
 | `cpuset_cpus`                      | `"0,1"`                                          | Le `CpusetCpus` du groupe de contrôle. Une chaîne. |
 | `cpuset_mems`                      | `"0,1"`                                          | Le `CpusetMems` du groupe de contrôle. Une chaîne. |
 | `cpu_shares`                       |                                                  | Nombre de partages CPU utilisés pour définir l'utilisation relative du CPU. La valeur par défaut est `1024`. |
@@ -721,6 +778,15 @@ Les paramètres suivants définissent les paramètres du conteneur Docker. Ces p
 | `service_memory`                   |                                                  | Valeur de chaîne de la limite de mémoire pour un service. |
 | `service_memory_swap`              |                                                  | Valeur de chaîne de la limite totale de mémoire pour un service. |
 | `service_memory_reservation`       |                                                  | Valeur de chaîne de la limite de mémoire souple pour un service. |
+
+### Capacités en mode privilégié {#capabilities-in-privileged-mode}
+
+Docker accorde toutes les capacités Linux à un conteneur privilégié. Les paramètres `cap_add`, `cap_drop`, `services_cap_add` et `services_cap_drop` ne modifient pas les capacités d'un conteneur s'exécutant en mode privilégié.
+
+Un conteneur de build s'exécute en mode privilégié lorsque `privileged` est `true` et que l'image correspond à `allowed_privileged_images`. Un conteneur de service s'exécute en mode privilégié lorsque l'image correspond à `allowed_privileged_services`, et que soit `services_privileged` est `true`, soit `services_privileged` n'est pas défini et `privileged` est `true`.
+
+> [!note]
+> Pour supprimer des capacités d'un conteneur, assurez-vous d'abord que le conteneur ne s'exécute pas en mode privilégié. Par exemple, `services_cap_drop = ["ALL"]` ne renforce pas la sécurité d'un service qui s'exécute encore en mode privilégié.
 
 ### La section `[[runners.docker.services]]` {#the-runnersdockerservices-section}
 
@@ -913,6 +979,45 @@ Comme décrit précédemment, GitLab Runner peut autoriser Docker auprès d'un r
 
 Les premières informations d'identification trouvées pour le registre sont utilisées. Ainsi, par exemple, si vous ajoutez des informations d'identification pour le registre intégré avec la variable `DOCKER_AUTH_CONFIG`, les informations d'identification par défaut sont remplacées.
 
+#### Restreindre les assistants d'identification Docker {#restrict-docker-credential-helpers}
+
+{{< history >}}
+
+- Introduit dans GitLab Runner 19.4 et rétroporté vers GitLab Runner 19.3.2, 19.2.4 et 19.1.3.
+
+{{< /history >}}
+
+Une valeur `DOCKER_AUTH_CONFIG` peut référencer des [assistants d'identification Docker](https://docs.gitlab.com/ci/docker/using_docker_images/#use-credential-helpers) avec les clés `credHelpers` et `credsStore`. Configurez `allowed_docker_credential_helpers` dans la section `[[runners]]`. Ce paramètre s'applique aux exécuteurs Docker et Kubernetes.
+
+> [!warning]
+> Les assistants d'identification s'exécutent en tant que binaires sur l'hôte où le gestionnaire de runner s'exécute, et non dans l'environnement du job. Les identifiants qu'ils retournent proviennent de l'identité de cet hôte, par exemple, un profil d'instance cloud. Un job capable d'exécuter n'importe quel binaire `docker-credential-*` sur le gestionnaire de runner pour n'importe quel registre pourrait extraire des images avec cette identité. Sur les runners partagés, chaque job exécuté par le runner obtiendrait cet accès.
+
+Par défaut, GitLab Runner n'exécute aucun assistant d'identification référencé par un `DOCKER_AUTH_CONFIG` fourni par un job. Utilisez le paramètre `allowed_docker_credential_helpers` pour autoriser des assistants spécifiques pour des registres spécifiques :
+
+```toml
+[[runners]]
+  [runners.allowed_docker_credential_helpers]
+    "ecr-login" = ["<aws_account_id>.dkr.ecr.*.amazonaws.com"]
+    "/usr/local/bin/docker-credential-gcloud" = ["europe-docker.pkg.dev/**"]
+    "desktop" = ["docker.io"]
+```
+
+- Chaque clé est un nom d'assistant tel que référencé dans `credHelpers` ou `credsStore`, ou un chemin absolu vers le binaire de l'assistant. Un nom simple comme `ecr-login` autorise le binaire `docker-credential-ecr-login`, résolu depuis le `PATH` de l'hôte du runner. Un chemin absolu pointe vers le binaire exact à exécuter au lieu de le résoudre depuis `PATH`. Le nom du fichier épinglé doit conserver le préfixe `docker-credential-`. Les jobs référencent un assistant épinglé par le nom sans le préfixe et sans extension `.exe`, par exemple `ecr-login` pour un `docker-credential-ecr-login.exe` épinglé.
+- Chaque valeur est une liste de patterns de registres pour lesquels l'assistant peut fournir des identifiants, et doit contenir au moins un pattern. Les patterns utilisent la [syntaxe glob `doublestar`](https://github.com/bmatcuk/doublestar#patterns). Le runner les compare à la clé de registre que le job spécifie dans `credHelpers`, ou à l'URL du serveur qu'un `credsStore` liste, et non au nom de l'image. Avant la comparaison, le runner normalise ce nom :
+
+  - Pour un nom avec un schéma `http://` ou `https://`, le runner ne conserve que l'hôte et le port, en minuscules. Le runner mappe l'hôte Docker Hub `index.docker.io` vers `docker.io`. Par exemple, `https://index.docker.io/v1/` devient `docker.io`, et `https://registry.example.com:5000/v1/` devient `registry.example.com:5000`.
+  - Sinon, le runner supprime le `/` de fin et tout tag d'image, et convertit le nom d'hôte en minuscules. Le chemin conserve sa casse. Par exemple, `Registry.Example.com:5000/My/Repository:v1` devient `registry.example.com:5000/My/Repository`.
+
+  Le runner convertit uniquement le nom d'hôte d'un pattern en minuscules et compare le reste tel qu'écrit. Rédigez les patterns sous la forme normalisée, sans schéma ni `/` final. Pour Docker Hub, utilisez `docker.io`. Un pattern limité à un chemin comme `europe-docker.pkg.dev/<your_project>/**` correspond uniquement lorsque la clé `credHelpers` du job inclut ce chemin. La clé de nom d'hôte simple que `gcloud auth configure-docker` écrit nécessite `europe-docker.pkg.dev` ou `europe-docker.pkg.dev/**`. Utilisez `"**"` pour correspondre à n'importe quel registre. Lorsque le runner ignore un assistant, l'avertissement dans le job log indique le nom normalisé à ajouter.
+
+  Pour faire correspondre un registre qui est un littéral IPv6, échappez les crochets. La syntaxe glob interprète `[` et `]` comme une classe de caractères, de sorte qu'une adresse IPv6 non échappée ne correspond à aucun registre. Utilisez une chaîne littérale TOML, car une chaîne de base TOML rejette l'échappement `\[`. Par exemple, utilisez `'\[2001:db8::1\]:5000'`, et non `"[2001:db8::1]:5000"`.
+
+Si un `DOCKER_AUTH_CONFIG` référence un assistant d'identification non répertorié, le runner ignore cette entrée et enregistre un avertissement dans le job log. Il en va de même pour un assistant répertorié utilisé pour un registre ne correspondant à aucun des patterns de l'assistant. Si le binaire d'un assistant non répertorié n'est pas installé sur l'hôte du runner, l'omission est journalisée uniquement au niveau debug. Les autres identifiants dans le même `DOCKER_AUTH_CONFIG`, tels que les `auths` définis statiquement ou les assistants autorisés, sont toujours utilisés. Un job échoue uniquement si une image qu'il extrait nécessite un identifiant qui a été ignoré.
+
+Pour un `credsStore`, l'assistant doit être répertorié. Le runner demande à l'assistant de lister les registres qu'il contient, puis ne demande le secret que pour les registres correspondant aux patterns de l'assistant. Les secrets des autres registres ne sont jamais récupérés.
+
+Ce paramètre n'affecte pas les assistants d'identification référencés par les propres fichiers `~/.docker/config.json` ou `~/.dockercfg` de l'hôte du runner. GitLab Runner traite ces fichiers comme une configuration d'hôte appartenant à l'opérateur.
+
 ## La section `[runners.parallels]` {#the-runnersparallels-section}
 
 Les paramètres suivants concernent Parallels.
@@ -1025,6 +1130,7 @@ Les paramètres suivants définissent la fonctionnalité de mise à l'échelle a
 | `OffPeakIdleCount`                | Obsolète : Identique à `IdleCount`, mais pour les périodes _Off Peak_. |
 | `OffPeakIdleTime`                 | Obsolète : Identique à `IdleTime`, mais pour les périodes _Off Peak_. |
 | `MaxBuilds`                       | Nombre maximum de jobs (builds) avant que la machine ne soit supprimée. |
+| `HeartbeatInterval`               | Fréquence d'actualisation d'un label de vivacité côté fournisseur (`runner_manager_heartbeat`) sur chaque machine suivie (durée, par exemple `"30m"`), afin que le nettoyage externe puisse distinguer les machines suivies des machines orphelines. Nécessite un pilote Docker Machine prenant en charge les mises à jour de labels (actuellement `google`). La valeur par défaut est `0` (désactivé). |
 | `MachineName`                     | Nom de la machine. Elle **doit** contenir `%s`, qui est remplacé par un identifiant de machine unique. |
 | `MachineDriver`                   | `driver` de Docker Machine. Consultez les détails dans la [section Fournisseurs cloud dans la configuration de Docker Machine](autoscale.md#supported-cloud-providers). |
 | `MachineOptions`                  | Options Docker Machine pour le MachineDriver. Pour plus d'informations, consultez [Fournisseurs cloud pris en charge](autoscale.md#supported-cloud-providers). Pour plus d'informations sur toutes les options AWS, consultez les projets [AWS](https://gitlab.com/gitlab-org/ci-cd/docker-machine/-/blob/main/docs/drivers/aws.md) et [GCP](https://gitlab.com/gitlab-org/ci-cd/docker-machine/-/blob/main/docs/drivers/gce.md) dans le dépôt Docker Machine. |
@@ -1074,6 +1180,40 @@ Exemple :
     Timezone = "UTC"
 ```
 
+### Variables d'environnement dans les options de machine {#environment-variables-in-machine-options}
+
+{{< history >}}
+
+- [Introduit](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/7185) dans GitLab Runner 19.4.
+
+{{< /history >}}
+
+Lorsque le [feature flag](feature-flags.md) `FF_MACHINE_OPTIONS_EXPAND_ENV` est activé, GitLab Runner remplace les références `$VAR` et `${VAR}` dans `MachineOptions` et `MachineOptionsWithName` par les valeurs de l'environnement du runner lors de la création d'une machine. Utilisez cette expansion pour étiqueter les machines avec des valeurs connues uniquement au moment de l'exécution, comme le nom du gestionnaire de runner qui les a créées. Par exemple, dans Kubernetes, `HOSTNAME` est le nom du pod :
+
+```toml
+[[runners]]
+  executor = "docker+machine"
+  [runners.machine]
+    MachineDriver = "google"
+    MachineName = "runner-%s"
+    MachineOptions = [
+      "google-project=GOOGLE-PROJECT-ID",
+      "google-label=runner_manager_name:${HOSTNAME}",
+    ]
+  [runners.feature_flags]
+    FF_MACHINE_OPTIONS_EXPAND_ENV = true
+```
+
+Une variable n'est pas lue depuis l'environnement : `${GITLAB_RUNNER_MACHINE_NAME}` est le nom de la machine en cours de création. Cela remplace `MachineOptionsWithName`.
+
+```toml
+    MachineOptions = [
+      "google-label=runner_instance_name:${GITLAB_RUNNER_MACHINE_NAME}",
+    ]
+```
+
+À utiliser pour les métadonnées, pas pour les identifiants. Les pilotes Docker Machine lisent leurs identifiants depuis leurs propres variables d'environnement, que le runner transmet, il n'est donc pas nécessaire de les inclure dans `MachineOptions`.
+
 ### Syntaxe des périodes {#periods-syntax}
 
 Le paramètre `Periods` contient un tableau de modèles de chaînes de périodes de temps représentées au format cron. La ligne contient les champs suivants :
@@ -1106,17 +1246,17 @@ Les paramètres suivants configurent la fonctionnalité de mise à l'échelle au
 | `max_use_count`                  | Le nombre maximum de fois qu'une instance peut être utilisée avant d'être planifiée pour suppression. |
 | `max_instances`                  | Le nombre maximum d'instances autorisées, quel que soit l'état de l'instance (en attente, en cours d'exécution, en cours de suppression). Par défaut : `0` (illimité). |
 | `plugin`                         | Le plugin [fleeting](https://gitlab.com/gitlab-org/fleeting/fleeting) à utiliser. Pour plus d'informations sur la façon d'installer et de référencer un plugin, consultez [Installer le plugin fleeting](../fleet_scaling/fleeting.md#install-a-fleeting-plugin). |
-| `delete_instances_on_shutdown`   | Spécifie si toutes les instances provisionnées sont supprimées lorsque GitLab Runner s'arrête. Par défaut : `false`. Introduit dans [GitLab Runner 15.11](https://gitlab.com/gitlab-org/fleeting/taskscaler/-/merge_requests/24) |
+| `delete_instances_on_shutdown`   | Spécifie si toutes les instances provisionnées sont supprimées lorsque GitLab Runner s'arrête. Par défaut : `false`. Introduit dans [GitLab Runner 15.11](https://gitlab.com/gitlab-org/fleeting/taskscaler/-/merge_requests/24) |
 | `instance_ready_command`         | Exécute cette commande sur chaque instance provisionnée par l'autoscaler pour s'assurer qu'elle est prête à être utilisée. Un échec entraîne la suppression de l'instance. Introduit dans [GitLab Runner 16.11](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/37473). |
 | `instance_acquire_timeout`       | La durée maximale pendant laquelle le runner attend pour acquérir une instance avant d'expirer. Par défaut : `15m` (15 minutes). Vous pouvez ajuster cette valeur pour mieux correspondre à votre environnement. Introduit dans [GitLab Runner 18.1](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5563). |
 | `update_interval`                | L'intervalle de vérification auprès du plugin fleeting pour les mises à jour d'instances. Par défaut : `1m` (1 minute). Introduit dans [GitLab Runner 16.11](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4722). |
 | `update_interval_when_expecting` | L'intervalle de vérification auprès du plugin fleeting pour les mises à jour d'instances lors de l'attente d'un changement d'état. Par exemple, lorsqu'une instance a provisionné une instance et que le runner attend la transition de `pending` à `running`. Par défaut : `2s` (2 secondes). Introduit dans [GitLab Runner 16.11](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4722). |
 | `deletion_retry_interval` | L'intervalle pendant lequel le plugin fleeting attend avant de réessayer la suppression lorsqu'une tentative de suppression précédente n'a eu aucun effet. Par défaut : `1m` (1 minute). Introduit dans [GitLab Runner 18.4](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5777). |
 | `shutdown_deletion_interval`| L'intervalle utilisé par le plugin fleeting entre la suppression des instances et la vérification de leur statut lors de l'arrêt. Par défaut : `10s` (10 secondes). Introduit dans [GitLab Runner 18.4](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5777). |
-| `shutdown_deletion_retries` | Le nombre maximum de tentatives effectuées par le plugin fleeting pour s'assurer que les instances terminent leur suppression avant l'arrêt. Par défaut : `3`. Introduit dans [GitLab Runner 18.4](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5777). |
-| `failure_threshold` | Le nombre maximum d'échecs de vérification de santé consécutifs avant que le plugin fleeting ne remplace une instance. Voir également la fonctionnalité heartbeat. Par défaut : `3`. Introduit dans [GitLab Runner 18.4](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5777). |
-| `log_internal_ip`                | Spécifie si la sortie CI/CD consigne l'adresse IP interne de la VM. Par défaut : `false`. Introduit dans [GitLab Runner 18.1](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5519). |
-| `log_external_ip`                | Spécifie si la sortie CI/CD consigne l'adresse IP externe de la VM. Par défaut : `false`. Introduit dans [GitLab Runner 18.1](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5519). |
+| `shutdown_deletion_retries` | Le nombre maximum de tentatives effectuées par le plugin fleeting pour s'assurer que les instances terminent leur suppression avant l'arrêt. Par défaut : `3`. Introduit dans [GitLab Runner 18.4](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5777). |
+| `failure_threshold` | Le nombre maximum d'échecs de vérification de santé consécutifs avant que le plugin fleeting ne remplace une instance. Voir également la fonctionnalité heartbeat. Par défaut : `3`. Introduit dans [GitLab Runner 18.4](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5777). |
+| `log_internal_ip`                | Spécifie si la sortie CI/CD consigne l'adresse IP interne de la VM. Par défaut : `false`. Introduit dans [GitLab Runner 18.1](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5519). |
+| `log_external_ip`                | Spécifie si la sortie CI/CD consigne l'adresse IP externe de la VM. Par défaut : `false`. Introduit dans [GitLab Runner 18.1](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5519). |
 
 Si `instance_ready_command` échoue fréquemment avec les règles de mise à l'échelle inactives, les instances peuvent être supprimées et créées plus rapidement que le runner n'accepte les jobs. Pour prendre en charge la limitation de la mise à l'échelle, un backoff exponentiel a été ajouté dans [GitLab 17.0](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/37497).
 
@@ -1172,10 +1312,10 @@ Les plugins mettent automatiquement à jour la configuration du connecteur. Vous
 | `username`               | Le nom d'utilisateur utilisé pour se connecter. |
 | `password`               | Le mot de passe utilisé pour se connecter. |
 | `key_path`               | La clé TLS utilisée pour se connecter ou pour provisionner dynamiquement des informations d'identification. |
-| `use_static_credentials` | Désactive le provisionnement automatique des informations d'identification. Par défaut : `false`. |
+| `use_static_credentials` | Désactive le provisionnement automatique des informations d'identification. Par défaut : `false`. |
 | `keepalive`              | La durée de maintien de la connexion (keepalive). |
 | `timeout`                | La durée d'expiration de la connexion. |
-| `use_external_addr`      | Indique si l'adresse externe fournie par le plugin doit être utilisée. Si le plugin ne renvoie qu'une adresse interne, elle est utilisée quel que soit ce paramètre. Par défaut : `false`. |
+| `use_external_addr`      | Indique si l'adresse externe fournie par le plugin doit être utilisée. Si le plugin ne renvoie qu'une adresse interne, elle est utilisée quel que soit ce paramètre. Par défaut : `false`. |
 
 ## La section `[runners.autoscaler.state_storage]` {#the-runnersautoscalerstate_storage-section}
 
@@ -1204,9 +1344,9 @@ Tenez compte des informations suivantes lors de l'activation de la fonctionnalit
 
 | Paramètre                         | Description |
 |-----------------------------------|-------------|
-| `enabled`                         | Indique si le stockage d'état est activé. Par défaut : `false`. |
+| `enabled`                         | Indique si le stockage d'état est activé. Par défaut : `false`. |
 | `dir`                             | Le répertoire du magasin d'états. Chaque entrée de configuration de runner dispose d'un sous-répertoire ici. Par défaut : `.taskscaler` dans le répertoire du fichier de configuration GitLab Runner. |
-| `keep_instance_with_acquisitions` | Indique si les instances avec des jobs actifs sont supprimées. Par défaut : `false`. |
+| `keep_instance_with_acquisitions` | Indique si les instances avec des jobs actifs sont supprimées. Par défaut : `false`. |
 
 ## Les sections `[[runners.autoscaler.policy]]` {#the-runnersautoscalerpolicy-sections}
 
@@ -1279,7 +1419,7 @@ L'isolation VM utilise [`nesting`](../executors/instance.md#nested-virtualizatio
 
 | Paramètre        | Description |
 |------------------|-------------|
-| `enabled`        | Spécifie si l'isolation VM est activée ou non. Par défaut : `false`. |
+| `enabled`        | Spécifie si l'isolation VM est activée ou non. Par défaut : `false`. |
 | `nesting_host`   | L'hôte du démon `nesting`. |
 | `nesting_config` | La configuration `nesting`, qui est sérialisée en JSON et envoyée au démon `nesting`. |
 | `image`          | L'image par défaut utilisée par le démon nesting si aucune image de job n'est spécifiée. |
@@ -1323,10 +1463,12 @@ Vous pouvez utiliser les variables d'environnement suivantes pour configurer la 
 
 | Variable                   | Description                           | Valeur par défaut   | Valeurs                                          |
 |----------------------------|---------------------------------------|-----------|-------------------------------------------------|
-| `CACHE_COMPRESSION_FORMAT` | Format de compression pour les archives de cache | `zip`     | `zip`, `tarzstd`                                |
+| `CACHE_COMPRESSION_FORMAT` | Format de compression pour les archives de cache | `zip`     | `zip`, `tarzstd`, `zipzstd`                     |
 | `CACHE_COMPRESSION_LEVEL`  | Niveau de compression pour les archives de cache  | `default` | `fastest`, `fast`, `default`, `slow`, `slowest` |
 
-Le format `tarzstd` utilise TAR avec la compression Zstandard, ce qui offre de meilleurs taux de compression que `zip`. Les niveaux de compression vont de `fastest` (compression minimale pour une vitesse maximale) à `slowest` (compression maximale pour une taille de fichier minimale). Le niveau `default` offre un compromis équilibré entre le taux de compression et la vitesse.
+Le format `tarzstd` utilise TAR avec la compression Zstandard, ce qui offre de meilleurs taux de compression que `zip`.
+
+Le format `zipzstd` utilise ZIP avec la compression Zstandard sur chaque fichier. Il compresse les fichiers en parallèle, ce qui le rend plus rapide à créer sur des runners multi-cœurs que `tarzstd`. Les archives sont légèrement plus volumineuses car chaque fichier est compressé indépendamment. Les caches `zipzstd` sont extraits en parallèle par défaut. Si vous désactivez le feature flag `FF_USE_FASTZIP`, l'extraction est monothread. Le feature flag `FF_USE_FASTZIP` est obsolète et sera supprimé dans GitLab Runner 19.7, après quoi l'extraction sera toujours parallèle. Les niveaux de compression vont de `fastest` (compression minimale pour une vitesse maximale) à `slowest` (compression maximale pour la plus petite taille de fichier). Le niveau `default` offre un compromis équilibré entre le taux de compression et la vitesse.
 
 Exemple :
 
@@ -1593,7 +1735,7 @@ La politique IAM pour le rôle affecté au ServiceAccount défini dans `rbac.ser
 
 Pour limiter l'accès au cache, le gestionnaire de runner génère des [URL pré-signées](https://docs.aws.amazon.com/AmazonS3/latest/userguide/using-presigned-url.html) à durée limitée pour que les jobs puissent télécharger et charger dans le cache. Cependant, AWS S3 limite [une seule requête PUT à 5 Go](https://docs.aws.amazon.com/AmazonS3/latest/userguide/upload-objects.html). Pour les fichiers de plus de 5 Go, vous devez utiliser l'API de chargement multipartite.
 
-Les transferts multipartites sont uniquement pris en charge avec AWS S3 et non avec d'autres fournisseurs S3. Comme le gestionnaire de runner gère les jobs pour différents projets, il ne peut pas transmettre des identifiants S3 disposant d'autorisations au niveau du compartiment. Au lieu de cela, le gestionnaire de runner utilise des URL pré-signées à durée limitée et des identifiants à portée étroite pour restreindre l'accès à un objet spécifique.
+Les transferts multipartites sont uniquement pris en charge avec AWS S3 et non avec d'autres fournisseurs S3. Comme le gestionnaire de runner gère les jobs pour différents projets, il ne peut pas transmettre des identifiants S3 disposant d'autorisations au niveau du compartiment. À la place, le gestionnaire de runner utilise des URL pré-signées à durée limitée et des identifiants à portée étroite pour restreindre l'accès à un objet spécifique.
 
 Pour utiliser les transferts multipartites S3 avec AWS, spécifiez un rôle IAM dans `RoleARN` au format `arn:aws:iam:::<ACCOUNT ID>:<YOUR ROLE NAME>`. Ce rôle génère des identifiants AWS à durée limitée dont la portée est étroitement définie pour écrire dans un blob spécifique dans le compartiment. Assurez-vous que vos identifiants S3 d'origine peuvent accéder à `AssumeRole` pour le `RoleARN` spécifié.
 
@@ -1898,8 +2040,8 @@ Définissez `upload_timeout` à une valeur adaptée à la taille d'artefact la p
 
 | Paramètre                 | Type     | Description |
 |---------------------------|----------|-------------|
-| `upload_timeout`          | durée | Facultatif. Durée maximale pour l'ensemble de l'opération de chargement d'artefacts. Par défaut : `1h`. |
-| `response_header_timeout` | durée | Facultatif. Durée maximale d'attente des en-têtes de réponse du serveur après l'envoi du corps du chargement. Par défaut : `10m`. |
+| `upload_timeout`          | durée | Facultatif. Durée maximale pour l'ensemble de l'opération de chargement d'artefacts. Par défaut : `1h`. |
+| `response_header_timeout` | durée | Facultatif. Durée maximale d'attente des en-têtes de réponse du serveur après l'envoi du corps du chargement. Par défaut : `10m`. |
 
 Exemple :
 
@@ -1920,8 +2062,8 @@ Le tableau suivant répertorie les paramètres de configuration disponibles pour
 | `key_file`                   | string  | Facultatif. Clé privée d'authentification Kubernetes. |
 | `ca_file`                    | string  | Facultatif. Certificat CA d'authentification Kubernetes. |
 | `image`                      | string  | Image de conteneur par défaut à utiliser pour les jobs lorsqu'aucune image n'est spécifiée. |
-| `allowed_images`             | array   | Liste de caractères génériques des images de conteneur autorisées dans `.gitlab-ci.yml`. Si absent, toutes les images sont autorisées (équivalent à `["*/*:*"]`). À utiliser avec les exécuteurs [Docker](../executors/docker.md#restrict-docker-images-and-services) ou [Kubernetes](../executors/kubernetes/_index.md#restrict-docker-images-and-services). |
-| `allowed_services`           | array   | Liste de caractères génériques des services autorisés dans `.gitlab-ci.yml`. Si absent, toutes les images sont autorisées (équivalent à `["*/*:*"]`). À utiliser avec les exécuteurs [Docker](../executors/docker.md#restrict-docker-images-and-services) ou [Kubernetes](../executors/kubernetes/_index.md#restrict-docker-images-and-services). |
+| `allowed_images`             | array   | Liste de caractères génériques des images de conteneur autorisées dans `.gitlab-ci.yml`. Si absent, toutes les images sont autorisées (équivalent à `["**"]`). À utiliser avec les exécuteurs [Docker](../executors/docker.md#restrict-docker-images-and-services) ou [Kubernetes](../executors/kubernetes/_index.md#restrict-docker-images-and-services). |
+| `allowed_services`           | array   | Liste de caractères génériques des services autorisés dans `.gitlab-ci.yml`. Si absent, toutes les images sont autorisées (équivalent à `["**"]`). À utiliser avec les exécuteurs [Docker](../executors/docker.md#restrict-docker-images-and-services) ou [Kubernetes](../executors/kubernetes/_index.md#restrict-docker-images-and-services). |
 | `namespace`                  | string  | Espace de nommage dans lequel exécuter les jobs Kubernetes. |
 | `privileged`                 | booléen | Exécuter tous les conteneurs avec l'indicateur privilégié activé. |
 | `allow_privilege_escalation` | booléen | Facultatif. Exécute tous les conteneurs avec l'indicateur `allowPrivilegeEscalation` activé. |

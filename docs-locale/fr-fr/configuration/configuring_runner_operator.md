@@ -274,11 +274,30 @@ Si l'une des liaisons de rôle existe, GitLab résout le rôle et le compte de s
 
 Si les deux liaisons de rôle existent, `gitlab-runner-app-rolebinding` a la priorité sur `gitlab-runner-rolebinding`.
 
+## Utiliser GitLab Runner conforme FIPS {#using-fips-compliant-gitlab-runner}
+
+> [!note]
+> Pour l'Operator, vous pouvez uniquement modifier l'image helper. Vous ne pouvez pas encore modifier l'image GitLab Runner. [Le ticket 28814](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/28814) suit cette fonctionnalité.
+
+Pour utiliser un [helper GitLab Runner conforme FIPS](../install/requirements.md#fips-compliant-gitlab-runner), modifiez l'image helper comme suit :
+
+```yaml
+apiVersion: apps.gitlab.com/v1beta2
+kind: Runner
+metadata:
+  name: dev
+spec:
+  gitlabUrl: https://gitlab.example.com
+  token: gitlab-runner-secret
+  helperImage: gitlab/gitlab-runner-helper:ubi-fips
+  concurrent: 2
+```
+
 ## Dépannage {#troubleshooting}
 
 ### Root vs non-root {#root-vs-non-root}
 
-GitLab Runner Operator et le pod GitLab Runner s'exécutent en tant qu'utilisateurs non-root. Par conséquent, l'image de build utilisée dans le job doit s'exécuter en tant qu'utilisateur non-root pour pouvoir se terminer avec succès. Cela garantit que les jobs peuvent s'exécuter correctement avec le minimum de permissions.
+GitLab Runner Operator et le pod GitLab Runner s'exécutent en tant qu'utilisateurs non-root. Par conséquent, par défaut, l'image de build utilisée dans le job doit s'exécuter en tant qu'utilisateur non root pour pouvoir se terminer correctement. Cela garantit que les jobs peuvent s'exécuter correctement avec le minimum de permissions.
 
 Pour que cela fonctionne, assurez-vous que l'image de build utilisée pour les jobs CI/CD :
 
@@ -292,7 +311,7 @@ La plupart des systèmes de fichiers des conteneurs sur un cluster OpenShift son
 - `/tmp`
 - Autres volumes montés sur des systèmes de fichiers root en tant que `tmpfs`
 
-#### Remplacement de la variable d'environnement `HOME` {#overriding-the-home-environment-variable}
+### Remplacement de la variable d'environnement `HOME` {#overriding-the-home-environment-variable}
 
 Si vous créez une image de build personnalisée ou si vous [remplacez des variables d'environnement](#configure-a-proxy-environment), assurez-vous que la variable d'environnement `HOME` n'est pas définie sur `/`, ce qui serait en lecture seule. En particulier si vos jobs doivent écrire des fichiers dans le répertoire home. Vous pourriez créer un répertoire sous `/home`, par exemple `/home/ci`, et définir `ENV HOME=/home/ci` dans votre `Dockerfile`.
 
@@ -312,11 +331,11 @@ Lorsque vous enregistrez un jeton de runner, si vous définissez la variable `lo
 
 Pour plus d'informations, consultez le [ticket 472](https://gitlab.com/gitlab-org/charts/gitlab-runner/-/work_items/472#note_1483346437).
 
-#### Attention aux contraintes de contexte de sécurité {#watch-out-for-security-context-constraints}
+### Attention aux contraintes de contexte de sécurité {#watch-out-for-security-context-constraints}
 
 Par défaut, lorsqu'il est installé dans un nouveau projet OpenShift, GitLab Runner Operator s'exécute en tant que non-root. Certains projets, comme le projet `default`, sont des exceptions où tous les comptes de service disposent d'un accès `anyuid`. Dans ce cas, l'utilisateur de l'image est `root`. Vous pouvez vérifier cela en exécutant `whoami` dans n'importe quel shell de conteneur, par exemple, un job. En savoir plus sur les contraintes de contexte de sécurité dans la [documentation de Red Hat Container Platform](https://docs.redhat.com/en/documentation/openshift_container_platform/4.18/html/authentication_and_authorization/managing-pod-security-policies).
 
-#### Exécuter avec les contraintes de contexte de sécurité `anyuid` {#run-as-anyuid-security-context-constraints}
+### Exécuter avec les contraintes de contexte de sécurité `anyuid` {#run-as-anyuid-security-context-constraints}
 
 > [!warning]
 > L'exécution de jobs en tant que root ou l'écriture dans des systèmes de fichiers root peut exposer votre système à des risques de sécurité.
@@ -368,19 +387,18 @@ roleRef:
 EOF
 ```
 
-#### Correspondance des ID utilisateur et de groupe entre le conteneur helper et le conteneur de build {#matching-helper-container-and-build-container-user-id-and-group-id}
+### Incompatibilité entre l'ID utilisateur et l'ID de groupe pour le conteneur helper et le conteneur de build {#mismatching-user-id-and-group-id-for-helper-container-and-build-container}
 
 Les déploiements GitLab Runner Operator utilisent `registry.gitlab.com/gitlab-org/ci-cd/gitlab-runner-ubi-images/gitlab-runner-helper-ocp` comme image helper par défaut. Cette image s'exécute avec l'ID utilisateur et l'ID de groupe `1001:1001`, sauf modification explicite par un contexte de sécurité.
 
-Lorsque l'ID utilisateur de votre conteneur de build diffère de l'ID utilisateur dans l'image helper, des erreurs liées aux permissions peuvent survenir lors de votre build. Voici un message d'erreur courant :
+Lorsque l'ID utilisateur de votre conteneur de build diffère de l'ID utilisateur de l'image helper, des erreurs liées aux permissions peuvent survenir lors de votre build, car les fichiers créés par le conteneur helper (le dépôt cloné et le cache restauré) appartiennent à `1001:1001`. Cette incompatibilité entraîne deux problèmes courants :
 
-```shell
-fatal: detected dubious ownership in repository at '/builds/gitlab-org/gitlab-runner'
-```
+- [Erreurs Git `dubious ownership`](#git-dubious-ownership-errors)
+- [Erreurs de permission de cache](#cache-permission-errors)
 
-Cette erreur indique que le dépôt a été cloné par l'ID utilisateur `1001` (conteneur helper), mais qu'un ID utilisateur différent dans le conteneur de build tente d'y accéder.
+#### Faire correspondre les ID utilisateur du conteneur helper et du conteneur de build {#match-the-helper-container-and-build-container-user-ids}
 
-Solution : configurez le contexte de sécurité de votre conteneur de build pour qu'il corresponde à l'ID utilisateur et à l'ID de groupe du conteneur helper :
+Pour résoudre ces deux problèmes, configurez le contexte de sécurité de votre conteneur de build afin qu'il corresponde à l'ID utilisateur et à l'ID de groupe du conteneur helper :
 
 ```toml
 [runners.kubernetes.build_container_security_context]
@@ -394,7 +412,61 @@ Notes supplémentaires :
 - Si vous avez personnalisé votre image helper avec des ID utilisateur ou de groupe différents, ajustez ces valeurs en conséquence.
 - Pour les déploiements OpenShift, vérifiez que ces paramètres de contexte de sécurité respectent les contraintes de contexte de sécurité (SCC) de votre cluster.
 
-#### Configurer SETFCAP {#configure-setfcap}
+Si vous ne pouvez pas modifier l'ID utilisateur du conteneur de build (par exemple, lors de l'utilisation d'images tierces avec un ID utilisateur fixe, ou lors de l'utilisation d'un runner partagé où vous ne pouvez pas modifier `build_container_security_context`), utilisez plutôt les solutions de contournement décrites pour chaque problème.
+
+#### Erreurs Git `dubious ownership` {#git-dubious-ownership-errors}
+
+Lorsque le conteneur de build accède au dépôt que le conteneur helper a cloné, Git signale :
+
+```shell
+fatal: detected dubious ownership in repository at '/builds/gitlab-org/gitlab-runner'
+```
+
+Cette erreur indique que le dépôt a été cloné par l'ID utilisateur `1001` (conteneur helper), mais qu'un ID utilisateur différent dans le conteneur de build tente d'y accéder.
+
+Pour résoudre cette erreur, vous pouvez :
+
+- [Faire correspondre les ID utilisateur du conteneur helper et du conteneur de build](#match-the-helper-container-and-build-container-user-ids).
+- Configurer Git pour qu'il fasse confiance au répertoire du dépôt malgré l'incompatibilité de propriété, en utilisant le paramètre [`safe.directory`](https://git-scm.com/docs/git-config#Documentation/git-config.txt-safedirectory) de Git. Étant donné que [la variable d'environnement `HOME` doit pointer vers un répertoire accessible en écriture](#overriding-the-home-environment-variable), vous pouvez la définir dans `before_script` :
+
+  ```yaml
+  my_job:
+    before_script:
+      - git config --global --add safe.directory $CI_PROJECT_DIR
+  ```
+
+Le paramètre `safe.directory` résout uniquement l'erreur `dubious ownership`. Les fichiers du dépôt restent la propriété de l'ID utilisateur du conteneur helper ; ainsi, les jobs qui écrivent dans le répertoire du dépôt peuvent encore rencontrer des erreurs de permission.
+
+#### Erreurs de permission de cache {#cache-permission-errors}
+
+L'incompatibilité d'ID utilisateur affecte également le [cache CI/CD](https://docs.gitlab.com/ci/caching/). Ce problème affecte les conteneurs de build non root dont l'ID utilisateur ne correspond pas à l'ID utilisateur de l'image helper. Les conteneurs de build s'exécutant en tant que root ne sont pas affectés.
+
+L'[image helper OCP](https://gitlab.com/gitlab-org/ci-cd/gitlab-runner-ubi-images/-/blob/07e737e0cbe551b36fb8060d4d2cc03cd0939091/helper/OCP.Dockerfile) archive et extrait les fichiers de cache avec l'ID utilisateur `1001`. Lorsque le conteneur de build s'exécute avec un ID utilisateur différent, il ne peut pas écrire dans le répertoire de cache restauré, car les fichiers appartiennent à `1001:1001`.
+
+Les symptômes incluent :
+
+- Le cache est restauré correctement, mais l'application ne peut pas écrire de nouvelles entrées dans le cache.
+- Des erreurs `Permission denied` se produisent lors de l'écriture dans le répertoire de cache.
+- `chown` dans `before_script` échoue car le conteneur de build ne possède pas les fichiers.
+
+Pour résoudre ces erreurs, vous pouvez :
+
+- [Faire correspondre les ID utilisateur du conteneur helper et du conteneur de build](#match-the-helper-container-and-build-container-user-ids).
+- Rendre les fichiers mis en cache accessibles en écriture par tous dans `after_script`, avant que le helper ne les archive. Lors des restaurations suivantes, les permissions `777` sont conservées dans l'archive `tar`, permettant à tout ID utilisateur de lire et d'écrire :
+
+  ```yaml
+  my_job:
+    after_script:
+      - chmod -R 777 my-cache-dir/ 2>/dev/null || true
+    cache:
+      key: my-cache-key
+      paths:
+        - my-cache-dir/
+  ```
+
+  Après avoir ajouté cette solution de contournement, [videz le cache existant](https://docs.gitlab.com/ci/caching/#clearing-the-cache) afin que la première exécution écrive de nouveaux fichiers avec les permissions `777` qui persistent lors des cycles d'archivage et de restauration suivants.
+
+### Configurer SETFCAP {#configure-setfcap}
 
 Si vous utilisez Red Hat OpenShift Container Platform (RHOCP) 4.11 ou une version ultérieure, vous pouvez obtenir le message d'erreur suivant :
 
@@ -435,26 +507,7 @@ Certains jobs (par exemple, `buildah`) ont besoin de la capacité `SETFCAP` pour
 
 Pour plus d'informations, consultez la [documentation Red Hat](https://access.redhat.com/solutions/7016013).
 
-### Utiliser GitLab Runner conforme FIPS {#using-fips-compliant-gitlab-runner}
-
-> [!note]
-> Pour l'Operator, vous pouvez uniquement modifier l'image helper. Vous ne pouvez pas encore modifier l'image GitLab Runner. [Le ticket 28814](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/28814) suit cette fonctionnalité.
-
-Pour utiliser un [helper GitLab Runner conforme FIPS](../install/requirements.md#fips-compliant-gitlab-runner), modifiez l'image helper comme suit :
-
-```yaml
-apiVersion: apps.gitlab.com/v1beta2
-kind: Runner
-metadata:
-  name: dev
-spec:
-  gitlabUrl: https://gitlab.example.com
-  token: gitlab-runner-secret
-  helperImage: gitlab/gitlab-runner-helper:ubi-fips
-  concurrent: 2
-```
-
-#### Enregistrer GitLab Runner à l'aide d'un certificat autosigné {#register-gitlab-runner-by-using-a-self-signed-certificate}
+### Enregistrer GitLab Runner à l'aide d'un certificat autosigné {#register-gitlab-runner-by-using-a-self-signed-certificate}
 
 Pour utiliser un certificat autosigné avec GitLab Self-Managed, créez un secret contenant le certificat CA que vous avez utilisé pour signer les certificats privés.
 
@@ -477,7 +530,7 @@ Le secret peut être créé à l'aide de la commande suivante :
 oc create secret generic mySecret --from-file=tls.crt=myCert.pem -o yaml
 ```
 
-#### Enregistrer GitLab Runner avec une URL externe pointant vers une adresse IP {#register-gitlab-runner-with-an-external-url-that-points-to-an-ip-address}
+### Enregistrer GitLab Runner avec une URL externe pointant vers une adresse IP {#register-gitlab-runner-with-an-external-url-that-points-to-an-ip-address}
 
 Si le runner ne peut pas faire correspondre le certificat autosigné avec le nom d'hôte, il est possible qu'un message d'erreur apparaisse. Ce problème survient lorsque vous configurez GitLab Self-Managed pour utiliser une adresse IP (comme `###.##.##.##`) plutôt qu'un nom d'hôte :
 
@@ -509,7 +562,11 @@ Pour résoudre ce problème :
 
 1. Utilisez ce nouveau certificat pour générer un nouveau secret.
 
-## Structure des correctifs {#patch-structure}
+## Application de correctifs {#patching}
+
+Utilisez des correctifs de spécification, définis via les [propriétés de l'Operator](#operator-properties) `podSpec` et `deploymentSpec`, pour personnaliser les ressources Kubernetes générées par l'Operator.
+
+### Structure des correctifs {#patch-structure}
 
 Chaque correctif de spécification se compose des propriétés suivantes :
 
@@ -522,7 +579,7 @@ Chaque correctif de spécification se compose des propriétés suivantes :
 
 Vous ne pouvez pas définir à la fois `patchFile` et `patch` dans la même configuration de spécification.
 
-## Application de correctifs au modèle de pod runner {#patching-the-runner-pod-template}
+### Application de correctifs au modèle de pod runner {#patching-the-runner-pod-template}
 
 L'application de correctifs à la [spécification de pod](https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-template-v1/#PodTemplateSpec) vous permet de personnaliser le déploiement de GitLab Runner en appliquant des correctifs au déploiement Kubernetes généré par l'opérateur. Les correctifs sont appliqués à la spécification du modèle de pod (`deployment.spec.template.spec`).
 
@@ -536,7 +593,7 @@ Vous pouvez contrôler les paramètres au niveau du pod, tels que :
 - Tolérances
 - Configuration du nom d'hôte et du DNS
 
-## Application de correctifs au modèle de déploiement runner {#patching-the-runner-deployment-template}
+### Application de correctifs au modèle de déploiement runner {#patching-the-runner-deployment-template}
 
 L'application de correctifs à la [spécification de déploiement](https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/deployment-v1/#Deployment) vous permet de personnaliser le déploiement de GitLab Runner en appliquant des correctifs au déploiement Kubernetes généré par l'opérateur. Les correctifs sont appliqués à la spécification de déploiement (`deployment.spec`).
 
@@ -548,13 +605,13 @@ Vous pouvez contrôler les paramètres au niveau du déploiement, tels que :
 - Secondes de délai de progression
 - Labels et annotations
 
-## Ordre des correctifs {#patch-order}
+### Ordre des correctifs {#patch-order}
 
 Les correctifs de spécification de déploiement sont appliqués avant les correctifs de spécification de pod. Cela signifie que si les spécifications de déploiement et de pod modifient toutes les deux le même champ, la spécification de pod a la priorité.
 
-## Exemples {#examples}
+### Exemples {#examples}
 
-### Exemple d'application de correctifs à la spécification de pod {#pod-specification-patching-example}
+#### Exemple d'application de correctifs à la spécification de pod {#pod-specification-patching-example}
 
 ```yaml
 apiVersion: apps.gitlab.com/v1beta2
@@ -580,7 +637,7 @@ spec:
       patchType: "strategic"
 ```
 
-### Exemple d'application de correctifs à la spécification de déploiement {#deployment-specification-patching-example}
+#### Exemple d'application de correctifs à la spécification de déploiement {#deployment-specification-patching-example}
 
 ```yaml
 apiVersion: apps.gitlab.com/v1beta2
@@ -609,7 +666,7 @@ spec:
       patchType: "json"
 ```
 
-## Bonnes pratiques {#best-practices}
+### Bonnes pratiques {#best-practices}
 
 - Testez les correctifs dans un environnement hors production avant de les appliquer aux déploiements en production.
 - Utilisez des correctifs au niveau du déploiement pour les paramètres qui affectent le comportement du déploiement plutôt que les paramètres de pod individuels.

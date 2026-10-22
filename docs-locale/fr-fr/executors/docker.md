@@ -54,7 +54,7 @@ Pour les problèmes connus et les exigences supplémentaires des configurations 
 | Linux                   | `docker`         | Linux                 |
 | macOS                   | `docker`         | Linux                 |
 
-Ces configurations ne sont **pas** prises en charge :
+Ces configurations ne sont pas prises en charge :
 
 | Le runner est installé sur : | L'exécuteur est :     | Le conteneur exécute : |
 |-------------------------|------------------|-----------------------|
@@ -298,7 +298,7 @@ Exemple :
 
 Si vous utilisez toute autre valeur pour `network_mode`, celle-ci est prise comme le nom d'un réseau Docker existant auquel le conteneur de build se connecte.
 
-Lors de la résolution de noms, Docker met à jour le fichier `/etc/hosts` dans le conteneur avec le nom d'hôte et l'alias du conteneur de service. Cependant, le conteneur de service n'est **pas** en mesure de résoudre le nom du conteneur. Pour résoudre le nom du conteneur, vous devez créer un réseau pour chaque job.
+Lors de la résolution de noms, Docker met à jour le fichier `/etc/hosts` dans le conteneur avec le nom d'hôte et l'alias du conteneur de service. Cependant, le conteneur de service n'est pas en mesure de résoudre le nom du conteneur. Pour résoudre le nom du conteneur, vous devez créer un réseau pour chaque job.
 
 Les conteneurs liés partagent leurs variables d'environnement.
 
@@ -669,7 +669,7 @@ build:
   - docker push my-image
 ```
 
-Vous pourriez avoir besoin de [configurer Docker in Docker avec TLS, ou de désactiver TLS](https://docs.gitlab.com/ci/docker/using_docker_build/#use-the-docker-executor-with-docker-in-docker) pour éviter une erreur similaire à la suivante :
+Vous pourriez avoir besoin de [configurer Docker in Docker avec TLS, ou de désactiver TLS](https://docs.gitlab.com/ci/docker/docker_in_docker/#use-with-docker-executor) pour éviter une erreur similaire à la suivante :
 
 ```plaintext
 Cannot connect to the Docker daemon at tcp://docker:2375. Is the docker daemon running?
@@ -799,6 +799,8 @@ Prérequis :
 
 > [!note]
 > Podman utilise `aardvark-dns` comme serveur DNS pour les conteneurs. Les versions `aardvark-dns` 1.10.0 et antérieures provoquent des échecs sporadiques de résolution DNS dans les jobs CI/CD. Assurez-vous d'avoir installé une version plus récente. Pour plus d'informations, consultez le [problème GitHub 389](https://github.com/containers/aardvark-dns/issues/389).
+> <!-- -->
+> GitLab Runner est validé avec Podman 5.8.2 en mode rootless et rootful, avec un utilisateur root et un utilisateur non root dans le conteneur, y compris les services qui s'exécutent sous `FF_NETWORK_PER_BUILD`. Pour plus d'informations, consultez [le ticket 31043](https://gitlab.com/gitlab-org/gitlab-runner/-/work_items/31043).
 
 1. Sur votre hôte Linux, installez GitLab Runner. Si vous avez installé GitLab Runner à l'aide du gestionnaire de paquets de votre système, il crée automatiquement un utilisateur `gitlab-runner`.
 1. Connectez-vous en tant qu'utilisateur qui exécute GitLab Runner. Vous devez le faire d'une manière qui ne contourne pas [`pam_systemd`](https://www.freedesktop.org/software/systemd/man/latest/pam_systemd.html). Vous pouvez utiliser SSH avec l'utilisateur approprié. Cela vous permet d'exécuter `systemctl` en tant que cet utilisateur.
