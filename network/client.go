@@ -199,9 +199,9 @@ func (n *client) createTransport() {
 	// create transport
 	transport := &http.Transport{
 		Proxy: http.ProxyFromEnvironment,
-		Dial: func(network, addr string) (net.Conn, error) {
+		DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
 			logrus.Debugln("Dialing:", network, addr, "...")
-			return dialer.Dial(network, addr)
+			return dialer.DialContext(ctx, network, addr)
 		},
 		TLSClientConfig:       &tlsConfig,
 		MaxIdleConns:          100,
@@ -585,7 +585,7 @@ func newClient(requestCredentials requestCredentials, collector *APIRequestsColl
 	}
 
 	if c.certDirectory != "" {
-		host := strings.Split(url.Host, ":")[0]
+		host, _, _ := strings.Cut(url.Host, ":")
 		c.findCertificate(&c.caFile, host+".crt")
 		c.findCertificate(&c.certFile, host+".auth.crt")
 		c.findCertificate(&c.keyFile, host+".auth.key")
