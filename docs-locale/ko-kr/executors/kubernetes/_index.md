@@ -101,28 +101,30 @@ variables:
 - `rbac.create`를 `true`로 설정합니다.
 - `serviceAccount.name: <service_account_name>`이(가) 있는 서비스 계정을 지정하고 `values.yml` 파일에서 다음 권한을 사용합니다.
 
-<!-- `k8s_api_permissions_list_start` -->
+<!-- k8s_api_permissions_list_start -->
 
 | 리소스 | 동사 (선택 사항 기능/구성 플래그) |
 |----------|-------------------------------|
 | apps/deployments | 생성 (`kubernetes.autoscaler`), 삭제 (`kubernetes.autoscaler`), 가져오기 (`kubernetes.autoscaler`), 나열 (`kubernetes.autoscaler`), 업데이트 (`kubernetes.autoscaler`) |
-| 이벤트 | 나열 (`print_pod_warning_events=true`), 감시 (`FF_PRINT_POD_EVENTS=true`) |
-| 네임스페이스 | 생성 (`kubernetes.NamespacePerJob=true`), 삭제 (`kubernetes.NamespacePerJob=true`) |
-| poddisruptionbudgets | 생성 (`pod_disruption_budget=true`), 가져오기 (`pod_disruption_budget=true`) |
+| configmaps | 생성 (`FF_SUSPENDABLE_ENVIRONMENTS=true`), 삭제 (`FF_SUSPENDABLE_ENVIRONMENTS=true`), 가져오기 (`FF_SUSPENDABLE_ENVIRONMENTS=true`), 업데이트 (`FF_SUSPENDABLE_ENVIRONMENTS=true`) |
+| 이벤트 | 나열 (`hostUsers=false`, `print_pod_warning_events=true`), 감시 (`FF_PRINT_POD_EVENTS=true`) |
+| 네임스페이스 | 생성 (`kubernetes.NamespacePerJob=true`), 삭제 (`kubernetes.NamespacePerJob=true`), 가져오기 (`FF_SUSPENDABLE_ENVIRONMENTS=true`) |
+| persistentvolumeclaims | 생성 (`FF_SUSPENDABLE_ENVIRONMENTS=true`), 삭제 (`FF_SUSPENDABLE_ENVIRONMENTS=true`) |
 | 포드 | 생성, 삭제, 가져오기, 나열 ([Informers 사용](#informers) ), 감시 ([Informers 사용](#informers), `FF_KUBERNETES_HONOR_ENTRYPOINT=true`, `FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false`) |
 | 포드/연결 | 생성 (`FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false`), 삭제 (`FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false`), 가져오기 (`FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false`), 패치 (`FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false`) |
 | 포드/실행 | 생성, 삭제, 가져오기, 패치 |
-| 포드/로그 | 가져오기 (`FF_KUBERNETES_HONOR_ENTRYPOINT=true`, `FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false`, `FF_WAIT_FOR_POD_TO_BE_REACHABLE=true`), 나열 (`FF_KUBERNETES_HONOR_ENTRYPOINT=true`, `FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false`) |
+| 포드/로그 | 가져오기 (`FF_CONCRETE=true`, `FF_KUBERNETES_HONOR_ENTRYPOINT=true`, `FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false`, `FF_WAIT_FOR_POD_TO_BE_REACHABLE=true`), 나열 (`FF_KUBERNETES_HONOR_ENTRYPOINT=true`, `FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false`) |
+| policy/poddisruptionbudgets | 생성 (`pod_disruption_budget=true`), 가져오기 (`pod_disruption_budget=true`) |
 | scheduling.k8s.io/priorityclasses | 생성 (`kubernetes.autoscaler`), 가져오기 (`kubernetes.autoscaler`) |
 | 비밀 | 생성, 삭제, 가져오기, 업데이트 |
 | 서비스계정 | 가져오기 |
 | 서비스 | 생성, 가져오기 |
 
-<!-- `k8s_api_permissions_list_end` -->
+<!-- k8s_api_permissions_list_end -->
 
 다음 YAML 역할 정의를 사용하여 필요한 권한이 있는 역할을 생성할 수 있습니다.
 
-<!-- `k8s_api_permissions_role_yaml_start` -->
+<!-- k8s_api_permissions_role_yaml_start -->
 
 ```yaml
 apiVersion: rbac.authorization.k8s.io/v1
@@ -140,20 +142,28 @@ rules:
   - "list" # Required when `kubernetes.autoscaler`
   - "update" # Required when `kubernetes.autoscaler`
 - apiGroups: [""]
+  resources: ["configmaps"]
+  verbs:
+  - "create" # Required when `FF_SUSPENDABLE_ENVIRONMENTS=true`
+  - "delete" # Required when `FF_SUSPENDABLE_ENVIRONMENTS=true`
+  - "get" # Required when `FF_SUSPENDABLE_ENVIRONMENTS=true`
+  - "update" # Required when `FF_SUSPENDABLE_ENVIRONMENTS=true`
+- apiGroups: [""]
   resources: ["events"]
   verbs:
-  - "list" # Required when `print_pod_warning_events=true`
+  - "list" # Required when `hostUsers=false`, `print_pod_warning_events=true`
   - "watch" # Required when `FF_PRINT_POD_EVENTS=true`
 - apiGroups: [""]
   resources: ["namespaces"]
   verbs:
   - "create" # Required when `kubernetes.NamespacePerJob=true`
   - "delete" # Required when `kubernetes.NamespacePerJob=true`
-- apiGroups: ["policy"]
-  resources: ["poddisruptionbudgets"]
+  - "get" # Required when `FF_SUSPENDABLE_ENVIRONMENTS=true`
+- apiGroups: [""]
+  resources: ["persistentvolumeclaims"]
   verbs:
-  - "create" # Required when `pod_disruption_budget=true`
-  - "get" # Required when `pod_disruption_budget=true`
+  - "create" # Required when `FF_SUSPENDABLE_ENVIRONMENTS=true`
+  - "delete" # Required when `FF_SUSPENDABLE_ENVIRONMENTS=true`
 - apiGroups: [""]
   resources: ["pods"]
   verbs:
@@ -179,8 +189,13 @@ rules:
 - apiGroups: [""]
   resources: ["pods/log"]
   verbs:
-  - "get" # Required when `FF_KUBERNETES_HONOR_ENTRYPOINT=true`, `FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false`, `FF_WAIT_FOR_POD_TO_BE_REACHABLE=true`
+  - "get" # Required when `FF_CONCRETE=true`, `FF_KUBERNETES_HONOR_ENTRYPOINT=true`, `FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false`, `FF_WAIT_FOR_POD_TO_BE_REACHABLE=true`
   - "list" # Required when `FF_KUBERNETES_HONOR_ENTRYPOINT=true`, `FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false`
+- apiGroups: ["policy"]
+  resources: ["poddisruptionbudgets"]
+  verbs:
+  - "create" # Required when `pod_disruption_budget=true`
+  - "get" # Required when `pod_disruption_budget=true`
 - apiGroups: ["scheduling.k8s.io"]
   resources: ["priorityclasses"]
   verbs:
@@ -204,7 +219,7 @@ rules:
   - "get"
 ```
 
-<!-- `k8s_api_permissions_role_yaml_end` -->
+<!-- k8s_api_permissions_role_yaml_end -->
 
 추가 세부 정보:
 
@@ -247,7 +262,7 @@ informer는 `list` 및 `watch` 권한이 `pods`에 필요합니다. 실행기가
 | `pod_cpu_request_overwrite_max_allowed`     | 빌드 포드에 대해 CPU 할당 요청을 쓸 수 있는 최대 양입니다. 비어 있으면 CPU 요청 덮어쓰기 기능을 비활성화합니다. |
 
 > [!note]
-Pod 수준의 리소스 사양이 [Kubernetes v1.32](https://v1-32.docs.kubernetes.io/blog/2024/12/11/kubernetes-v1-32-release/#pod-level-resource-specifications) 에서 알파 기능으로 도입되었으며 [Kubernetes v1.34](https://kubernetes.io/blog/2025/09/22/kubernetes-v1-34-pod-level-resources/)에서 베타로 졸업했습니다.
+> Pod 수준의 리소스 사양이 [Kubernetes v1.32](https://v1-32.docs.kubernetes.io/blog/2024/12/11/kubernetes-v1-32-release/#pod-level-resource-specifications) 에서 알파 기능으로 도입되었으며 [Kubernetes v1.34](https://kubernetes.io/blog/2025/09/22/kubernetes-v1-34-pod-level-resources/)에서 베타로 졸업했습니다.
 
 ### 메모리 요청 및 제한 {#memory-requests-and-limits}
 
@@ -370,6 +385,8 @@ job_with_higher_helper_memory_limit:
 | `service_account_overwrite_allowed`           | 서비스 계정 덮어쓰기 환경 변수의 내용을 검증하는 정규 표현식입니다. 비어 있으면 서비스 계정 덮어쓰기 기능을 비활성화합니다. |
 | `services`                                    | [서비스](https://docs.gitlab.com/ci/services/) 의 목록이 [사이드카 패턴](https://learn.microsoft.com/en-us/azure/architecture/patterns/sidecar)을 사용하여 빌드 컨테이너에 연결되어 있습니다. [서비스 사용에 대해 자세히 알아보기](#define-a-list-of-services). |
 | `use_service_account_image_pull_secrets`      | 활성화되면 실행기에서 생성한 포드에 `imagePullSecrets`가 부족합니다. 이로 인해 포드가 [서비스 계정에서 `imagePullSecrets`](https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/#add-image-pull-secret-to-service-account)를 사용하여 생성되며 설정된 경우입니다. |
+| `suspend_pvc_size`                            | 일시 중단 가능한 작업 환경을 위해 생성된 PVC의 크기입니다. PVC는 overlayfs 상단 계층, 빌드 디렉토리 및 `suspend_data_path`로 구성된 서비스 컨테이너 데이터 디렉토리를 저장합니다. `20Gi`로 기본 설정됩니다. |
+| `suspend_pvc_storage_class`                   | `StorageClass` 이름입니다. `suspend_pvc_size`에 의해 생성된 PVC의 이름입니다. 비워 두면 PVC는 클러스터의 기본 `StorageClass`을 사용합니다. |
 | `terminationGracePeriodSeconds`               | 포드에서 실행 중인 프로세스에 종료 신호가 전송된 후 프로세스가 kill 신호로 강제 중단되는 시간입니다. [`cleanup_grace_period_seconds` 및 `pod_termination_grace_period_seconds`를 대신하여 더 이상 사용되지 않음](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/28165). |
 | `volumes`                                     | 구성 파일을 통해 구성되며, 이는 빌드 컨테이너에 마운트되는 볼륨 목록입니다. [볼륨 사용에 대해 자세히 알아보기](#configure-volume-types). |
 | `pod_spec`                                    | 이 설정은 실험입니다. CI 작업을 실행하는 데 사용되는 포드에 설정된 구성 목록을 사용하여 러너 관리자에서 생성된 포드 사양을 덮어씁니다. `Kubernetes Pod Specification` 나열된 모든 속성을 설정할 수 있습니다. 자세한 내용은 [생성된 포드 사양 덮어쓰기(실험)](#overwrite-generated-pod-specifications)를 참조하세요. |
@@ -378,7 +395,7 @@ job_with_higher_helper_memory_limit:
 | `retry_limits`                                | 각 요청 오류를 재시도할 횟수입니다. |
 | `logs_base_dir`                               | 빌드 로그를 저장하기 위해 생성된 경로에 앞에 붙일 기본 디렉터리입니다. 자세한 내용은 [빌드 로그 및 스크립트의 기본 디렉터리 변경](#change-the-base-directory-for-build-logs-and-scripts)을 참조하세요. |
 | `scripts_base_dir`                            | 빌드 스크립트를 저장하기 위해 생성된 경로에 앞에 붙일 기본 디렉터리입니다. 자세한 내용은 [빌드 로그 및 스크립트의 기본 디렉터리 변경](#change-the-base-directory-for-build-logs-and-scripts)을 참조하세요. |
-| `print_pod_warning_events`                    | 활성화되면 이 기능은 작업이 실패할 때 포드와 연결된 모든 경고 이벤트를 검색합니다. 이 기능은 기본적으로 활성화되어 있으며 [최소 `events: list` 권한](#configure-runner-api-permissions)이 있는 서비스 계정이 필요합니다. |
+| `print_pod_warning_events`                    | 러너가 작업 Pod에 대한 Kubernetes 경고 메시지를 출력할지 여부를 제어합니다. Pod가 시작되는 동안(예: 스케줄링 실패) 및 작업이 실패한 후 경고 이벤트를 검색할 때 모두 해당합니다. 기본적으로 활성화됩니다. 작업 실패 이벤트 검색을 위해서는 최소한 [`events: list` 권한](#configure-runner-api-permissions)이 있는 서비스 계정이 필요합니다. |
 | `pod_disruption_budget`                       | 활성화되면 [`PodDisruptionBudget`](https://kubernetes.io/docs/tasks/run-application/configure-pdb/)이(가) 각 작업 포드에 대해 생성되어 노드 드레인 및 클러스터 업그레이드와 같은 자발적 중단 중 제거를 방지합니다. 기본적으로 비활성화됨. [`poddisruptionbudgets` 권한](#configure-runner-api-permissions)이 있는 서비스 계정이 필요합니다. |
 
 ### 구성 예 {#configuration-example}
@@ -546,7 +563,7 @@ description: "Low priority class for runner pause pods"
 ```
 
 > [!note]
-`PriorityClass`은(는) 클러스터 범위의 리소스입니다. 네임스페이스 `Role` 및 `RoleBinding`는 `scheduling.k8s.io/priorityclasses` 권한을 부여할 수 없습니다. 대신 `ClusterRole` 및 `ClusterRoleBinding`을(를) 사용합니다.
+> `PriorityClass`은(는) 클러스터 범위의 리소스입니다. 네임스페이스 `Role` 및 `RoleBinding`는 `scheduling.k8s.io/priorityclasses` 권한을 부여할 수 없습니다. 대신 `ClusterRole` 및 `ClusterRoleBinding`을(를) 사용합니다.
 
 ## 실행기 서비스 계정 구성 {#configure-the-executor-service-account}
 
@@ -559,7 +576,7 @@ description: "Low priority class for runner pause pods"
 ### 작업 포드에 대한 기본 레이블 {#default-labels-for-job-pods}
 
 > [!warning]
-러너 구성 또는 `.gitlab-ci.yml` 파일을 통해 이 레이블을 재정의할 수 없습니다. `runner.gitlab.com` 네임스페이스의 레이블을 설정하거나 수정하려는 모든 시도는 무시되며 디버그 메시지로 기록됩니다.
+> 러너 구성 또는 `.gitlab-ci.yml` 파일을 통해 이 레이블을 재정의할 수 없습니다. `runner.gitlab.com` 네임스페이스의 레이블을 설정하거나 수정하려는 모든 시도는 무시되며 디버그 메시지로 기록됩니다.
 
 | 키                                        | 설명 |
 |--------------------------------------------|-------------|
@@ -567,7 +584,8 @@ description: "Low priority class for runner pause pods"
 | `project.runner.gitlab.com/name`           | 프로젝트의 이름입니다. |
 | `project.runner.gitlab.com/namespace-id`   | 프로젝트의 네임스페이스 ID입니다. |
 | `project.runner.gitlab.com/namespace`      | 프로젝트의 네임스페이스 이름입니다. |
-| `project.runner.gitlab.com/root-namespace` | 프로젝트의 루트 네임스페이스 ID입니다. 예를 들어 `/gitlab-org/group-a/subgroup-a/project`, 여기서 루트 네임스페이스는 `gitlab-org`입니다. |
+| `project.runner.gitlab.com/root-namespace` | 프로젝트의 루트 네임스페이스 이름입니다. 예를 들어 `/gitlab-org/group-a/subgroup-a/project`, 여기서 루트 네임스페이스는 `gitlab-org`입니다. |
+| `project.runner.gitlab.com/root-namespace-id` | 프로젝트의 루트 네임스페이스 ID입니다. |
 | `manager.runner.gitlab.com/name`           | 이 작업을 시작한 러너 구성의 이름입니다. |
 | `manager.runner.gitlab.com/id-short`       | 작업을 시작한 러너 구성의 ID입니다. |
 | `job.runner.gitlab.com/pod`                | Kubernetes 실행기에서 사용하는 내부 레이블입니다. |
@@ -597,7 +615,7 @@ description: "Low priority class for runner pause pods"
 - [`FF_USE_POD_ACTIVE_DEADLINE_SECONDS` 기능 플래그 활성화](../../configuration/feature-flags.md)입니다. 활성화되고 작업 시간 초과 시 CI/CD 작업 포드가 실패로 표시되고 연결된 모든 컨테이너가 종료됩니다. 작업이 먼저 GitLab에서 시간 초과되도록 하려면 `activeDeadlineSeconds`을 `configured timeout + 1 second`로 설정합니다.
 
 > [!note]
-`FF_USE_POD_ACTIVE_DEADLINE_SECONDS` 기능 플래그를 활성화하고 `pod_termination_grace_period_seconds`을 0이 아닌 값으로 설정하면 CI/CD 작업 포드가 즉시 종료되지 않습니다. 포드 `terminationGracePeriods`은 포드가 만료될 때만 종료되도록 합니다.
+> `FF_USE_POD_ACTIVE_DEADLINE_SECONDS` 기능 플래그를 활성화하고 `pod_termination_grace_period_seconds`을 0이 아닌 값으로 설정하면 CI/CD 작업 포드가 즉시 종료되지 않습니다. 포드 `terminationGracePeriods`은 포드가 만료될 때만 종료되도록 합니다.
 
 ### 제거로부터 작업 포드 보호 {#protect-job-pods-from-eviction}
 
@@ -623,7 +641,7 @@ description: "Low priority class for runner pause pods"
 - 추가 RBAC 권한이 필요합니다. 자세한 내용은 [러너 API 권한 구성](#configure-runner-api-permissions)을 참조하세요.
 
 > [!warning]
-`PodDisruptionBudget`을 켜면 작업이 실행 중인 경우 노드 드레인이 중단될 수 있습니다. 클러스터 업그레이드 전략이 잠재적 노드 드레인 지연을 고려하거나 작업 시간 제한을 사용하여 작업이 실행될 수 있는 기간을 제한합니다.
+> `PodDisruptionBudget`을 켜면 작업이 실행 중인 경우 노드 드레인이 중단될 수 있습니다. 클러스터 업그레이드 전략이 잠재적 노드 드레인 지연을 고려하거나 작업 시간 제한을 사용하여 작업이 실행될 수 있는 기간을 제한합니다.
 
 ### 포드 toleration 덮어쓰기 {#overwrite-pod-tolerations}
 
@@ -666,7 +684,7 @@ Kubernetes 포드 toleration을 덮어쓰려면:
     ```
 
 > [!warning]
-`runner.gitlab.com` 네임스페이스의 레이블은 읽기 전용입니다. GitLab은 이러한 GitLab 내부 레이블을 추가, 수정 또는 제거하려는 모든 시도를 무시합니다.
+> `runner.gitlab.com` 네임스페이스의 레이블은 읽기 전용입니다. GitLab은 이러한 GitLab 내부 레이블을 추가, 수정 또는 제거하려는 모든 시도를 무시합니다.
 
 ### 포드 annotation 덮어쓰기 {#overwrite-pod-annotations}
 
@@ -1187,7 +1205,7 @@ check_interval = 30
 Kubernetes 보안 컨텍스트 구성으로 컨테이너에서 실행하는 사용자 및 그룹을 구성합니다. 관리자는 컨테이너 보안을 제어하고 특정 컨테이너 유형에 대해 사용자를 지정하도록 작업을 허용할 수 있습니다.
 
 > [!note]
-Windows의 작업 정의에서 `runAsUser`, `runAsGroup` 또는 `image:user`를 설정하는 것은 지원되지 않습니다. 대신 [FF_USE_ADVANCED_POD_SPEC_CONFIGURATION](#overwrite-generated-pod-specifications) 을 통해 [runAsUserName](https://kubernetes.io/docs/tasks/configure-pod-container/configure-runasusername/)을 설정하는 것이 권장됩니다.
+> Windows의 작업 정의에서 `runAsUser`, `runAsGroup` 또는 `image:user`를 설정하는 것은 지원되지 않습니다. 대신 [FF_USE_ADVANCED_POD_SPEC_CONFIGURATION](#overwrite-generated-pod-specifications) 을 통해 [runAsUserName](https://kubernetes.io/docs/tasks/configure-pod-container/configure-runasusername/)을 설정하는 것이 권장됩니다.
 
 #### 구성 우선 순위 {#configuration-precedence}
 
@@ -1450,7 +1468,28 @@ check_interval = 30
       entrypoint = ["entrypoint.sh"]
       command = ["executable","param1","param2"]
       environment = ["ENV=value1", "ENV2=value2"]
+    [[runners.kubernetes.services]]
+      name = "redis:7"
+      alias = "cache"
+      suspend_data_path = "/data"  # persists Redis data across suspend/resume cycles
 ```
+
+각 `[[runners.kubernetes.services]]` 항목은 다음 필드를 지원합니다:
+
+| 필드 | 설명 |
+|---|---|
+| `name` | 서비스의 이미지 경로입니다(필수). |
+| `alias` | 컨테이너 및 DNS 이름으로 사용되는 공백 또는 쉼표로 구분된 별칭입니다. |
+| `entrypoint` | 이미지 엔트리포인트를 재정의합니다. |
+| `command` | 이미지 명령을 재정의합니다. |
+| `environment` | 서비스 컨테이너에 주입되는 `KEY=value` 환경 변수의 목록입니다. |
+| `suspend_data_path` | 지속적인 데이터가 기록되는 서비스 컨테이너 내부의 경로입니다(예: Redis의 경우 `/data` 또는 PostgreSQL의 경우 `/var/lib/postgresql/data`). |
+
+`suspend_data_path` 동작은 구성에 따라 달라집니다:
+
+- 일시 중단 가능한 작업(`FF_SUSPENDABLE_ENVIRONMENTS` 활성화)에서 `command` 또는 `entrypoint`이 설정되지 않은 경우, 러너는 일시 중단 PVC의 하위 디렉토리를 이 경로에 마운트하여 데이터가 일시 중단 및 재개 주기를 거칩니다.
+- `command` 또는 `entrypoint`이 설정되면 러너는 대신 전체 서비스 컨테이너를 지속하므로 이 설정은 효과가 없습니다.
+- `command` 또는 `entrypoint`이 설정되지 않은 상태로 비워 두면 서비스 컨테이너에 지속적인 저장소가 없습니다.
 
 서비스 환경에 `HEALTHCHECK_TCP_PORT`이 포함되면 GitLab Runner는 사용자 CI 스크립트를 시작하기 전에 서비스가 해당 포트에서 응답할 때까지 대기합니다. `.gitlab-ci.yml`의 `services` 섹션에서 `HEALTHCHECK_TCP_PORT` 환경 변수를 구성할 수도 있습니다.
 
@@ -1754,7 +1793,7 @@ job:
 빌드 시간에 포드 사양에 추가할 [노드 친화성](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#node-affinity) 목록을 정의합니다.
 
 > [!note]
-`node_affinities`는 빌드가 실행되어야 하는 운영 체제를 결정하지 않으며 `node_selectors`만 결정합니다. 자세한 내용은 [운영 체제, 아키텍처 및 Windows 커널 버전](#operating-system-architecture-and-windows-kernel-version)을 참조하세요. `config.toml`의 예 구성:
+> `node_affinities`는 빌드가 실행되어야 하는 운영 체제를 결정하지 않으며 `node_selectors`만 결정합니다. 자세한 내용은 [운영 체제, 아키텍처 및 Windows 커널 버전](#operating-system-architecture-and-windows-kernel-version)을 참조하세요. `config.toml`의 예 구성:
 
 ```toml
 concurrent = 1
@@ -2155,7 +2194,7 @@ Kubernetes가 Kubernetes 클러스터에 정의된 [`configMap`](https://kuberne
 기본 키 및 값 저장소를 변경하려면 `items` 옵션을 사용합니다. `items` 옵션을 사용하면 **only specified keys** 볼륨에 추가되고 다른 모든 키는 건너뜁니다.
 
 > [!note]
-존재하지 않는 키를 사용하면 작업이 Pod 생성 단계에서 실패합니다.
+> 존재하지 않는 키를 사용하면 작업이 Pod 생성 단계에서 실패합니다.
 
 #### `secret` 볼륨 {#secret-volume}
 
@@ -2180,7 +2219,7 @@ Kubernetes가 Kubernetes 클러스터에 정의된 [`configMap`](https://kuberne
 기본 키 및 값 저장소를 변경하려면 `items` 옵션을 사용합니다. `items` 옵션을 사용하면 **only specified keys** 볼륨에 추가되고 다른 모든 키는 건너뜁니다.
 
 > [!note]
-존재하지 않는 키를 사용하면 작업이 Pod 생성 단계에서 실패합니다.
+> 존재하지 않는 키를 사용하면 작업이 Pod 생성 단계에서 실패합니다.
 
 #### `emptyDir` 볼륨 {#emptydir-volume}
 
@@ -2280,7 +2319,7 @@ concurrent = 4
 보안 정책을 설정한 후 [보조 이미지](../../configuration/advanced-configuration.md#helper-image)는 정책을 준수해야 합니다. 이미지는 루트 그룹으로부터 권한을 받지 않으므로 사용자 ID가 루트 그룹의 일부인지 확인해야 합니다.
 
 > [!note]
-`nonroot` 환경만 필요한 경우 보조 이미지 대신 [GitLab Runner UBI](https://gitlab.com/gitlab-org/ci-cd/gitlab-runner-ubi-images/container_registry/1766421) OpenShift Container Platform 이미지를 사용할 수 있습니다. [GitLab Runner Helper UBI](https://gitlab.com/gitlab-org/ci-cd/gitlab-runner-ubi-images/container_registry/1766433) OpenShift Container Platform 이미지도 사용할 수 있습니다.
+> `nonroot` 환경만 필요한 경우 보조 이미지 대신 [GitLab Runner UBI](https://gitlab.com/gitlab-org/ci-cd/gitlab-runner-ubi-images/container_registry/1766421) OpenShift Container Platform 이미지를 사용할 수 있습니다. [GitLab Runner Helper UBI](https://gitlab.com/gitlab-org/ci-cd/gitlab-runner-ubi-images/container_registry/1766433) OpenShift Container Platform 이미지도 사용할 수 있습니다.
 
 다음 예제는 `nonroot`이라는 사용자 및 그룹을 만들고 보조 이미지를 해당 사용자로 실행하도록 설정합니다.
 
@@ -2313,7 +2352,7 @@ Docker 데몬은 `service`로 시작되므로 Pod의 별도 컨테이너로 실�
 - TLS 연결이 없는 경우 `DOCKER_HOST=tcp://docker:2375`입니다.
 - TLS 연결의 경우 `DOCKER_HOST=tcp://docker:2376`입니다.
 
-Docker 19.03 이상에서는 TLS가 기본적으로 활성화되지만 인증서를 클라이언트에 매핑해야 합니다. Docker-in-Docker에 대한 비 TLS 연결을 활성화하거나 인증서를 마운트할 수 있습니다. 자세한 내용은 [Docker 실행기와 Docker-in-Docker 사용](https://docs.gitlab.com/ci/docker/using_docker_build/#use-the-docker-executor-with-docker-in-docker)을 참조하십시오.
+Docker 19.03 이상에서는 TLS가 기본적으로 활성화되지만 인증서를 클라이언트에 매핑해야 합니다. Docker-in-Docker에 대한 비 TLS 연결을 활성화하거나 인증서를 마운트할 수 있습니다. 자세한 내용은 [Docker-in-Docker 사용](https://docs.gitlab.com/ci/docker/docker_in_docker/#use-with-docker-executor)을 참조하세요.
 
 ### 호스트 커널 노출 방지 {#prevent-host-kernel-exposure}
 
@@ -2429,7 +2468,7 @@ GitLab Runner는 기본적으로 `kube attach` 대신 `kube exec`를 사용합�
 ### 컨테이너 진입점 알려진 문제 {#container-entrypoint-known-issues}
 
 > [!note]
-GitLab 15.1 이상에서는 `FF_KUBERNETES_HONOR_ENTRYPOINT`가 설정되었을 때 Docker 이미지에 정의된 진입점이 Kubernetes 실행기에서 사용됩니다.
+> GitLab 15.1 이상에서는 `FF_KUBERNETES_HONOR_ENTRYPOINT`가 설정되었을 때 Docker 이미지에 정의된 진입점이 Kubernetes 실행기에서 사용됩니다.
 
 컨테이너 진입점에는 다음과 같은 알려진 문제가 있습니다:
 
@@ -2437,7 +2476,7 @@ GitLab 15.1 이상에서는 `FF_KUBERNETES_HONOR_ENTRYPOINT`가 설정되었을 
 
   - 셸을 열려면 시스템이 빌드 컨테이너에 대해 [`args`](https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#entrypoint)로 명령을 전달합니다.
 - [파일 유형 CI/CD 변수](https://docs.gitlab.com/ci/variables/#use-file-type-cicd-variables)는 진입점이 실행될 때 디스크에 기록되지 않습니다. 파일은 스크립트 실행 중에만 작업에서 액세스할 수 있습니다.
-- 다음 CI/CD 변수는 진입점에서 액세스할 수 없습니다. [`before_script`](https://docs.gitlab.com/ci/yaml/#beforescript)를 사용하여 스크립트 명령을 실행하기 전에 설정 변경을 수행합니다:
+- 다음 CI/CD 변수는 진입점에서 액세스할 수 없습니다. [`before_script`](https://docs.gitlab.com/ci/yaml/#before_script)을 사용하여 스크립트 명령을 실행하기 전에 모든 설정 변경을 수행할 수 있습니다:
   - [설정에서 정의된 CI/CD 변수](https://docs.gitlab.com/ci/variables/#define-a-cicd-variable-in-the-ui).
   - [마스크된 CI/CD 변수](https://docs.gitlab.com/ci/variables/#mask-a-cicd-variable).
 
@@ -2512,7 +2551,7 @@ variables:
 ```
 
 > [!note]
-이 변수는 클러스터에 네임스페이스를 생성하지 않습니다. 작업을 실행하기 전에 네임스페이스가 존재하는지 확인합니다.
+> 이 변수는 클러스터에 네임스페이스를 생성하지 않습니다. 작업을 실행하기 전에 네임스페이스가 존재하는지 확인합니다.
 
 CI 실행 중에 지정된 네임스페이스만 사용하려면 `config.toml` 파일에서 `namespace_overwrite_allowed`에 대한 정규식을 정의합니다:
 

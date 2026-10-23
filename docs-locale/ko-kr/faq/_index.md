@@ -7,8 +7,8 @@ title: GitLab 러너 문제 해결
 
 {{< details >}}
 
-- 티어: Free, Premium, Ultimate
-- 제공 서비스: GitLab.com, GitLab Self-Managed, GitLab Dedicated
+- 계층:  Free, Premium, Ultimate
+- 제공:  GitLab.com, GitLab Self-Managed, GitLab Dedicated
 
 {{< /details >}}
 
@@ -177,7 +177,7 @@ Docker 실행기를 사용하려고 하고 서버에 설치된 Docker 엔진에 
 
 ## 자동으로 확장된 러너에 AWS 인스턴스 프로필 추가 {#adding-an-aws-instance-profile-to-your-autoscaled-runners}
 
-AWS IAM 역할을 생성한 후 IAM 콘솔에서 역할에 **Role ARN** 및 **Instance Profile ARNs**이 있습니다. **Instance Profile** 이름을 사용해야 하고, **not** **Role Name**을(를) 사용하지 않아야 합니다.
+AWS IAM 역할을 생성한 후 IAM 콘솔에서 역할에 **Role ARN** 및 **Instance Profile ARNs**이 있습니다. **Instance Profile** 이름을 사용해야 하며, **Role Name**을 사용하면 안 됩니다.
 
 `[runners.machine]` 섹션에 다음 값을 추가합니다: `"amazonec2-iam-instance-profile=<instance-profile-name>",`
 

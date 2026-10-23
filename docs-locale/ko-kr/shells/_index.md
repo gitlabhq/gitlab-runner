@@ -100,7 +100,7 @@ PowerShell은 다른 사용자의 컨텍스트에서 빌드를 실행하는 것�
 다음은 PowerShell 스크립트의 예입니다:
 
 ```powershell
-$ErrorActionPreference = "Continue" # This will be set to 'Stop' when targetting PowerShell Core
+$ErrorActionPreference = "Continue" # This will be set to 'Stop' when targeting PowerShell Core
 
 echo "Running on $([Environment]::MachineName)..."
 
@@ -145,7 +145,13 @@ echo "Running on $([Environment]::MachineName)..."
   if( (Get-Command -Name Remove-Item2 -Module NTFSSecurity -ErrorAction SilentlyContinue) -and (Test-Path "C:\GitLab-Runner\builds\0\project-1" -PathType Container) ) {
     Remove-Item2 -Force -Recurse "C:\GitLab-Runner\builds\0\project-1"
   } elseif(Test-Path "C:\GitLab-Runner\builds\0\project-1") {
-    Remove-Item -Force -Recurse "C:\GitLab-Runner\builds\0\project-1"
+    $item = Get-Item -Force "C:\GitLab-Runner\builds\0\project-1"
+    if ($item.LinkType -or -not $item.PSIsContainer) {
+      Remove-Item -Force "C:\GitLab-Runner\builds\0\project-1" -ErrorAction Stop
+    } else {
+      Get-ChildItem -Path "C:\GitLab-Runner\builds\0\project-1" -Force -Recurse -ErrorAction Stop | Sort-Object { $_.FullName.Length } -Descending | Remove-Item -Force -ErrorAction Stop
+      Remove-Item -Force "C:\GitLab-Runner\builds\0\project-1" -ErrorAction Stop
+    }
   }
 
   & "git" "clone" "https://gitlab.com/group/project.git" "Z:\Gitlab\tests\test\builds\0\project-1"
