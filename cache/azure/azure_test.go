@@ -38,7 +38,7 @@ const (
 
 type mockSTS struct{}
 
-var accessTokenRespSuccess = []byte(fmt.Sprintf(`{"access_token": "%s", "expires_in": 3600}`, "tokenValue"))
+var accessTokenRespSuccess = fmt.Appendf(nil, `{"access_token": "%s", "expires_in": 3600}`, "tokenValue")
 
 func (m *mockSTS) Do(req *http.Request) (*http.Response, error) {
 	res := &http.Response{StatusCode: http.StatusNotFound}
@@ -53,7 +53,7 @@ func (m *mockSTS) Do(req *http.Request) (*http.Response, error) {
 	if grant := req.FormValue("grant_type"); grant == "device_code" || grant == "password" {
 		// include account info because we're authenticating a user
 		res.Body = io.NopCloser(bytes.NewReader(
-			[]byte(fmt.Sprintf(`{"access_token":"at","expires_in": 3600,"refresh_token":"rt","client_info":%q,"id_token":%q}`, mockClientInfo, mockIDToken)),
+			fmt.Appendf(nil, `{"access_token":"at","expires_in": 3600,"refresh_token":"rt","client_info":%q,"id_token":%q}`, mockClientInfo, mockIDToken),
 		))
 	} else {
 		res.Body = io.NopCloser(bytes.NewReader(accessTokenRespSuccess))
