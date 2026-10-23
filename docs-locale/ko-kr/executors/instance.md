@@ -29,13 +29,13 @@ title: 인스턴스 실행기
 1. 사용 중인 플랫폼에 대한 VM 이미지를 생성합니다. 이미지에는 다음이 포함되어야 합니다:
    - Git
    - GitLab Runner 바이너리
- 
+
      작업 아티팩트와 캐시를 처리하려면 가상 머신에 러너 바이너리를 설치하고 러너 실행 파일을 기본 경로에 유지합니다.
 
    - 실행할 계획 중인 작업에 필요한 종속성
-  
-     > [!note]
-     > VM 이미지는 러너를 실행할 필요가 없습니다. VM 이미지를 사용하여 시작된 인스턴스는 GitLab에서 자신을 러너로 등록해서는 안 됩니다.
+
+   > [!note]
+   > VM 이미지는 러너를 실행할 필요가 없습니다. VM 이미지를 사용하여 시작된 인스턴스는 GitLab에서 자신을 러너로 등록해서는 안 됩니다.
 
 ### 네이티브 단계용 러너 바이너리 {#gitlab-runner-binary-for-native-steps}
 
@@ -527,4 +527,4 @@ concurrent = 50
 
 ### `sh: 1: eval: Running on ip-x.x.x.x via runner-host...n: not found` {#sh-1-eval-running-on-ip-xxxx-via-runner-hostn-not-found}
 
-이 오류는 일반적으로 준비 단계에서 `eval` 명령이 실패할 때 발생합니다. 이 오류를 해결하려면 `bash` 셸로 전환하고 [기능 플래그](../configuration/feature-flags.md) `FF_USE_NEW_BASH_EVAL_STRATEGY`을(를) 활성화합니다.
+이 오류는 일반적으로 준비 단계에서 `eval` 명령이 실패할 때 발생합니다. 이 오류를 해결하려면 `bash` 셸로 전환하세요.

@@ -77,24 +77,22 @@ flowchart LR
 > [!note]
 > SSH, Shell, VirtualBox, Parallels 및 Custom 실행기는 유지 보수 모드입니다. 중요한 보안 업데이트는 제공되지만 새로운 기능은 계획되지 않습니다.
 
-| 실행기                                         | Docker | Docker Autoscaler |                 Instance |   Kubernetes   | SSH  |     셸      |   VirtualBox   |   Parallels    |          Custom          |
-|:-------------------------------------------------|:------:|:-----------------:|-------------------------:|:--------------:|:----:|:--------------:|:--------------:|:--------------:|:------------------------:|
-| 매 빌드마다 깨끗한 빌드 환경          |   ✓    |         ✓         | 조건부 <sup>1</sup> |       ✓        |  ✗   |       ✗        |       ✓        |       ✓        | 조건부 <sup>1</sup> |
-| 이전 복제본이 있으면 재사용                |   ✓    |         ✓         | 조건부 <sup>1</sup> | ✓ <sup>2</sup> |  ✓   |       ✓        |       ✗        |       ✗        | 조건부 <sup>1</sup> |
-| 러너 파일 시스템 접근 보호 <sup>3</sup> |   ✓    |         ✓         |                        ✗ |       ✓        |  ✓   |       ✗        |       ✓        |       ✓        |       조건부        |
-| 러너 머신 마이그레이션                           |   ✓    |         ✓         |                        ✓ |       ✓        |  ✗   |       ✗        |    부분적     |    부분적     |            ✓             |
-| 동시 빌드에 대한 구성 필요 없음 |   ✓    |         ✓         |                        ✓ |       ✓        |  ✗   | ✗ <sup>4</sup> |       ✓        |       ✓        | 조건부 <sup>1</sup> |
-| 복잡한 빌드 환경                   |   ✓    |         ✓         |           ✗ <sup>5</sup> |       ✓        |  ✗   | ✗ <sup>5</sup> | ✓ <sup>6</sup> | ✓ <sup>6</sup> |            ✓             |
-| 빌드 문제 디버깅                         | 중간 |      중간       |                   중간 |     중간     | 쉬움 |      쉬움      |      어려움      |      어려움      |          중간          |
+| 실행기                                             | Docker | Docker Autoscaler |                   Instance |       Kubernetes       | SSH  |       셸       | VirtualBox  |  Parallels  |           Custom           |
+|:-----------------------------------------------------|:------:|:-----------------:|---------------------------:|:----------------------:|:----:|:-----------------:|:-----------:|:-----------:|:--------------------------:|
+| 매 빌드마다 깨끗한 빌드 환경              |   ✓    |         ✓         | 조건부[^provisioning] |           ✓            |  ✗   |         ✗         |      ✓      |      ✓      | 조건부[^provisioning] |
+| 이전 복제본이 있으면 재사용                    |   ✓    |         ✓         | 조건부[^provisioning] | ✓[^persistent-volumes] |  ✓   |         ✓         |      ✗      |      ✗      | 조건부[^provisioning] |
+| 러너 파일 시스템 액세스 보호[^unprotected-fs] |   ✓    |         ✓         |                          ✗ |           ✓            |  ✓   |         ✗         |      ✓      |      ✓      |        조건부         |
+| 러너 머신 마이그레이션                               |   ✓    |         ✓         |                          ✓ |           ✓            |  ✗   |         ✗         |   부분적   |   부분적   |             ✓              |
+| 동시 빌드에 대한 구성 필요 없음     |   ✓    |         ✓         |                          ✓ |           ✓            |  ✗   | ✗[^host-services] |      ✓      |      ✓      | 조건부[^provisioning] |
+| 복잡한 빌드 환경                       |   ✓    |         ✓         |            ✗[^manual-deps] |           ✓            |  ✗   |  ✗[^manual-deps]  | ✓[^vagrant] | ✓[^vagrant] |             ✓              |
+| 빌드 문제 디버깅                             | 중간 |      중간       |                     중간 |         중간         | 쉬움 |       쉬움        |    어려움     |    어려움     |           중간           |
 
-**각주**:
-
-1. 프로비저닝하는 환경에 따라 달라집니다. 완전히 격리되거나 빌드 간에 공유될 수 있습니다.
-1. [지속성 있는 동시성별 빌드 볼륨](kubernetes/_index.md#persistent-per-concurrency-build-volumes) 구성이 필요합니다.
-1. 러너의 파일 시스템 접근이 보호되지 않으면 작업은 러너 토큰 및 다른 작업의 캐시와 코드를 포함한 전체 시스템에 접근할 수 있습니다. ✓로 표시된 실행기는 기본적으로 러너가 파일 시스템에 접근할 수 없습니다. 그러나 보안 결함이나 특정 구성으로 인해 작업이 해당 컨테이너 밖으로 나가 러너를 호스팅하는 파일 시스템에 접근할 수 있습니다.
-1. 빌드가 빌드 머신에 설치된 서비스를 사용하는 경우 실행기 선택이 가능하지만 문제가 될 수 있습니다.
-1. 수동 종속성 설치가 필요합니다.
-1. 예를 들어 [Vagrant](https://developer.hashicorp.com/vagrant/docs/providers/virtualbox "Vagrant documentation for VirtualBox")를 사용합니다.
+[^provisioning]: 프로비저닝하는 환경에 따라 달라집니다. 완전히 격리되거나 빌드 간 공유될 수 있습니다.
+[^persistent-volumes]: [동시성별 지속형 빌드 볼륨](kubernetes/_index.md#persistent-per-concurrency-build-volumes) 구성이 필요합니다.
+[^unprotected-fs]: 러너의 파일 시스템 접근이 보호되지 않으면 작업은 러너 토큰 및 다른 작업의 캐시와 코드를 포함한 전체 시스템에 접근할 수 있습니다. ✓로 표시된 실행기는 기본적으로 러너가 파일 시스템에 접근할 수 없습니다. 하지만 보안 결함이나 특정 구성으로 인해 작업이 컨테이너에서 벗어나 러너를 호스팅하는 파일 시스템에 액세스할 수 있습니다.
+[^host-services]: 빌드에서 빌드 머신에 설치된 서비스를 사용하는 경우 실행기 선택이 가능하지만 문제가 될 수 있습니다.
+[^manual-deps]: 수동 종속성 설치가 필요합니다.
+[^vagrant]: 예를 들어, [Vagrant](https://developer.hashicorp.com/vagrant/docs/providers/virtualbox "VirtualBox용 Vagrant 문서")를 사용합니다.
 
 ### Docker 실행기 {#docker-executor}
 
@@ -114,7 +112,7 @@ Docker Autoscaler는 [fleeting 플러그인](https://gitlab.com/gitlab-org/fleet
 
 Instance 실행기는 러너 관리자가 처리하는 예상 작업 볼륨을 수용하기 위해 필요에 따라 인스턴스를 생성하는 자동 크기 조정이 활성화된 실행기입니다.
 
-이 실행기 및 관련 Docker Autoscale 실행기는 GitLab Runner Fleeting 및 Taskscaler 기술과 함께 작동하는 새로운 자동 크기 조정 실행기입니다.
+이 실행기와 관련된 Docker Autoscale 실행기는 GitLab Runner Fleeting 및 Taskscaler 기술과 함께 작동하는 새로운 자동 크기 조정 실행기입니다.
 
 Instance 실행기도 [fleeting 플러그인](https://gitlab.com/gitlab-org/fleeting/fleeting)을 사용하여 자동 크기 조정합니다.
 
@@ -142,37 +140,33 @@ Kubernetes 실행기를 사용하여 빌드에 기존 Kubernetes 클러스터를
 > [!note]
 > SSH, Shell, VirtualBox, Parallels 및 Custom 실행기는 유지 보수 모드입니다. 중요한 보안 업데이트는 제공되지만 새로운 기능은 계획되지 않습니다.
 
-| 실행기                                     | Docker | Docker Autoscaler |    Instance    | Kubernetes |      SSH       |     셸      |    VirtualBox    |    Parallels     |                           Custom                            |
-|:---------------------------------------------|:------:|:-----------------:|:--------------:|:----------:|:--------------:|:--------------:|:----------------:|:----------------:|:-----------------------------------------------------------:|
-| 보안 변수                             |   ✓    |         ✓         |       ✓        |     ✓      |       ✓        |       ✓        |        ✓         |        ✓         |                              ✓                              |
-| `.gitlab-ci.yml`: image                      |   ✓    |         ✓         |       ✗        |     ✓      |       ✗        |       ✗        | ✓ <sup>(1)</sup> | ✓ <sup>(1)</sup> | ✓ (by using [`$CUSTOM_ENV_CI_JOB_IMAGE`](custom.md#stages)) |
-| `.gitlab-ci.yml`: services                   |   ✓    |         ✓         |       ✗        |     ✓      |       ✗        |       ✗        |        ✗         |        ✗         |                              ✓                              |
-| `.gitlab-ci.yml`: cache                      |   ✓    |         ✓         |       ✓        |     ✓      |       ✓        |       ✓        |        ✓         |        ✓         |                              ✓                              |
-| `.gitlab-ci.yml`: artifacts                  |   ✓    |         ✓         |       ✓        |     ✓      |       ✓        |       ✓        |        ✓         |        ✓         |                              ✓                              |
-| 스테이지 간 아티팩트 전달             |   ✓    |         ✓         |       ✓        |     ✓      |       ✓        |       ✓        |        ✓         |        ✓         |                              ✓                              |
-| GitLab 컨테이너 레지스트리 비공개 이미지 사용 |   ✓    |         ✓         | 적용할 수 없음 |     ✓      | 적용할 수 없음 | 적용할 수 없음 |  적용할 수 없음  |  적용할 수 없음  |                       적용할 수 없음                        |
-| 대화형 웹 터미널                     |   ✓    |         ✗         |       ✗        |     ✓      |       ✗        |       ✓        |        ✗         |        ✗         |                              ✗                              |
+| 실행기                                     | Docker | Docker Autoscaler |    Instance    | Kubernetes |      SSH       |     셸      |     VirtualBox     |     Parallels      |                           Custom                            |
+|:---------------------------------------------|:------:|:-----------------:|:--------------:|:----------:|:--------------:|:--------------:|:------------------:|:------------------:|:-----------------------------------------------------------:|
+| 보안 변수                             |   ✓    |         ✓         |       ✓        |     ✓      |       ✓        |       ✓        |         ✓          |         ✓          |                              ✓                              |
+| `.gitlab-ci.yml`: image                      |   ✓    |         ✓         |       ✗        |     ✓      |       ✗        |       ✗        | ✓[^image-override] | ✓[^image-override] | ✓ (by using [`$CUSTOM_ENV_CI_JOB_IMAGE`](custom.md#stages)) |
+| `.gitlab-ci.yml`: services                   |   ✓    |         ✓         |       ✗        |     ✓      |       ✗        |       ✗        |         ✗          |         ✗          |                              ✓                              |
+| `.gitlab-ci.yml`: cache                      |   ✓    |         ✓         |       ✓        |     ✓      |       ✓        |       ✓        |         ✓          |         ✓          |                              ✓                              |
+| `.gitlab-ci.yml`: artifacts                  |   ✓    |         ✓         |       ✓        |     ✓      |       ✓        |       ✓        |         ✓          |         ✓          |                              ✓                              |
+| 스테이지 간 아티팩트 전달             |   ✓    |         ✓         |       ✓        |     ✓      |       ✓        |       ✓        |         ✓          |         ✓          |                              ✓                              |
+| GitLab 컨테이너 레지스트리 비공개 이미지 사용 |   ✓    |         ✓         | 적용할 수 없음 |     ✓      | 적용할 수 없음 | 적용할 수 없음 |   적용할 수 없음   |   적용할 수 없음   |                       적용할 수 없음                        |
+| 대화형 웹 터미널                     |   ✓    |         ✗         |       ✗        |     ✓      |       ✗        |       ✓        |         ✗          |         ✗          |                              ✗                              |
 
-**각주**:
-
-1. GitLab Runner 14.2에서 [추가](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/1257)된 지원입니다. [기본 VM 이미지 재정의](../configuration/advanced-configuration.md#overriding-the-base-vm-image) 섹션을 참조하여 자세한 내용을 확인하세요.
+[^image-override]: GitLab Runner 14.2에서 [추가](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/1257)된 지원입니다. [기본 VM 이미지 재정의](../configuration/advanced-configuration.md#overriding-the-base-vm-image) 섹션을 참조하여 자세한 내용을 확인하세요.
 
 다양한 셸에서 지원되는 시스템:
 
-| 셸   |      Bash      | PowerShell Desktop  | PowerShell Core   |  sh  |
-| :------: | :------------: | :-----------------: | :---------------: | :--: |
-| Linux    | ✓ <sup>1</sup> |         ✗           |        ✓          |  ✓   |
-| macOS    | ✓ <sup>1</sup> |         ✗           |        ✓          |  ✓   |
-| FreeBSD  | ✓ <sup>1</sup> |         ✗           |        ✗          |  ✓   |
-| Windows  | ✗ <sup>3</sup> |   ✓ <sup>4</sup>    | ✓ <sup>2,5</sup>  |  ✗   |
+| 셸  |          Bash          |     PowerShell Desktop     |                 PowerShell Core                 | sh  |
+| :-----: | :--------------------: | :------------------------: | :---------------------------------------------: | :-: |
+|  Linux  |   ✓[^default-shell]    |             ✗              |                        ✓                        |  ✓  |
+|  macOS  |   ✓[^default-shell]    |             ✗              |                        ✓                        |  ✓  |
+| FreeBSD |   ✓[^default-shell]    |             ✗              |                        ✗                        |  ✓  |
+| Windows | ✗[^no-bash-on-windows] | ✓[^default-container-jobs] | ✓[^registration-shell], [^default-shell-executor] |  ✗  |
 
-**Footnotes:**
-
-1. 기본 셸
-1. 러너 등록 및 `shell` 실행기를 사용하는 작업에 대한 기본 셸입니다.
-1. Windows에서는 Bash 셸이 지원되지 않습니다.
-1. `docker-windows` 및 `kubernetes` 실행기를 사용하는 작업에 대한 기본 셸입니다.
-1. `shell` 실행기를 사용하는 작업에 대한 기본 셸입니다.
+[^default-shell]: 기본 셸
+[^registration-shell]: 러너 등록 및 `shell` 실행기를 사용하는 작업의 기본 셸입니다.
+[^no-bash-on-windows]: Bash 셸은 Windows에서 지원되지 않습니다.
+[^default-container-jobs]: `docker-windows` 및 `kubernetes` 실행기를 사용하는 작업의 기본 셸입니다.
+[^default-shell-executor]: `shell` 실행기를 사용하는 작업의 기본 셸입니다.
 
 다양한 셸에서 대화형 웹 터미널이 지원되는 시스템:
 

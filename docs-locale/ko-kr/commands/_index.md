@@ -121,7 +121,7 @@ sudo kill -SIGQUIT <main_runner_pid>
 ```
 
 > [!warning]
-> **not** `killall` 또는 `pkill`를 `shell` 또는 `docker` 실행기를 사용할 때 우아한 종료에 사용합니다. 이는 하위 프로세스도 종료되므로 신호 처리가 제대로 되지 않을 수 있습니다. 작업을 처리하는 주 프로세스에만 사용합니다.
+> `killall` 또는 `pkill`을 사용하여 graceful shutdown을 수행하지 마세요. `shell` 또는 `docker` 실행기를 사용 중인 경우에는 더욱 주의하세요. 이는 하위 프로세스도 종료되므로 신호 처리가 제대로 되지 않을 수 있습니다. 작업을 처리하는 주 프로세스에만 사용합니다.
 
 일부 운영 체제는 서비스가 실패할 때 자동으로 다시 시작하도록 구성되어 있습니다(일부 플랫폼에서는 기본값). 운영 체제가 이 설정을 가지고 있다면 위의 신호로 종료된 경우 러너를 자동으로 다시 시작할 수 있습니다.
 
@@ -270,6 +270,22 @@ gitlab-runner register
 
 이 명령은 [설정 파일](#configuration-file)에 저장된 모든 러너를 나열합니다.
 
+### `gitlab-runner lint` {#gitlab-runner-lint}
+
+이 명령어는 러너를 시작하지 않고 [설정 파일](#configuration-file)을 검증합니다. 다음을 보고합니다:
+
+- TOML 구문 오류입니다.
+- 기본 제공 JSON 스키마 검증으로 감지된 의미 오류입니다.
+- 알 수 없거나 철자가 잘못된 키(예: `buids_dir` 대신 `builds_dir`, `[[runner.kubernetes...]]` 대신 `[[runners.kubernetes...]]`)로, TOML 디코더는 이를 무시합니다.
+
+명령어가 이전에 언급한 문제를 발견하거나 설정 파일이 없는 경우 0이 아닌 상태로 종료됩니다. `run`과 `register`와 달리 `lint`은 누락된 설정 파일을 심각한 오류로 취급합니다.
+
+`lint`을 사용하여 러너를 다시 시작하기 전에 설정을 검증하거나 CI에서 사용하세요:
+
+```shell
+gitlab-runner lint --config /etc/gitlab-runner/config.toml
+```
+
 ### `gitlab-runner verify` {#gitlab-runner-verify}
 
 이 명령은 등록된 러너가 GitLab에 연결할 수 있는지 확인합니다. 하지만 GitLab 러너 서비스에서 러너를 사용 중인지 확인하지는 않습니다. 출력 예시입니다:
@@ -280,6 +296,15 @@ Verifying runner... is alive                        runner=0db52b31
 Verifying runner... is alive                        runner=826f687f
 Verifying runner... is alive                        runner=32773c0f
 ```
+
+모든 등록된 러너 대신 단일 러너를 검증하려면 `--token` 플래그를 사용하세요. `--token`와 `--url`을 함께 사용하여 러너의 GitLab 인스턴스 URL도 일치시키세요:
+
+```shell
+gitlab-runner verify --url "https://gitlab.example.com" --token my-authentication-token
+```
+
+> [!note]
+> 다른 GitLab Runner 명령어와 달리 `verify`에 대한 `--url` 및 `--token` 플래그는 `CI_SERVER_URL` 및 `CI_SERVER_TOKEN` 환경 변수를 읽지 않습니다. 러너를 선택하려면 명령행에서 이 플래그를 설정하세요.
 
 GitLab에서 제거된 오래된 러너를 제거하려면 다음 명령을 실행하세요.
 
@@ -368,7 +393,7 @@ gitlab-runner reset-token --url "https://gitlab.example.com/" --id 12345 --pat P
 #### 모든 러너 {#all-runners-1}
 
 ```shell
-gitlab-runners reset-token --all-runners
+gitlab-runner reset-token --all-runners
 ```
 
 ## 서비스 관련 명령 {#service-related-commands}
