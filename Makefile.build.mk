@@ -30,7 +30,7 @@ runner-images: out/runner-images
 $(BASE_BINARY_PATH)-linux-amd64-fips: GOOS=linux
 $(BASE_BINARY_PATH)-linux-amd64-fips: GOARCH=amd64
 $(BASE_BINARY_PATH)-linux-amd64-fips:
-	GOOS=$(GOOS) GOARCH=$(GOARCH) CGO_ENABLED=1 GOEXPERIMENT=boringcrypto go build -tags fips -ldflags "$(GO_LDFLAGS)" -o $@
+	GOOS=$(GOOS) GOARCH=$(GOARCH) CGO_ENABLED=1 GOEXPERIMENT=boringcrypto GOFIPS140=off go build -tags fips -ldflags "$(GO_LDFLAGS)" -o $@
 
 $(BASE_BINARY_PATH)-%: GOOS=$(firstword $(subst -, ,$*))
 $(BASE_BINARY_PATH)-%: GOARCH=$(lastword $(subst -, ,$(basename $*)))
