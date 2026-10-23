@@ -585,7 +585,7 @@ func newClient(requestCredentials requestCredentials, collector *APIRequestsColl
 	}
 
 	if c.certDirectory != "" {
-		host := strings.Split(url.Host, ":")[0]
+		host, _, _ := strings.Cut(url.Host, ":")
 		c.findCertificate(&c.caFile, host+".crt")
 		c.findCertificate(&c.certFile, host+".auth.crt")
 		c.findCertificate(&c.keyFile, host+".auth.key")

@@ -30,7 +30,7 @@ func TestStrictHostCheckingWithKnownHostsFile(t *testing.T) {
 	knownHostsFile := filepath.Join(tempDir, "known-hosts-file")
 	require.NoError(t, os.WriteFile(
 		knownHostsFile,
-		[]byte(fmt.Sprintf("[127.0.0.1]:%s %s\n", s.Port(), ssh.TestSSHKeyPair.PublicKey)),
+		fmt.Appendf(nil, "[127.0.0.1]:%s %s\n", s.Port(), ssh.TestSSHKeyPair.PublicKey),
 		0o644,
 	))
 
