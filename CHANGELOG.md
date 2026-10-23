@@ -1,3 +1,9 @@
+## v19.3.4 (2026-10-23)
+
+### Maintenance
+
+- Backport Go 1.26.10 and base images 0.0.58 to 19-3-stable [!7689](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/7689)
+
 ## v19.3.3 (2026-09-14)
 
 ### Maintenance
