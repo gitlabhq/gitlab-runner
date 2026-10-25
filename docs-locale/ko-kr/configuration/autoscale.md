@@ -7,8 +7,8 @@ title: Docker Machine 실행기 자동 크기 조정 구성
 
 {{< details >}}
 
-- 계층:  Free, Premium, Ultimate
-- 제공:  GitLab.com, GitLab Self-Managed, GitLab Dedicated
+- 티어: Free, Premium, Ultimate
+- 제공 서비스: GitLab.com, GitLab Self-Managed, GitLab Dedicated
 
 {{< /details >}}
 
@@ -81,7 +81,7 @@ Docker Machine 자동 크기 조정기는 `limit` 및 `concurrent` 구성과 관
 
 Docker Machine 실행기로 생성된 가상 머신(VM) 수를 제한하려면 `config.toml` 파일의 `[[runners]]` 섹션에서 `limit` 매개변수를 사용하세요.
 
-`concurrent` 매개변수**does not** VM 수를 제한하지 않습니다.
+`concurrent` 매개변수는 VM의 개수를 제한하지 않습니다.
 
 하나의 프로세스를 여러 러너 워커를 관리하도록 구성할 수 있습니다. 자세한 내용은 [기본 구성: 하나의 러너 매니저, 하나의 러너](../fleet_scaling/_index.md#basic-configuration-one-runner-manager-one-runner)를 참조하세요.
 

@@ -274,11 +274,30 @@ spec:
 
 두 역할 바인딩이 모두 있으면 `gitlab-runner-app-rolebinding`이 `gitlab-runner-rolebinding`보다 우선합니다.
 
+## FIPS 호환 GitLab 러너 사용 {#using-fips-compliant-gitlab-runner}
+
+> [!note]
+> 연산자의 경우 헬퍼 이미지만 변경할 수 있습니다. GitLab 러너 이미지는 아직 변경할 수 없습니다. [이슈 28814](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/28814)가 이 기능을 추적합니다.
+
+[FIPS 호환 GitLab 러너 헬퍼](../install/requirements.md#fips-compliant-gitlab-runner)를 사용하려면 다음과 같이 헬퍼 이미지를 변경합니다:
+
+```yaml
+apiVersion: apps.gitlab.com/v1beta2
+kind: Runner
+metadata:
+  name: dev
+spec:
+  gitlabUrl: https://gitlab.example.com
+  token: gitlab-runner-secret
+  helperImage: gitlab/gitlab-runner-helper:ubi-fips
+  concurrent: 2
+```
+
 ## 문제 해결 {#troubleshooting}
 
 ### 루트 vs 루트 아님 {#root-vs-non-root}
 
-GitLab 러너 연산자 및 GitLab 러너 포드는 루트가 아닌 사용자로 실행됩니다. 결과적으로 작업에서 사용되는 빌드 이미지는 성공적으로 완료될 수 있도록 루트가 아닌 사용자로 실행되어야 합니다. 이는 작업이 최소 권한으로 성공적으로 실행될 수 있도록 보장합니다.
+GitLab 러너 연산자 및 GitLab 러너 포드는 루트가 아닌 사용자로 실행됩니다. 결과적으로 기본적으로 작업에서 사용되는 빌드 이미지는 비루트 사용자로 실행되어야 성공적으로 완료될 수 있습니다. 이는 작업이 최소 권한으로 성공적으로 실행될 수 있도록 보장합니다.
 
 이를 작동시키려면 CI/CD 작업에 사용되는 빌드 이미지가 다음을 수행하는지 확인하세요:
 
@@ -292,7 +311,7 @@ OpenShift 클러스터의 대부분 컨테이너 파일 시스템은 다음을 �
 - `/tmp`
 - 루트 파일 시스템에 `tmpfs`로 마운트된 기타 볼륨
 
-#### `HOME` 환경 변수 재정의 {#overriding-the-home-environment-variable}
+### `HOME` 환경 변수 재정의 {#overriding-the-home-environment-variable}
 
 사용자 지정 빌드 이미지를 만들거나 [환경 변수를 재정의](#configure-a-proxy-environment)하는 경우 `HOME` 환경 변수가 읽기 전용인 `/`로 설정되지 않았는지 확인하세요. 특히 작업이 홈 디렉터리에 파일을 써야 하는 경우입니다. `/home` 아래에 디렉터리를 만들 수 있습니다. 예를 들어 `/home/ci` 및 `Dockerfile`에서 `ENV HOME=/home/ci`을 설정합니다.
 
@@ -312,11 +331,11 @@ OpenShift 클러스터의 대부분 컨테이너 파일 시스템은 다음을 �
 
 자세한 내용은 [이슈 472](https://gitlab.com/gitlab-org/charts/gitlab-runner/-/work_items/472#note_1483346437)를 참조하세요.
 
-#### 보안 컨텍스트 제약 주의 {#watch-out-for-security-context-constraints}
+### 보안 컨텍스트 제약 주의 {#watch-out-for-security-context-constraints}
 
 기본적으로 새 OpenShift 프로젝트에 설치할 때 GitLab 러너 연산자는 루트가 아닌 사용자로 실행됩니다. `default` 프로젝트와 같은 일부 프로젝트는 모든 서비스 계정에 `anyuid` 액세스 권한이 있는 예외입니다. 이 경우 이미지의 사용자는 `root`입니다. `whoami`를 컨테이너 셸 내에서 실행하여 확인할 수 있습니다(예: 작업). 보안 컨텍스트 제약에 대해 자세히 알아보려면 [Red Hat 컨테이너 플랫폼 문서](https://docs.redhat.com/en/documentation/openshift_container_platform/4.18/html/authentication_and_authorization/managing-pod-security-policies)를 읽으세요.
 
-#### `anyuid` 보안 컨텍스트 제약으로 실행 {#run-as-anyuid-security-context-constraints}
+### `anyuid` 보안 컨텍스트 제약으로 실행 {#run-as-anyuid-security-context-constraints}
 
 > [!warning]
 > 루트로 작업을 실행하거나 루트 파일 시스템에 쓰면 시스템이 보안 위험에 노출될 수 있습니다.
@@ -368,19 +387,18 @@ roleRef:
 EOF
 ```
 
-#### 헬퍼 컨테이너와 빌드 컨테이너 사용자 ID 및 그룹 ID 일치 {#matching-helper-container-and-build-container-user-id-and-group-id}
+### Helper 컨테이너와 빌드 컨테이너의 사용자 ID와 그룹 ID 불일치 {#mismatching-user-id-and-group-id-for-helper-container-and-build-container}
 
 GitLab 러너 연산자 배포는 `registry.gitlab.com/gitlab-org/ci-cd/gitlab-runner-ubi-images/gitlab-runner-helper-ocp`를 기본 헬퍼 이미지로 사용합니다. 이 이미지는 보안 컨텍스트에 의해 명시적으로 수정되지 않은 한 `1001:1001`의 사용자 ID 및 그룹 ID로 실행됩니다.
 
-빌드 컨테이너의 사용자 ID가 헬퍼 이미지의 사용자 ID와 다르면 빌드 중에 권한 관련 오류가 발생할 수 있습니다. 다음은 일반적인 오류 메시지입니다:
+빌드 컨테이너의 사용자 ID가 Helper 이미지의 사용자 ID와 다르면 Helper 컨테이너가 생성한 파일(복제된 리포지토리 및 복원된 캐시)이 `1001:1001`에 의해 소유되므로 빌드 중에 권한 관련 오류가 발생할 수 있습니다. 이러한 불일치는 두 가지 일반적인 문제를 야기합니다:
 
-```shell
-fatal: detected dubious ownership in repository at '/builds/gitlab-org/gitlab-runner'
-```
+- [Git `dubious ownership` 오류](#git-dubious-ownership-errors)
+- [캐시 권한 오류](#cache-permission-errors)
 
-이 오류는 브랜치 리포지토리가 사용자 ID `1001`(헬퍼 컨테이너)로 복제되었지만 빌드 컨테이너의 다른 사용자 ID가 이에 액세스하려고 함을 나타냅니다.
+#### Helper 컨테이너와 빌드 컨테이너의 사용자 ID 일치 {#match-the-helper-container-and-build-container-user-ids}
 
-솔루션: 빌드 컨테이너의 보안 컨텍스트를 헬퍼 컨테이너의 사용자 ID 및 그룹 ID와 일치하도록 구성합니다:
+두 문제를 모두 해결하는 방법은 빌드 컨테이너의 보안 컨텍스트를 Helper 컨테이너의 사용자 ID 및 그룹 ID와 일치하도록 구성하는 것입니다:
 
 ```toml
 [runners.kubernetes.build_container_security_context]
@@ -394,7 +412,61 @@ run_as_group = 1001
 - 헬퍼 이미지를 다른 사용자 ID 또는 그룹 ID로 사용자 지정한 경우 이러한 값을 적절히 조정합니다.
 - OpenShift 배포의 경우 이러한 보안 컨텍스트 설정이 클러스터의 보안 컨텍스트 제약(SCC)을 준수하는지 확인하세요.
 
-#### SETFCAP 구성 {#configure-setfcap}
+빌드 컨테이너 사용자 ID를 변경할 수 없는 경우(예: 고정 사용자 ID를 가진 타사 이미지를 사용하거나 `build_container_security_context`을 수정할 수 없는 공유 러너를 사용하는 경우) 각 문제에 대해 설명된 해결 방법을 사용하세요.
+
+#### Git `dubious ownership` 오류 {#git-dubious-ownership-errors}
+
+빌드 컨테이너가 Helper 컨테이너가 복제한 리포지토리에 액세스할 때 Git이 다음과 같이 보고합니다:
+
+```shell
+fatal: detected dubious ownership in repository at '/builds/gitlab-org/gitlab-runner'
+```
+
+이 오류는 브랜치 리포지토리가 사용자 ID `1001`(헬퍼 컨테이너)로 복제되었지만 빌드 컨테이너의 다른 사용자 ID가 이에 액세스하려고 함을 나타냅니다.
+
+이 오류를 해결하려면 다음 중 하나를 수행하세요:
+
+- [Helper 컨테이너와 빌드 컨테이너의 사용자 ID 일치](#match-the-helper-container-and-build-container-user-ids).
+- Git의 [`safe.directory`](https://git-scm.com/docs/git-config#Documentation/git-config.txt-safedirectory) 설정을 사용하여 소유권 불일치에도 불구하고 리포지토리 디렉토리를 신뢰하도록 Git을 구성합니다. [`HOME` 환경 변수가 쓰기 가능한 디렉토리를 가리켜야 하므로](#overriding-the-home-environment-variable) `before_script`에서 이를 설정할 수 있습니다:
+
+  ```yaml
+  my_job:
+    before_script:
+      - git config --global --add safe.directory $CI_PROJECT_DIR
+  ```
+
+`safe.directory` 설정은 `dubious ownership` 오류만 해결합니다. 리포지토리 파일은 Helper 컨테이너의 사용자 ID로 계속 소유되므로 리포지토리 디렉토리에 쓰는 작업은 여전히 권한 오류가 발생할 수 있습니다.
+
+#### 캐시 권한 오류 {#cache-permission-errors}
+
+사용자 ID 불일치는 또한 [CI/CD 캐시](https://docs.gitlab.com/ci/caching/)에 영향을 미칩니다. 이 문제는 사용자 ID가 Helper 이미지의 사용자 ID와 일치하지 않는 비루트 빌드 컨테이너에 영향을 미칩니다. 루트로 실행되는 빌드 컨테이너는 영향을 받지 않습니다.
+
+[OCP Helper 이미지](https://gitlab.com/gitlab-org/ci-cd/gitlab-runner-ubi-images/-/blob/07e737e0cbe551b36fb8060d4d2cc03cd0939091/helper/OCP.Dockerfile)는 캐시 파일을 사용자 ID `1001`로 아카이브하고 추출합니다. 빌드 컨테이너가 다른 사용자 ID로 실행되면 파일이 `1001:1001`에 의해 소유되므로 복원된 캐시 디렉토리에 쓸 수 없습니다.
+
+증상은 다음과 같습니다:
+
+- 캐시가 성공적으로 복원되지만 애플리케이션이 새 캐시 항목을 쓸 수 없습니다.
+- 캐시 디렉토리에 쓸 때 `Permission denied` 오류가 발생합니다.
+- `before_script`에서 `chown`가 실패합니다. 빌드 컨테이너가 파일을 소유하지 않기 때문입니다.
+
+이러한 오류를 해결하려면 다음 중 하나를 수행하세요:
+
+- [Helper 컨테이너와 빌드 컨테이너의 사용자 ID 일치](#match-the-helper-container-and-build-container-user-ids).
+- Helper가 파일을 아카이브하기 전에 `after_script`에서 캐시된 파일을 전역 쓰기 가능하게 만듭니다. 후속 복원에서 `777` 권한은 `tar` 아카이브에서 유지되므로 모든 사용자 ID가 읽고 쓸 수 있습니다:
+
+  ```yaml
+  my_job:
+    after_script:
+      - chmod -R 777 my-cache-dir/ 2>/dev/null || true
+    cache:
+      key: my-cache-key
+      paths:
+        - my-cache-dir/
+  ```
+
+  이 해결 방법을 추가한 후 [기존 캐시를 지워서](https://docs.gitlab.com/ci/caching/#clearing-the-cache) 첫 번째 실행이 `777` 권한을 가진 새 파일을 작성하여 후속 아카이브 및 복원 주기를 통해 유지되도록 합니다.
+
+### SETFCAP 구성 {#configure-setfcap}
 
 Red Hat OpenShift 컨테이너 플랫폼(RHOCP) 4.11 이상을 사용하는 경우 다음 오류 메시지가 나타날 수 있습니다:
 
@@ -435,26 +507,7 @@ error reading allowed ID mappings:error reading subuid mappings for user
 
 자세한 내용은 [Red Hat 문서](https://access.redhat.com/solutions/7016013)를 참조하세요.
 
-### FIPS 호환 GitLab 러너 사용 {#using-fips-compliant-gitlab-runner}
-
-> [!note]
-> 연산자의 경우 헬퍼 이미지만 변경할 수 있습니다. GitLab 러너 이미지는 아직 변경할 수 없습니다. [이슈 28814](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/28814)가 이 기능을 추적합니다.
-
-[FIPS 호환 GitLab 러너 헬퍼](../install/requirements.md#fips-compliant-gitlab-runner)를 사용하려면 다음과 같이 헬퍼 이미지를 변경합니다:
-
-```yaml
-apiVersion: apps.gitlab.com/v1beta2
-kind: Runner
-metadata:
-  name: dev
-spec:
-  gitlabUrl: https://gitlab.example.com
-  token: gitlab-runner-secret
-  helperImage: gitlab/gitlab-runner-helper:ubi-fips
-  concurrent: 2
-```
-
-#### 자체 서명 인증서를 사용하여 GitLab 러너 등록 {#register-gitlab-runner-by-using-a-self-signed-certificate}
+### 자체 서명 인증서를 사용하여 GitLab 러너 등록 {#register-gitlab-runner-by-using-a-self-signed-certificate}
 
 GitLab Self-Managed에서 자체 서명 인증서를 사용하려면 프라이빗 인증서에 서명하는 데 사용한 CA 인증서를 포함하는 시크릿을 만듭니다.
 
@@ -477,7 +530,7 @@ DESCRIPTION:
 oc create secret generic mySecret --from-file=tls.crt=myCert.pem -o yaml
 ```
 
-#### IP 주소를 가리키는 외부 URL로 GitLab 러너 등록 {#register-gitlab-runner-with-an-external-url-that-points-to-an-ip-address}
+### IP 주소를 가리키는 외부 URL로 GitLab 러너 등록 {#register-gitlab-runner-with-an-external-url-that-points-to-an-ip-address}
 
 러너가 자체 서명 인증서를 호스트 이름과 일치시킬 수 없으면 오류 메시지가 나타날 수 있습니다. 이 문제는 GitLab Self-Managed를 호스트 이름 대신 IP 주소(예: `###.##.##.##`)를 사용하도록 구성할 때 발생합니다:
 
@@ -509,7 +562,11 @@ Post https://###.##.##.##/api/v4/runners: x509: cannot validate certificate for 
 
 1. 이 새 인증서를 사용하여 새 시크릿을 생성합니다.
 
-## 패치 구조 {#patch-structure}
+## 패칭 {#patching}
+
+`podSpec` 및 `deploymentSpec` [운영자 속성](#operator-properties)을 통해 설정된 사양 패치를 사용하여 운영자가 생성하는 Kubernetes 리소스를 사용자 정의합니다.
+
+### 패치 구조 {#patch-structure}
 
 각 사양 패치는 다음 속성으로 구성됩니다:
 
@@ -522,7 +579,7 @@ Post https://###.##.##.##/api/v4/runners: x509: cannot validate certificate for 
 
 같은 사양 구성에서 `patchFile` 및 `patch`를 모두 설정할 수 없습니다.
 
-## 러너 포드 템플릿 패칭 {#patching-the-runner-pod-template}
+### 러너 포드 템플릿 패칭 {#patching-the-runner-pod-template}
 
 [포드 사양](https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-template-v1/#PodTemplateSpec) 패칭을 사용하면 연산자가 생성한 Kubernetes 배포에 패치를 적용하여 GitLab 러너가 배포되는 방식을 사용자 지정할 수 있습니다. 패치는 포드 템플릿의 사양(`deployment.spec.template.spec`)에 적용됩니다.
 
@@ -536,7 +593,7 @@ Post https://###.##.##.##/api/v4/runners: x509: cannot validate certificate for 
 - 허용 범위
 - 호스트 이름 및 DNS 구성
 
-## 러너 배포 템플릿 패칭 {#patching-the-runner-deployment-template}
+### 러너 배포 템플릿 패칭 {#patching-the-runner-deployment-template}
 
 [배포 사양](https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/deployment-v1/#Deployment) 패칭을 사용하면 연산자가 생성한 Kubernetes 배포에 패치를 적용하여 GitLab 러너가 배포되는 방식을 사용자 지정할 수 있습니다. 패치는 배포 사양(`deployment.spec`)에 적용됩니다.
 
@@ -548,13 +605,13 @@ Post https://###.##.##.##/api/v4/runners: x509: cannot validate certificate for 
 - 진행 기한(초)
 - 레이블 및 주석
 
-## 패치 순서 {#patch-order}
+### 패치 순서 {#patch-order}
 
 배포 사양 패치는 포드 사양 패치 이전에 적용됩니다. 이는 배포 및 포드 사양이 동일한 필드를 수정하는 경우 포드 사양이 우선한다는 의미입니다.
 
-## 예제 {#examples}
+### 예제 {#examples}
 
-### 포드 사양 패칭 예제 {#pod-specification-patching-example}
+#### 포드 사양 패칭 예제 {#pod-specification-patching-example}
 
 ```yaml
 apiVersion: apps.gitlab.com/v1beta2
@@ -580,7 +637,7 @@ spec:
       patchType: "strategic"
 ```
 
-### 배포 사양 패칭 예제 {#deployment-specification-patching-example}
+#### 배포 사양 패칭 예제 {#deployment-specification-patching-example}
 
 ```yaml
 apiVersion: apps.gitlab.com/v1beta2
@@ -609,7 +666,7 @@ spec:
       patchType: "json"
 ```
 
-## 모범 사례 {#best-practices}
+### 모범 사례 {#best-practices}
 
 - 프로덕션 배포에 적용하기 전에 프로덕션이 아닌 환경에서 패치를 테스트합니다.
 - 개별 포드 설정보다는 배포 동작에 영향을 미치는 설정에 배포 수준 패치를 사용합니다.
