@@ -175,9 +175,15 @@ CI/CD 워크로드를 실행하기 시작하고 시간에 따라 성능을 분�
 
 | 메트릭 이름                                                    | 설명 |
 |----------------------------------------------------------------|-------------|
-| `gitlab_runner_api_request_statuses_total`                     | , 엔드포인트 및 상태별로 분할된 API 요청의 총 개수입니다. |
-| `gitlab_runner_autoscaling_machine_creation_duration_seconds`  | 머신 생성 시간의 히스토그램입니다. |
+| `gitlab_runner_api_request_attempts_total`                     | `runner`, `runner_name`, `system_id`, `endpoint`, `status`, `method`으로 분할된 API 요청을 완료하는 동안 수행한 HTTP 시도의 총 개수입니다. `gitlab_runner_api_request_statuses_total`는 각 요청의 최종 응답만 기록합니다. 이 카운터는 `429` 및 `5xx` 응답을 포함한 모든 시도를 포함하므로, 재시도된 응답이 여기에 표시됩니다. 연결 또는 TLS 오류와 같이 HTTP 응답을 받지 못한 시도는 `status="error"`입니다. 러너 컨텍스트 외부에서 수행된 요청(등록, 확인, 등록 취소, 아티팩트)은 정규화된 API 경로를 `endpoint`으로 가지며 빈 러너 레이블을 가집니다. |
+| `gitlab_runner_api_request_retries_total`                      | `path` 및 `method`으로 분할된 API 요청을 완료하는 동안 수행한 HTTP 시도의 총 개수입니다. 이름과 달리 첫 번째 시도를 포함한 모든 시도를 계산합니다. `gitlab_runner_api_request_attempts_total`을 선호합니다. 이는 상태도 포함합니다. |
+| `gitlab_runner_api_request_statuses_total`                     | `runner`, `runner_name`, `system_id`, `endpoint`, `status`, `method`으로 분할된 API 요청의 총 개수입니다. |
+| `gitlab_runner_autoscaling_idle_target`                        | 자동 스케일러가 `IdleScaleFactor` 및 `IdleCountMin`을 적용한 후 유지하려는 사용 가능한 머신의 개수입니다. |
+| `gitlab_runner_autoscaling_machine_creation_duration_seconds`  | `target_zone`, `target_region`, `target_project`, `target_machine_type`으로 분할된 머신 생성 시간의 히스토그램입니다. |
+| `gitlab_runner_autoscaling_machine_failed_creation_duration_seconds` | `gitlab_runner_autoscaling_machine_creation_duration_seconds`과 동일한 레이블을 가진 실패한 머신 생성 시간의 히스토그램입니다. |
+| `gitlab_runner_autoscaling_machine_creation_phase_duration_seconds` | 각 Docker Machine 단계에 대한 머신 생성 시간의 히스토그램입니다. `FF_DOCKER_MACHINE_JSON_OUTPUT` 기능 플래그가 필요합니다. 자세한 내용은 [`[machine]` 섹션](../configuration/advanced-configuration.md#the-machine-section)을 참조하세요. |
 | `gitlab_runner_autoscaling_machine_states`                     | 이 제공자의 상태별 머신 수입니다. |
+| `gitlab_runner_autoscaling_max_growth_rate`                    | 한 번에 생성 상태에 있을 수 있는 최대 머신 개수입니다(0 = 무제한). |
 | `gitlab_runner_concurrent`                                     | 동시성 설정의 값입니다. |
 | `gitlab_runner_errors_total`                                   | 캡처된 오류의 수입니다. 이 메트릭은 로그 라인을 추적하는 카운터입니다. 메트릭에는 `level` 레이블이 포함됩니다. 가능한 값은 `warning` 및 `error`입니다. 이 메트릭을 포함할 계획이면 관찰할 때 `rate()` 또는 `increase()`를 사용하세요. 즉, 경고 또는 오류의 속도가 증가하는 것을 발견하면 이는 추가 조사가 필요한 문제를 시사할 수 있습니다. |
 | `gitlab_runner_jobs`                                           | 이것은 실행 중인 작업의 수를 보여줍니다(레이블에 다양한 범위가 있음). |
@@ -191,7 +197,8 @@ CI/CD 워크로드를 실행하기 시작하고 시간에 따라 성능을 분�
 | `gitlab_runner_job_router_circuit_breaker_trips_total`         | Job Router 회로 차단기가 열린 횟수입니다. |
 | `gitlab_runner_job_router_discovery_cache_events_total`        | Job Router 검색 캐시 조회 수이며, `result`(`hit` 또는 `miss`)로 분할됩니다. |
 | `gitlab_runner_job_router_fallbacks_total`                     | Job Router에서 GitLab 직접 폴링으로 폴백된 작업 요청 수이며, `reason`(`no_discovery`, `breaker_open`, `dial_failed`, `breaker_tripped`, 또는 `router_disabled`)로 분할됩니다. |
-| `gitlab_runner_job_router_get_job_duration_seconds`            | 러너 측 Job Router `GetJob` 요청 지속 시간의 히스토그램입니다. |
+| `gitlab_runner_job_router_get_job_duration_seconds`            | 러너 측 Job Router `GetJob` 요청 지속 시간의 히스토그램으로, `runner`, `system_id`, `result`(`job`, `no_job`, `error`)으로 분할됩니다. |
+| `gitlab_runner_job_router_get_job_requests_total`              | 러너 측 Job Router `GetJob` 요청의 개수로, `runner`, `system_id`, gRPC 상태 `code`(`OK`, 속도 제한 요청의 경우 `ResourceExhausted`, `Unavailable` 등)으로 분할됩니다. |
 | `gitlab_runner_limit`                                          | 제한 설정의 현재 값입니다. |
 | `gitlab_runner_request_concurrency`                            | 새 작업에 대한 현재 동시 요청 수입니다. |
 | `gitlab_runner_request_concurrency_exceeded_total`             | 구성된 `request_concurrency` 제한 이상의 초과 요청 수입니다. |
@@ -203,6 +210,9 @@ CI/CD 워크로드를 실행하기 시작하고 시간에 따라 성능을 분�
 | `process_start_time_seconds`                                   | Unix epoch로부터 초 단위로 측정된 프로세스의 시작 시간입니다. |
 | `process_virtual_memory_bytes`                                 | 가상 메모리 크기(바이트)입니다. |
 | `process_virtual_memory_max_bytes`                             | 사용 가능한 가상 메모리의 최대 양(바이트)입니다. |
+
+> [!note]
+> GitLab Runner 19.4 이상에서는 `gitlab_runner_autoscaling_machine_creation_duration_seconds` 및 `gitlab_runner_autoscaling_machine_failed_creation_duration_seconds`에 `target_zone`, `target_region`, `target_project`, `target_machine_type` 레이블이 있습니다. 이러한 히스토그램을 단일 시리즈로 처리한 쿼리는 먼저 집계해야 합니다. 예를 들어 `histogram_quantile(0.95, sum by (le) (rate(gitlab_runner_autoscaling_machine_creation_duration_seconds_bucket[5m])))`입니다. Docker Machine 상태를 읽을 수 없는 머신은 빈 레이블 값을 가집니다.
 
 ### Grafana 대시보드 구성 팁 {#grafana-dashboard-configuration-tips}
 
