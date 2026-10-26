@@ -431,6 +431,8 @@ func TestRequestJob_SustainedRouterFailure_TripsAndFallsBack(t *testing.T) {
 	installTestBreaker(rc, &now)
 	routerSrv.failCode.Store(int32(codes.Unavailable))
 	sessionInfo := &common.SessionInfo{}
+	logger, hook := logrustest.NewNullLogger()
+	config.Logger = logger
 
 	// Failures within the grace window are transient: the runner stays healthy,
 	// keeps polling the router, and does not fall back to Rails - even once the
@@ -449,6 +451,9 @@ func TestRequestJob_SustainedRouterFailure_TripsAndFallsBack(t *testing.T) {
 	require.NotNil(t, job)
 	assert.EqualValues(t, 1223, job.ID)
 	assert.EqualValues(t, 1, railsCalls.Load())
+	tripped := logEntries(hook, "Job router circuit breaker tripped, falling back to direct job requests")
+	require.Len(t, tripped, 1)
+	assertRouterErrorFields(t, tripped[0], codes.Unavailable, rc.disco.ServerURL)
 
 	// While open, further polls go straight to Rails without contacting the router.
 	callsWhileOpen := routerSrv.calls.Load()
@@ -635,6 +640,78 @@ func TestRequestJob_RateLimited(t *testing.T) {
 	}
 }
 
+// Every failed GetJob is logged with the gRPC code, the router it was sent to and
+// the correlation ID, whichever branch handles it, so one log line is enough to
+// find the matching GitLab Relay (KAS) entry and tell routers apart.
+func TestRequestJob_ErrorLogFields(t *testing.T) {
+	tests := map[codes.Code]struct {
+		message string
+		level   logrus.Level
+	}{
+		codes.Unavailable:       {message: "Error requesting a job", level: logrus.ErrorLevel},
+		codes.PermissionDenied:  {message: "Error requesting a job", level: logrus.ErrorLevel},
+		codes.Internal:          {message: "Error requesting a job", level: logrus.ErrorLevel},
+		codes.ResourceExhausted: {message: "Checking for jobs... rate limited", level: logrus.WarnLevel},
+		codes.Unimplemented:     {message: "Job router is disabled, falling back to direct job requests", level: logrus.InfoLevel},
+	}
+
+	for code, want := range tests {
+		t.Run(code.String(), func(t *testing.T) {
+			rc, config, routerSrv, _ := setupRouterWithRailsFallback(t)
+			routerSrv.failCode.Store(int32(code))
+			logger, hook := logrustest.NewNullLogger()
+			config.Logger = logger
+			// Unimplemented drops the cached discovery, so capture the URL up front.
+			routerURL := rc.getRouterDiscovery(t.Context(), config).ServerURL
+
+			rc.RequestJob(t.Context(), config, &common.SessionInfo{})
+
+			entries := logEntries(hook, want.message)
+			require.Len(t, entries, 1)
+			assert.Equal(t, want.level, entries[0].Level)
+			assertRouterErrorFields(t, entries[0], code, routerURL)
+		})
+	}
+}
+
+// A job payload that does not decode is logged with the same fields as a failed
+// GetJob, so the response can be traced back to the router that sent it.
+func TestRequestJob_UndecodableJobLogFields(t *testing.T) {
+	rc, config, routerSrv, _ := setupRouterWithRailsFallback(t)
+	routerSrv.badJob.Store(true)
+	logger, hook := logrustest.NewNullLogger()
+	config.Logger = logger
+
+	job, healthy := rc.RequestJob(t.Context(), config, &common.SessionInfo{})
+	assert.Nil(t, job)
+	assert.False(t, healthy)
+
+	entries := logEntries(hook, "json.Unmarshal()")
+	require.Len(t, entries, 1)
+	assert.Equal(t, logrus.ErrorLevel, entries[0].Level)
+	assert.Equal(t, responseRequestID, entries[0].Data[fields.CorrelationID])
+	assert.Equal(t, rc.disco.ServerURL, entries[0].Data[jobRouterURLLogField])
+}
+
+// logEntries returns the entries recorded by hook with the given message, in order.
+func logEntries(hook *logrustest.Hook, message string) []*logrus.Entry {
+	var entries []*logrus.Entry
+	for _, e := range hook.AllEntries() {
+		if e.Message == message {
+			entries = append(entries, e)
+		}
+	}
+	return entries
+}
+
+// assertRouterErrorFields checks the fields every failed GetJob log line carries.
+func assertRouterErrorFields(t *testing.T, entry *logrus.Entry, code codes.Code, routerURL string) {
+	t.Helper()
+	assert.Equal(t, code.String(), entry.Data[grpcCodeLogField])
+	assert.Equal(t, routerURL, entry.Data[jobRouterURLLogField])
+	assert.Equal(t, responseRequestID, entry.Data[fields.CorrelationID])
+}
+
 func TestIsRouterFailure(t *testing.T) {
 	failures := []codes.Code{
 		codes.Unavailable, codes.DeadlineExceeded, codes.Canceled,
@@ -792,6 +869,7 @@ type mockRouterServer struct {
 	disabled bool         // when true, reports the Job Router as disabled, mirroring the router when the job_router flag is off
 	failCode atomic.Int32 // when non-zero, every GetJob fails with this gRPC code, simulating a router outage
 	noJob    atomic.Bool  // when true, every GetJob succeeds with an empty payload, simulating a long-poll with no job
+	badJob   atomic.Bool  // when true, every GetJob succeeds with a payload that is not a job
 	calls    atomic.Int32
 
 	lastUpdateToReturn string // when set, returned to the runner as the x-gitlab-last-update response metadata
@@ -809,11 +887,12 @@ func (s *mockRouterServer) GetJob(ctx context.Context, req *rpc.GetJobRequest) (
 	}
 
 	if code := codes.Code(s.failCode.Load()); code != codes.OK {
+		// As GitLab Relay does: the response metadata is set before the error is returned.
+		md := metadata.Pairs(requestIDMetadataKey, responseRequestID)
 		if code == codes.ResourceExhausted && s.retryAfterToReturn != "" {
-			// As GitLab Relay does: the response metadata is set before the error is returned.
-			md := metadata.Pairs(requestIDMetadataKey, responseRequestID, retryAfterMetadataKey, s.retryAfterToReturn)
-			assert.NoError(s.t, grpc.SetHeader(ctx, md))
+			md.Append(retryAfterMetadataKey, s.retryAfterToReturn)
 		}
+		assert.NoError(s.t, grpc.SetHeader(ctx, md))
 		return nil, status.Error(code, "simulated router failure")
 	}
 
@@ -829,6 +908,9 @@ func (s *mockRouterServer) GetJob(ctx context.Context, req *rpc.GetJobRequest) (
 	assert.NoError(s.t, grpc.SetHeader(ctx, md))
 	if s.noJob.Load() {
 		return &rpc.GetJobResponse{}, nil
+	}
+	if s.badJob.Load() {
+		return &rpc.GetJobResponse{JobResponse: []byte("not json")}, nil
 	}
 	return &rpc.GetJobResponse{
 		JobResponse: []byte(fakeJobResponse),

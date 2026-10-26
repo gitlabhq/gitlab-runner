@@ -36,9 +36,13 @@ const (
 	// retryAfterMetadataKey carries GitLab's Retry-After header, relayed by GitLab
 	// Relay (KAS) when the job request was rate limited. Lowercase form of Retry-After.
 	retryAfterMetadataKey = "retry-after"
-	// grpcCodeLogField carries the gRPC status code of a failed GetJob. Same key
-	// GitLab Relay (KAS) logs it under; LabKit has no standard field for it.
+	// grpcCodeLogField carries the gRPC status code of a failed GetJob, the
+	// counterpart of the "status" field on the direct HTTP path. Same key GitLab
+	// Relay (KAS) logs it under; LabKit has no standard field for it.
 	grpcCodeLogField = "grpc_code"
+	// jobRouterURLLogField carries the router address a GetJob was sent to. Same
+	// key as the job_router_url config option that can override that address.
+	jobRouterURLLogField = "job_router_url"
 	// discoveryTTL bounds how long a runner keeps polling GitLab directly after
 	// a "no router" answer or a failed lookup, and how long a changed address
 	// takes to reach it. Turning the router off does not wait for it.
@@ -148,10 +152,10 @@ func (c *Client) RequestJob(ctx context.Context, config common.RunnerConfig, ses
 	})
 	if err != nil {
 		if permit.Failure() {
-			config.Log().WithError(err).WithField("job_router_url", disco.ServerURL).
+			config.Log().WithError(err).WithField(jobRouterURLLogField, disco.ServerURL).
 				Warn("Job router circuit breaker tripped on dial failure, falling back to direct job requests")
 		} else {
-			config.Log().WithError(err).WithField("job_router_url", disco.ServerURL).
+			config.Log().WithError(err).WithField(jobRouterURLLogField, disco.ServerURL).
 				Warn("Job router dial failed, falling back to direct job requests")
 		}
 		return c.fallback(ctx, config, sessionInfo, fallbackDialFailed)
@@ -190,7 +194,7 @@ func (c *Client) RequestJob(ctx context.Context, config common.RunnerConfig, ses
 	}
 
 	if permit.Success() {
-		config.Log().WithField("job_router_url", disco.ServerURL).
+		config.Log().WithField(jobRouterURLLogField, disco.ServerURL).
 			Info("Job router recovered, resuming routing")
 	}
 
@@ -240,9 +244,16 @@ func (c *Client) handleRouterError(
 	disco *common.RouterDiscovery,
 	config common.RunnerConfig,
 ) (healthy bool, reason fallbackReason) {
-	logger := config.Log().WithField(fields.CorrelationID, metadataValue(responseMD, requestIDMetadataKey, requestCorrelationID))
+	// Every branch logs the same three fields so one line is enough to find the
+	// matching GitLab Relay (KAS) entry and tell routers apart.
+	code := status.Code(err)
+	logger := config.Log().WithFields(logrus.Fields{
+		fields.CorrelationID: metadataValue(responseMD, requestIDMetadataKey, requestCorrelationID),
+		jobRouterURLLogField: disco.ServerURL,
+		grpcCodeLogField:     code.String(),
+	})
 
-	switch code := status.Code(err); {
+	switch {
 	case code == codes.Unimplemented:
 		// Job router deliberately disabled. The router answered, so the breaker is
 		// fine; drop the cached router to force re-discovery, then fall back to Rails.
@@ -254,8 +265,7 @@ func (c *Client) handleRouterError(
 		// The router is unreachable: count it toward the breaker. On trip, fall back;
 		// below the threshold, treat it as transient and keep polling the router.
 		if permit.Failure() {
-			logger.WithError(err).WithField("job_router_url", disco.ServerURL).
-				Warn("Job router circuit breaker tripped, falling back to direct job requests")
+			logger.WithError(err).Warn("Job router circuit breaker tripped, falling back to direct job requests")
 			return false, fallbackBreakerTripped
 		}
 		logger.WithError(err).Error("Error requesting a job")
@@ -273,10 +283,8 @@ func (c *Client) handleRouterError(
 		// push-back for adaptive request concurrency as the HTTP retry layer does.
 		permit.Success()
 		network.MarkRetryAttempted(ctx)
-		logger.WithFields(logrus.Fields{
-			grpcCodeLogField: code.String(),
-			"retry_after":    metadataValue(responseMD, retryAfterMetadataKey, ""),
-		}).Warningln("Checking for jobs...", "rate limited")
+		logger.WithField("retry_after", metadataValue(responseMD, retryAfterMetadataKey, "")).
+			Warningln("Checking for jobs...", "rate limited")
 		return true, fallbackNone
 	default:
 		// The router responded (it is reachable), so the breaker is satisfied even
@@ -295,13 +303,17 @@ func parseJobResponse(job *rpc.GetJobResponse, responseMD metadata.MD, disco *co
 	if len(job.JobResponse) == 0 {
 		return nil, true
 	}
+	correlationID := metadataValue(responseMD, requestIDMetadataKey, requestCorrelationID)
 	var response spec.Job
 	if err := json.Unmarshal(job.JobResponse, &response); err != nil {
-		config.Log().WithError(err).Error("json.Unmarshal()")
+		config.Log().WithError(err).WithFields(logrus.Fields{
+			fields.CorrelationID: correlationID,
+			jobRouterURLLogField: disco.ServerURL,
+		}).Error("json.Unmarshal()")
 		return nil, false
 	}
 	response.TLSData = disco.TLSData
-	response.JobRequestCorrelationID = metadataValue(responseMD, requestIDMetadataKey, requestCorrelationID)
+	response.JobRequestCorrelationID = correlationID
 	return &response, true
 }
 
