@@ -17,7 +17,7 @@ For the full review workflow documentation, see the [Translation MR Review Workf
 - [ ] Fix conflicts (check commit history of each file in `main` to identify target changes causing conflicts, such as translation changes on production or TW shortcode/linting updates)
 - [ ] Fix any pipeline issues
 - [ ] Rebase if needed
-- [ ] Check the review app for all impacted pages (Duo can help produce a list of URLs)
+- [ ] Deploy a review app and check all impacted pages. Duo can help produce a list of URLs, which you can paste in the Review App section below.
 - [ ] Remove the MR from Draft mode (this triggers the first review by GitLab Duo)
 - [ ] If the Duo review identified translation errors requiring review by language content maintainers ([Japanese](https://gitlab.com/gitlab-com/localization/maintainers/japanese), [French](https://gitlab.com/gitlab-com/localization/maintainers/french), or [Korean](https://gitlab.com/gitlab-com/localization/maintainers/korean)), ping and add them as a reviewer.
 - [ ] Hand off for review to a [tech docs maintainer](https://gitlab.com/gitlab-com/localization/maintainers/tech-docs). The MR should be ready to merge at this point
