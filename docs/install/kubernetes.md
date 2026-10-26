@@ -33,6 +33,9 @@ For GitLab Runner to run properly, you must set these values in your configurati
 - `gitlabUrl`: The full URL of the GitLab server (like `https://gitlab.example.com`) to register the runner against.
 - `rbac: { create: true }`: Create RBAC (role-based access control) rules for the GitLab Runner to create
   pods to run jobs in.
+  - By default, `rbac.rules` is empty, and the chart grants the runner service account all verbs on all
+    resources in the core API group. To grant only the permissions the runner needs, see
+    [limit the permissions the chart grants](kubernetes_helm_chart_configuration.md#limit-the-permissions-the-chart-grants).
   - If you want to use an existing `serviceAccount`, add your service account name in `rbac`:
 
     ```yaml

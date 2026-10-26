@@ -234,6 +234,75 @@ its own service account, or you can
     name: your-service-account
   ```
 
+### Limit the permissions the chart grants
+
+When `rbac.create` is `true` and `rbac.rules` is empty, the chart creates a role with one rule: all verbs
+on all resources in the core API group. With this rule, the runner service account can read and change
+every `Secret`, `ConfigMap`, and `ServiceAccount` in the namespace. It can also run commands in every pod.
+The rule grants nothing in other API groups, such as `apps` or `policy`, which some runner features need.
+
+The chart creates a `Role` in `runners.jobNamespace`, or in the namespace the runner is deployed in when
+`runners.jobNamespace` is not set. When `rbac.clusterWideAccess` is `true`, the chart creates a `ClusterRole` and
+a `ClusterRoleBinding`, so the rule applies to every namespace in the cluster.
+
+When `rbac.podSecurityPolicy.enabled` is `true` (the default is `false`), the chart adds a rule with
+`apiGroups: ['policy']`, `resources: ['podsecuritypolicies']`, and `verbs: ['use']` for the names in
+`rbac.podSecurityPolicy.resourceNames`, whether or not you set `rbac.rules`.
+
+To limit the role, set `rbac.rules`. When `rbac.rules` has at least one rule, the chart uses those rules in
+place of the default rule. If a rule omits `apiGroups` or leaves it empty, the chart uses the core API group.
+If a rule omits `resources` or `verbs`, or leaves either empty, the chart uses `*`. Set both in every rule.
+
+In Helm chart version 0.94 and earlier, the chart reads only `apiGroups`, `resources`, and `verbs` from
+each rule. It drops other keys, such as `resourceNames` and `nonResourceURLs`, so a rule that uses them
+grants more than it lists:
+
+- A rule with `resourceNames` grants its verbs on every object of that resource type.
+- A rule with only `nonResourceURLs` and `verbs` grants those verbs on every resource in the core API group.
+
+Do not use `resourceNames` or `nonResourceURLs` in `rbac.rules`. In Helm chart version 0.95 and later,
+`helm install` and `helm upgrade` fail with an error that names the rule and the key.
+
+For the permissions the runner needs, see
+[configure runner API permissions](../executors/kubernetes/_index.md#configure-runner-api-permissions).
+The rules in the role definition use the same keys as `rbac.rules`. In the permissions table,
+a prefix such as `apps/` or `scheduling.k8s.io/` is the API group. For example, `apps/deployments` is
+`apiGroups: ["apps"]` and `resources: ["deployments"]`. A resource with no group prefix, such as `secrets` or
+`pods/exec`, uses `apiGroups: [""]`. Check the permissions when you upgrade GitLab Runner,
+because a new version might need more.
+
+A `Role` cannot grant access to cluster-scoped resources, such as `namespaces` and `priorityclasses`.
+To grant them, set `rbac.clusterWideAccess` to `true`.
+
+For example, these rules grant the permissions the executor needs with its default settings and feature flags:
+
+```yaml
+rbac:
+  create: true
+  rules:
+    - apiGroups: [""]
+      resources: ["events"]
+      verbs: ["list"]
+    - apiGroups: [""]
+      resources: ["pods"]
+      verbs: ["create", "delete", "get", "list", "watch"]
+    - apiGroups: [""]
+      resources: ["pods/attach", "pods/exec"]
+      verbs: ["create", "delete", "get", "patch"]
+    - apiGroups: [""]
+      resources: ["pods/log"]
+      verbs: ["get", "list"]
+    - apiGroups: [""]
+      resources: ["secrets"]
+      verbs: ["create", "delete", "get", "update"]
+    - apiGroups: [""]
+      resources: ["serviceaccounts"]
+      verbs: ["get"]
+    - apiGroups: [""]
+      resources: ["services"]
+      verbs: ["create", "get"]
+```
+
 ## Control maximum runner concurrency
 
 A single runner deployed on Kubernetes can run multiple jobs in parallel by starting additional Runner pods.
