@@ -413,6 +413,10 @@ func (vm *dummyVM) GetId() string { return vm.id }
 func (vm *dummyVM) GetName() string { return vm.name }
 func (vm *dummyVM) GetAddr() string { return vm.addr }
 
+func TestAcquisitionRef_AcquisitionKey(t *testing.T) {
+	assert.Equal(t, "test-key", newAcquisitionRef("test-key", false).AcquisitionKey())
+}
+
 func TestAcquisitionRef_AcquisitionSlot(t *testing.T) {
 	tests := []struct {
 		name         string

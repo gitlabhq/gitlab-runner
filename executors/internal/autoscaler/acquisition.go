@@ -59,6 +59,10 @@ func newAcquisitionRef(key string, mapJobImageToVMImage bool) *acquisitionRef {
 	}
 }
 
+func (ref *acquisitionRef) AcquisitionKey() string {
+	return ref.key
+}
+
 // AcquisitionSlot returns the slot number for this acquisition
 func (ref *acquisitionRef) AcquisitionSlot() int {
 	if ref.acq != nil {

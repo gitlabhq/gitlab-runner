@@ -47,7 +47,7 @@ func TestCreateNetworkLabels(t *testing.T) {
 
 	logger, _ := logrustest.NewNullLogger()
 
-	manager := networks.NewManager(logger, client, build, labels.NewLabeler(build))
+	manager := networks.NewManager(logger, client, build, labels.NewLabeler(build, nil))
 
 	ctx := context.Background()
 

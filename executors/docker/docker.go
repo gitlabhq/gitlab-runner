@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"net"
 	"net/netip"
 	"os"
@@ -102,6 +103,10 @@ type executor struct {
 	temporary        []string // IDs of containers that should be removed
 	buildContainerID string
 	suspended        bool // When true, Cleanup preserves containers/volumes/network on the VM
+
+	// expiresAt is stamped on every docker object so resume checks the expiry
+	// set when the environment was created, whatever TTL the checking manager has.
+	expiresAt time.Time
 
 	buildContainer  *container.InspectResponse
 	helperContainer *container.InspectResponse
@@ -274,6 +279,19 @@ func createDockerConnection(ctx context.Context, opts common.ExecutorPrepareOpti
 }
 
 var version1_44 = version.Must(version.NewVersion("1.44"))
+
+// acquisitionKeyer is implemented by the autoscaler's acquisitionRef. It is
+// asserted on Build.ExecutorData so docker need not import the autoscaler.
+type acquisitionKeyer interface {
+	AcquisitionKey() string
+}
+
+func acquisitionKey(b *common.Build) string {
+	if keyer, ok := b.ExecutorData.(acquisitionKeyer); ok {
+		return keyer.AcquisitionKey()
+	}
+	return ""
+}
 
 func (e *executor) expandAndGetDockerImage(
 	imageName string,
@@ -1702,6 +1720,8 @@ func (e *executor) Prepare(options common.ExecutorPrepareOptions) error {
 		}
 	}
 
+	e.expiresAt = options.Config.RuntimeEnvironmentExpiresAt(time.Now())
+
 	e.AbstractExecutor.PrepareConfiguration(options)
 
 	var err error
@@ -1711,6 +1731,13 @@ func (e *executor) Prepare(options common.ExecutorPrepareOptions) error {
 			Inner:         fmt.Errorf("creating docker log configuration: %w", err),
 			FailureReason: common.ConfigurationError,
 		}
+	}
+
+	// The guards read only the build and config, so they run before Connect:
+	// a refused job neither dials the instance nor creates a docker object.
+	// Each returns a BuildError, so prepare is not retried.
+	if err := e.checkSuspendResumeGuards(options); err != nil {
+		return err
 	}
 
 	err = e.dockerConnector.Connect(e.Context, options, e)
@@ -1834,6 +1861,69 @@ func (e *executor) prepareBuildsDir(options common.ExecutorPrepareOptions) error
 	// done before the manager is even created.
 	if isHostMounted {
 		e.SharedBuildsDir = true
+	}
+
+	return nil
+}
+
+// checkSuspendResumeGuards refuses suspend/resume setups whose environments
+// the cleanup can't reach.
+func (e *executor) checkSuspendResumeGuards(options common.ExecutorPrepareOptions) error {
+	build := options.Build
+	cfg := options.Config
+
+	rtKey := build.RuntimeEnvironmentKey()
+	acqKey := acquisitionKey(build)
+	willSuspend := build.WillSuspend()
+
+	if (willSuspend || rtKey != "") && acqKey == "" {
+		return &common.BuildError{
+			Inner:         errors.New("docker TTL suspend/resume requires the docker-autoscaler executor"),
+			FailureReason: common.ConfigurationError,
+		}
+	}
+
+	if (willSuspend || rtKey != "") && cfg.Autoscaler != nil && cfg.Autoscaler.VMIsolation.Enabled {
+		return &common.BuildError{
+			Inner:         errors.New("docker TTL suspend/resume is not supported with vm_isolation"),
+			FailureReason: common.ConfigurationError,
+		}
+	}
+
+	// The two dial modes can reach different daemons (environmentDialContext).
+	// Release only sees the runner config value, and a resume with a different
+	// value would look for its containers on another daemon.
+	if willSuspend || rtKey != "" {
+		buildDialStdio := build.IsFeatureFlagOn(featureflags.UseDockerAutoscalerDialStdio)
+		configDialStdio := cfg.IsFeatureFlagOn(featureflags.UseDockerAutoscalerDialStdio)
+		if buildDialStdio != configDialStdio {
+			return &common.BuildError{
+				Inner:         errors.New("FF_USE_DOCKER_AUTOSCALER_DIAL_STDIO must be set at the runner level, not as a CI variable"),
+				FailureReason: common.ConfigurationError,
+			}
+		}
+	}
+
+	if !willSuspend {
+		return nil
+	}
+
+	// Must be enabled at the runner level. A CI variable alone would create
+	// environments the shared sweep never visits (it gates on the runner-level FF).
+	if !cfg.IsFeatureFlagOn(featureflags.SuspendableEnvironments) {
+		return &common.BuildError{
+			Inner:         errors.New("FF_SUSPENDABLE_ENVIRONMENTS must be enabled at the runner level"),
+			FailureReason: common.ConfigurationError,
+		}
+	}
+
+	// Release filters by the runner-id label. A zero ID would match the
+	// environments of every runner with an unset ID.
+	if cfg.ID <= 0 {
+		return &common.BuildError{
+			Inner:         errors.New("docker TTL suspend requires a positive runner registration ID"),
+			FailureReason: common.ConfigurationError,
+		}
 	}
 
 	return nil
@@ -2143,6 +2233,10 @@ func (e *executor) prepareContainerLabels(otherLabels map[string]string) map[str
 	for k, v := range e.Config.Docker.ContainerLabels {
 		l[k] = e.Build.Variables.ExpandValue(v)
 	}
+
+	// The raw container_labels above can name an environment label, so the
+	// environment labels are applied again on top.
+	maps.Copy(l, e.labeler.EnvLabels())
 
 	return l
 }
