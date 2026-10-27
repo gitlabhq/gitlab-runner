@@ -36,10 +36,22 @@ Please list here all the steps that must be taken if something goes wrong:
 
 ### Cleaning up the feature flag
 
-In most use cases, removing a feature flag will be a breaking change. This breaking change must be planned in accordance with the GitLab's policy on breaking changes.
+In some cases, removing a feature flag also removes a feature. That is a breaking change, and it must be planned
+in accordance with the [GitLab breaking change policy](https://docs.gitlab.com/development/deprecation_guidelines/).
+A flag that only switches between an old and a new implementation of the same functionality does not remove a
+feature. In all cases, before removing a flag:
+
+- Mark the flag as deprecated in `helpers/featureflags/flags.go` by setting `Deprecated: true` and
+  `ToBeRemovedWith` to the removal milestone, then run `make update_feature_flags_docs`. This populates the
+  **Deprecated** and **To be removed with** columns on the
+  [feature flags page](https://docs.gitlab.com/runner/configuration/feature-flags/), which is where the removal
+  is announced.
+- Remove the flag no earlier than two milestones after it is deprecated. If the flag is deprecated in `N`, remove
+  it in `N+2` or later.
 
 <!-- The checklist here is to help stakeholders keep track of the feature flag status -->
 - [ ] Specify in the issue description if this feature will be removed completely or will be productized as part of the Feature Flag cleanup
+- [ ] Mark the flag as deprecated with a removal milestone and confirm it shows on the feature flags page.
 - [ ] Create a merge request to remove `<feature-flag-name>` feature flag. Ask for review and merge it.
   - [ ] Remove all references to the feature flag from the codebase.
   - [ ] Remove the documentations for the feature from the repository.
