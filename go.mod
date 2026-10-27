@@ -29,7 +29,7 @@ require (
 	github.com/distribution/reference v0.6.0
 	github.com/docker/cli v29.8.1+incompatible
 	github.com/docker/docker-credential-helpers v0.9.10
-	github.com/docker/go-connections v0.8.1
+	github.com/docker/go-connections v0.8.2
 	github.com/docker/go-units v0.5.0
 	github.com/evanphx/json-patch v5.9.11+incompatible
 	github.com/fatih/color v1.19.0
