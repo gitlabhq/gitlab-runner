@@ -47,7 +47,7 @@ func newDefaultManager(t *testing.T, config ManagerConfig) *manager {
 		logger:         loggerMock,
 		config:         config,
 		managedVolumes: make(map[string]bool),
-		labeler:        labels.NewLabeler(b),
+		labeler:        labels.NewLabeler(b, nil),
 	}
 
 	return m

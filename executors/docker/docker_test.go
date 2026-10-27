@@ -17,6 +17,8 @@ import (
 	"runtime"
 	"strings"
 	"testing"
+	"testing/synctest"
+	"time"
 
 	"github.com/containerd/errdefs"
 	"github.com/docker/go-units"
@@ -41,6 +43,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/common/buildlogger"
 	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
 	"gitlab.com/gitlab-org/gitlab-runner/executors"
+	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/labels"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/networks"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/prebuilt"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/pull"
@@ -4581,4 +4584,252 @@ func TestShouldIgnoreDockerError(t *testing.T) {
 			assert.Equal(t, tc.want, shouldIgnoreDockerError(tc.err, preds...))
 		})
 	}
+}
+
+// fakeAcquisitionKeyer stands in for the autoscaler's acquisitionRef.
+type fakeAcquisitionKeyer struct{ key string }
+
+func (f fakeAcquisitionKeyer) AcquisitionKey() string { return f.key }
+
+func setRunnerFF(cfg *common.RunnerConfig) {
+	if cfg.FeatureFlags == nil {
+		cfg.FeatureFlags = map[string]bool{}
+	}
+	cfg.FeatureFlags[featureflags.SuspendableEnvironments] = true
+}
+
+func TestCheckSuspendResumeGuards(t *testing.T) {
+	vmIsolation := &common.AutoscalerConfig{VMIsolation: common.VMIsolation{Enabled: true}}
+
+	tests := map[string]struct {
+		plainDocker    bool // no acquisition key
+		resume         bool // a runtime environment key instead of SuspendOnSuccess
+		runnerFFOff    bool
+		id             int64
+		autoscaler     *common.AutoscalerConfig
+		dialStdioCIOff bool
+		wantErr        string
+	}{
+		"plain docker suspend":                       {plainDocker: true, id: 42, wantErr: "requires the docker-autoscaler executor"},
+		"plain docker resume":                        {plainDocker: true, resume: true, id: 42, wantErr: "requires the docker-autoscaler executor"},
+		"vm_isolation suspend":                       {id: 42, autoscaler: vmIsolation, wantErr: "not supported with vm_isolation"},
+		"vm_isolation resume":                        {resume: true, runnerFFOff: true, id: 42, autoscaler: vmIsolation, wantErr: "not supported with vm_isolation"},
+		"autoscaler without vm_isolation":            {id: 42, autoscaler: &common.AutoscalerConfig{}},
+		"runner-level FF off, CI variable on":        {runnerFFOff: true, id: 42, wantErr: "FF_SUSPENDABLE_ENVIRONMENTS"},
+		"resume skips the suspend-only guards":       {resume: true, runnerFFOff: true},
+		"zero runner ID":                             {wantErr: "positive runner registration ID"},
+		"dial-stdio disabled only by CI variable":    {id: 42, dialStdioCIOff: true, wantErr: "FF_USE_DOCKER_AUTOSCALER_DIAL_STDIO"},
+		"resume, dial-stdio disabled only by CI var": {resume: true, runnerFFOff: true, dialStdioCIOff: true, wantErr: "FF_USE_DOCKER_AUTOSCALER_DIAL_STDIO"},
+		"all guards pass":                            {id: 42},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			cfg := &common.RunnerConfig{}
+			cfg.ID = tc.id
+			cfg.Autoscaler = tc.autoscaler
+			if !tc.runnerFFOff {
+				setRunnerFF(cfg)
+			}
+
+			build := &common.Build{Runner: cfg}
+			if !tc.plainDocker {
+				build.ExecutorData = fakeAcquisitionKeyer{key: "acq-key"}
+			}
+			build.Variables = append(build.Variables, spec.Variable{Key: featureflags.SuspendableEnvironments, Value: "true"})
+			if tc.dialStdioCIOff {
+				build.Variables = append(build.Variables, spec.Variable{Key: featureflags.UseDockerAutoscalerDialStdio, Value: "false"})
+			}
+			if tc.resume {
+				build.Job.SuspendOptions.RuntimeEnvironmentKey = "1/sys/acquisition-key=k"
+			} else {
+				build.Job.SuspendOptions.SuspendOnSuccess = true
+			}
+
+			err := (&executor{}).checkSuspendResumeGuards(common.ExecutorPrepareOptions{Build: build, Config: cfg})
+			if tc.wantErr == "" {
+				require.NoError(t, err)
+				return
+			}
+			var buildErr *common.BuildError
+			require.ErrorAs(t, err, &buildErr)
+			assert.Equal(t, common.ConfigurationError, buildErr.FailureReason)
+			assert.ErrorContains(t, err, tc.wantErr)
+		})
+	}
+}
+
+// A job the guards refuse must not dial the instance first: under
+// vm_isolation, connecting boots a VM that Cleanup then tears down.
+func TestPrepare_GuardsRunBeforeConnect(t *testing.T) {
+	connected := false
+	e := &executor{
+		dockerConnector: func(context.Context, common.ExecutorPrepareOptions, *executor) error {
+			connected = true
+			return nil
+		},
+	}
+
+	cfg := &common.RunnerConfig{RunnerSettings: common.RunnerSettings{Docker: &common.DockerConfig{}}}
+	setRunnerFF(cfg)
+	build := &common.Build{Runner: cfg}
+	build.Job.SuspendOptions.SuspendOnSuccess = true // no acquisition key: refused
+
+	err := e.Prepare(common.ExecutorPrepareOptions{Config: cfg, Build: build, Context: t.Context()})
+
+	var buildErr *common.BuildError
+	require.ErrorAs(t, err, &buildErr)
+	assert.Equal(t, common.ConfigurationError, buildErr.FailureReason)
+	assert.False(t, connected, "a refused job must not connect")
+}
+
+func TestPrepareContainerLabels_EnvLabels(t *testing.T) {
+	const acqKey = "env-label-test-key"
+
+	tests := map[string]struct {
+		ffOn          bool
+		keySet        bool
+		suspend       bool
+		resume        bool
+		wantEnvLabels bool
+	}{
+		"FF on, key set, suspend → env labels present":   {ffOn: true, keySet: true, suspend: true, wantEnvLabels: true},
+		"FF on, key set, resume → env labels present":    {ffOn: true, keySet: true, resume: true, wantEnvLabels: true},
+		"FF on, key set, plain job → env labels absent":  {ffOn: true, keySet: true},
+		"FF off, key set, suspend → env labels absent":   {keySet: true, suspend: true},
+		"FF on, key empty, suspend → env labels absent":  {ffOn: true, suspend: true},
+		"FF off, key empty, suspend → env labels absent": {suspend: true},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			c := docker.NewMockClient(t)
+			e := newTestExecutor(t, c)
+
+			if tc.ffOn {
+				setRunnerFF(&e.Config)
+			}
+			// a fresh build, so its cached settings see the runner flag
+			e.Build = &common.Build{Runner: &e.Config}
+			if tc.keySet {
+				e.Build.ExecutorData = fakeAcquisitionKeyer{key: acqKey}
+			}
+			e.Build.Job.SuspendOptions.SuspendOnSuccess = tc.suspend
+			if tc.resume {
+				e.Build.Job.SuspendOptions.RuntimeEnvironmentKey = "7/sys/acquisition-key=" + acqKey
+			}
+			e.Config.ID = 7
+
+			e.expiresAt = time.Now().Add(time.Hour)
+			require.NoError(t, e.createLabeler())
+
+			got := e.prepareContainerLabels(nil)
+
+			if tc.wantEnvLabels {
+				assert.Equal(t, acqKey, got[labels.AcquisitionKeyLabel],
+					"acquisition key label must be present")
+				assert.Equal(t, "7", got[common.RuntimeEnvironmentRunnerIDLabel],
+					"runner-id label must carry the runner ID")
+				assert.Equal(t, common.FormatRuntimeEnvironmentExpiry(e.expiresAt),
+					got[common.RuntimeEnvironmentExpiresAtLabel], "expires-at label must be present")
+			} else {
+				assert.NotContains(t, got, labels.AcquisitionKeyLabel)
+				assert.NotContains(t, got, common.RuntimeEnvironmentRunnerIDLabel)
+				assert.NotContains(t, got, common.RuntimeEnvironmentExpiresAtLabel)
+			}
+		})
+	}
+}
+
+func TestPrepareContainerLabels_EnvLabels_CannotBeOverridden(t *testing.T) {
+	const acqKey = "override-test-key"
+
+	c := docker.NewMockClient(t)
+	e := newTestExecutor(t, c)
+
+	setRunnerFF(&e.Config)
+	e.Config.ID = 7
+	// a fresh build, so its cached settings see the runner flag
+	e.Build = &common.Build{Runner: &e.Config}
+	e.Build.ExecutorData = fakeAcquisitionKeyer{key: acqKey}
+	e.Build.Job.SuspendOptions.SuspendOnSuccess = true
+	e.expiresAt = time.Unix(1700000000, 0).UTC()
+	require.NoError(t, e.createLabeler())
+
+	e.Config.Docker.ContainerLabels = map[string]string{
+		labels.AcquisitionKeyLabel:              "attacker-value",
+		common.RuntimeEnvironmentRunnerIDLabel:  "999",
+		common.RuntimeEnvironmentExpiresAtLabel: "999",
+	}
+
+	got := e.prepareContainerLabels(nil)
+
+	assert.Equal(t, acqKey, got[labels.AcquisitionKeyLabel],
+		"raw ContainerLabels must not override the acquisition-key env label")
+	assert.Equal(t, "7", got[common.RuntimeEnvironmentRunnerIDLabel],
+		"raw ContainerLabels must not override the runner-id env label")
+	assert.Equal(t, "1700000000", got[common.RuntimeEnvironmentExpiresAtLabel],
+		"raw ContainerLabels must not override the expires-at env label")
+}
+
+func TestCreateServiceContainerConfig_EnvLabels_CannotBeOverridden(t *testing.T) {
+	const acqKey = "override-test-key"
+
+	c := docker.NewMockClient(t)
+	e := newTestExecutor(t, c)
+
+	setRunnerFF(&e.Config)
+	e.Config.ID = 7
+	// a fresh build, so its cached settings see the runner flag
+	e.Build = &common.Build{Runner: &e.Config}
+	e.Build.ExecutorData = fakeAcquisitionKeyer{key: acqKey}
+	e.Build.Job.SuspendOptions.SuspendOnSuccess = true
+	e.expiresAt = time.Unix(1700000000, 0).UTC()
+	require.NoError(t, e.createLabeler())
+
+	// The raw loop copies these unchanged; the prefixed service loop adds
+	// com.gitlab.gitlab-runner. in front, which can't match an env label.
+	// "environment.acquisition_key" is the key that matched the old name.
+	e.Config.Docker.ContainerLabels = map[string]string{
+		labels.AcquisitionKeyLabel:              "attacker-value",
+		common.RuntimeEnvironmentRunnerIDLabel:  "999",
+		common.RuntimeEnvironmentExpiresAtLabel: "999",
+		"environment.acquisition_key":           "attacker-value",
+	}
+
+	got := e.createServiceContainerConfig("redis", "7", "image-id", spec.Image{Name: "redis:7"}).Labels
+
+	assert.Equal(t, acqKey, got[labels.AcquisitionKeyLabel])
+	assert.Equal(t, "7", got[common.RuntimeEnvironmentRunnerIDLabel])
+	assert.Equal(t, "1700000000", got[common.RuntimeEnvironmentExpiresAtLabel])
+}
+
+func TestPrepare_StampsExpiry(t *testing.T) {
+	ttl := 2 * time.Hour
+	errStop := errors.New("stop after stamping")
+
+	synctest.Test(t, func(t *testing.T) {
+		start := time.Now()
+		e := &executor{
+			dockerConnector: func(context.Context, common.ExecutorPrepareOptions, *executor) error {
+				return errStop
+			},
+		}
+
+		cfg := &common.RunnerConfig{
+			RunnerSettings: common.RunnerSettings{
+				RuntimeEnvironmentTTL: &ttl,
+				Docker:                &common.DockerConfig{},
+			},
+		}
+
+		err := e.Prepare(common.ExecutorPrepareOptions{
+			Config:  cfg,
+			Build:   &common.Build{Runner: cfg},
+			Context: t.Context(),
+		})
+		require.ErrorIs(t, err, errStop)
+
+		assert.Equal(t, start.Add(ttl).UTC(), e.expiresAt)
+	})
 }

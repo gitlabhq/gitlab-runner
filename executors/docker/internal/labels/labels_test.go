@@ -13,7 +13,7 @@ import (
 )
 
 func TestNewLabeler(t *testing.T) {
-	l := NewLabeler(&common.Build{})
+	l := NewLabeler(&common.Build{}, nil)
 
 	assert.IsType(t, new(labeler), l)
 }
@@ -42,7 +42,7 @@ func TestLabels(t *testing.T) {
 		ProjectRunnerID: 456,
 	}
 
-	l := NewLabeler(b)
+	l := NewLabeler(b, nil)
 
 	expected := map[string]string{
 		"com.gitlab.gitlab-runner.job.id":            "12345",
@@ -131,7 +131,7 @@ func TestLabels_pipelineIDSupport(t *testing.T) {
 				b.Job.Variables = append(b.Job.Variables, *tt.pipelineIDInJobVariable)
 			}
 
-			l := NewLabeler(b)
+			l := NewLabeler(b, nil)
 			labels := l.Labels(map[string]string{"other": "label"})
 
 			t.Log(labels)
@@ -142,4 +142,31 @@ func TestLabels_pipelineIDSupport(t *testing.T) {
 			assert.Equal(t, tt.expectedPipelineIDLabel, labels[pipelineIDLabelKey])
 		})
 	}
+}
+
+// Other labels get the job-label prefix, so none of them can replace an
+// environment label, whatever its name.
+func TestLabels_OtherLabelsCannotReplaceEnvLabels(t *testing.T) {
+	b := &common.Build{Runner: &common.RunnerConfig{}}
+	l := NewLabeler(b, map[string]string{AcquisitionKeyLabel: "acq-key"})
+
+	got := l.Labels(map[string]string{
+		AcquisitionKeyLabel: "other",
+		"acquisition-key":   "other",
+	})
+
+	assert.Equal(t, "acq-key", got[AcquisitionKeyLabel])
+	assert.Equal(t, "other", got[dockerLabelPrefix+".acquisition-key"])
+}
+
+func TestLabels_EnvLabelsReturnsCopy(t *testing.T) {
+	b := &common.Build{Runner: &common.RunnerConfig{}}
+	l := NewLabeler(b, map[string]string{AcquisitionKeyLabel: "acq-key"})
+
+	env := l.EnvLabels()
+	assert.Equal(t, map[string]string{AcquisitionKeyLabel: "acq-key"}, env)
+
+	env[AcquisitionKeyLabel] = "changed"
+	assert.Equal(t, "acq-key", l.EnvLabels()[AcquisitionKeyLabel])
+	assert.Equal(t, "acq-key", l.Labels(nil)[AcquisitionKeyLabel])
 }

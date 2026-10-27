@@ -48,7 +48,7 @@ func newDefaultManager(t *testing.T) *manager {
 	m := &manager{
 		logger:  loggerMock,
 		build:   b,
-		labeler: labels.NewLabeler(b),
+		labeler: labels.NewLabeler(b, nil),
 	}
 	return m
 }

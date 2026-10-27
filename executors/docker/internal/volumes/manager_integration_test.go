@@ -54,7 +54,7 @@ func TestCreateVolumesLabels(t *testing.T) {
 	}
 
 	volumeParser := parserCreator(build.GetAllVariables().ExpandValue)
-	manager := volumes.NewManager(logger, volumeParser, client, cfg, labels.NewLabeler(build))
+	manager := volumes.NewManager(logger, volumeParser, client, cfg, labels.NewLabeler(build, nil))
 
 	ctx := context.Background()
 
@@ -132,7 +132,7 @@ func TestCreateVolumesDriverOpts(t *testing.T) {
 	}
 
 	volumeParser := parserCreator(build.GetAllVariables().ExpandValue)
-	manager := volumes.NewManager(logger, volumeParser, client, cfg, labels.NewLabeler(build))
+	manager := volumes.NewManager(logger, volumeParser, client, cfg, labels.NewLabeler(build, nil))
 
 	ctx := context.Background()
 
