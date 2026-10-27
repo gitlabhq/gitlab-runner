@@ -132,6 +132,46 @@ func TestPowershell_IfCmdShellEscapes(t *testing.T) {
 	assert.Equal(t, "Set-Variable -Name cmdErr -Value $false\r\nTry {\r\n  & \"foo\" 'x&(y)' 2>$null\r\n  if(!$?) { throw &{if($LASTEXITCODE) {$LASTEXITCODE} else {1}} }\r\n} Catch {\r\n  Set-Variable -Name cmdErr -Value $true\r\n}\r\nif(!$cmdErr) {\r\n", writer.String())
 }
 
+func TestPowershell_psSingleQuote(t *testing.T) {
+	tests := map[string]struct {
+		text     string
+		expected string
+	}{
+		"empty":                 {"", "''"},
+		"no special characters": {"feature/some-branch", "'feature/some-branch'"},
+		"windows path":          {`C:\Program Files\git`, `'C:\Program Files\git'`},
+		"ascii apostrophe":      {"it's", "'it''s'"},
+		"left single quote":     {"a\u2018b", "'a\u2018\u2018b'"},
+		"right single quote":    {"a\u2019b", "'a\u2019\u2019b'"},
+		"single low-9 quote":    {"a\u201ab", "'a\u201a\u201ab'"},
+		"single high-rev-9":     {"a\u201bb", "'a\u201b\u201bb'"},
+		"all five interleaved": {
+			"'\u2018\u2019\u201a\u201b",
+			"'''\u2018\u2018\u2019\u2019\u201a\u201a\u201b\u201b'",
+		},
+		"odd count":                       {"a\u2019", "'a\u2019\u2019'"},
+		"even count":                      {"a\u2019b\u2019c", "'a\u2019\u2019b\u2019\u2019c'"},
+		"u201f is not a terminator":       {"a\u201fb", "'a\u201fb'"},
+		"double quotes untouched":         {"a\"b\u201cc", "'a\"b\u201cc'"},
+		"dollar and backtick are literal": {"$(Get-Date)`e", "'$(Get-Date)`e'"},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			assert.Equal(t, tc.expected, psSingleQuote(tc.text))
+		})
+	}
+}
+
+func TestPowershell_CommandEscapesUnicodeQuotes(t *testing.T) {
+	writer := &PsWriter{Shell: SNPowershell, EOL: "\r\n"}
+	writer.Command("git", "fetch", "a\u2019b")
+	out := writer.String()
+
+	assert.Contains(t, out, "& \"git\" 'fetch' 'a\u2019\u2019b'")
+	assert.NotContains(t, out, "'a\u2019b'")
+}
+
 func TestPowershell_MkTmpDirOnUNCShare(t *testing.T) {
 	writer := &PsWriter{TemporaryPath: `\\unc-server\share`, EOL: "\n"}
 	writer.MkTmpDir("tmp")

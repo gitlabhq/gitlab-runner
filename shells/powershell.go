@@ -248,11 +248,22 @@ func psReplaceSpecialChars(text string) string {
 	return text
 }
 
-// psSingleQuote wraps text in a PowerShell single-quoted (verbatim) string.
-// Embedded single quotes are escaped by doubling them, per
-// https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_quoting_rules
+// psSingleQuoteEscaper doubles every code point the PowerShell tokenizer accepts as a
+// single-quote character: U+0027 and U+2018 to U+201B. A doubled character is consumed by
+// the parser as one literal character, so values round-trip unchanged.
+// github.com/PowerShell/PowerShell/blob/v7.4.6/src/System.Management.Automation/engine/parser/CharTraits.cs#L265-L272
+var psSingleQuoteEscaper = strings.NewReplacer(
+	"'", "''", // U+0027 apostrophe
+	"\u2018", "\u2018\u2018", // U+2018 left single quotation mark
+	"\u2019", "\u2019\u2019", // U+2019 right single quotation mark
+	"\u201a", "\u201a\u201a", // U+201A single low-9 quotation mark
+	"\u201b", "\u201b\u201b", // U+201B single high-reversed-9 quotation mark
+)
+
+// psSingleQuote wraps text in a PowerShell single-quoted (verbatim) string, escaping every
+// character that could terminate it.
 func psSingleQuote(text string) string {
-	return "'" + strings.ReplaceAll(text, "'", "''") + "'"
+	return "'" + psSingleQuoteEscaper.Replace(text) + "'"
 }
 
 // github.com/PowerShell/PowerShell/blob/v7.3.1/src/System.Management.Automation/engine/parser/CharTraits.cs#L276-L282
