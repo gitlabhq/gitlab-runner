@@ -25,7 +25,7 @@ else
 fi
 
 if command -v rumdl >/dev/null 2>&1; then
-    rumdl check --config docs/.rumdl.toml docs || ((ERROR_RESULTS++))
+    rumdl check --config docs/.rumdl/rumdl.toml docs || ((ERROR_RESULTS++))
 else
     echo "rumdl is missing, please install it from https://rumdl.dev/getting-started/installation/"
 fi

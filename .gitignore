@@ -19,6 +19,7 @@ tests/ubuntu/.vagrant
 artifacts
 tmp/gitlab-test
 /.tmp/
+.rumdl_cache
 
 # Ignore all editorconfig files except the root one
 .editorconfig

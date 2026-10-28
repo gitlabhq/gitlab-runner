@@ -1,0 +1,27 @@
+[global]
+enable = [
+  "MD005",  # list-indent: https://rumdl.dev/md005/
+  "MD007",  # ul-indent: https://rumdl.dev/md007/
+  "MD013",  # line-length: https://rumdl.dev/md013/
+  "MD027",  # no-multiple-space-blockquote: https://rumdl.dev/md027/
+  "MD029",  # ol-prefix: https://rumdl.dev/md029/
+  "MD034",  # no-bare-urls: https://rumdl.dev/md034/
+  "MD044",  # proper-names: https://rumdl.dev/md044/
+  "MD046",  # code-block-style: https://rumdl.dev/md046/
+  "MD055",  # table-pipe-style: https://rumdl.dev/md055/
+  "MD056",  # table-column-count: https://rumdl.dev/md056/
+  "MD057",  # existing-relative-links: https://rumdl.dev/md057/
+  "MD066",  # footnote-validation: https://rumdl.dev/md066/
+  "MD070",  # nested-code-fence: https://rumdl.dev/md070/
+  "MD075",  # orphaned-table-rows: https://rumdl.dev/md075/
+]
+
+[MD013]  # line-length: https://rumdl.dev/md013/
+line-length = 800
+code-blocks = false
+
+[MD057]  # existing-relative-links: https://rumdl.dev/md057/
+absolute-links = "warn"
+check-frontmatter = true
+compact-paths = true
+self-referential-links = true

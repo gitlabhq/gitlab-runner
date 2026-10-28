@@ -30,7 +30,7 @@ helpers/secrets/ @gitlab-com/pipeline-security-group/backend
 /docs/ @gitlab-com/runner-docs-maintainers
 /docs/.vale/ @gitlab-org/technical-writing/tw-docops @gitlab-org/tw-leadership
 /docs/.markdownlint/ @gitlab-org/technical-writing/tw-docops @gitlab-org/tw-leadership
-/docs/.rumdl.toml @gitlab-org/technical-writing/tw-docops @gitlab-org/tw-leadership
+/docs/.rumdl/rumdl.toml @gitlab-org/technical-writing/tw-docops @gitlab-org/tw-leadership
 /.gitlab/ci/docs.gitlab-ci.yml @gitlab-org/technical-writing/tw-docops @gitlab-org/tw-leadership
 
 [Localization]
