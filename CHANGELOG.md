@@ -1,7 +1,12 @@
-## v19.4.2 (2026-10-23)
+## v19.4.2 (2026-10-28)
+
+### Bug fixes
+
+- Backport escaping of all PowerShell single-quote characters to 19-4-stable [!7711](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/7711)
 
 ### Maintenance
 
+- Update RUNNER_IMAGES_VERSION to 0.0.59 (19-4-stable) [!7715](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/7715)
 - Backport Go 1.26.10 and base images 0.0.58 to 19-4-stable [!7688](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/7688)
 
 ## v19.4.1 (2026-10-28)
