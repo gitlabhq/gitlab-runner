@@ -122,10 +122,10 @@ var flags = []FeatureFlag{
 		Name:            UseFastzip,
 		DefaultValue:    true,
 		Deprecated:      true,
-		ToBeRemovedWith: "19.7",
+		ToBeRemovedWith: "19.9",
 		Description: "Fastzip is a performant archiver for cache/artifact archiving and extraction. " +
 			"Enabled by default. Set to `false` to use the legacy zip implementation. " +
-			"Deprecated: The legacy zip implementation and this flag are removed in GitLab Runner 19.7, " +
+			"Deprecated: The legacy zip implementation and this flag are removed in GitLab Runner 19.9, " +
 			"after which fastzip is always used.",
 	},
 	{

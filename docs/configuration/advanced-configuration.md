@@ -1875,7 +1875,7 @@ The `zipzstd` format uses ZIP with Zstandard compression on each file. It compre
 is faster to create on multi-core runners than `tarzstd`. Archives are slightly larger because each file is
 compressed independently. `zipzstd` caches are extracted in parallel by default. If you disable the
 `FF_USE_FASTZIP` feature flag, extraction is single-threaded. The `FF_USE_FASTZIP` feature flag is deprecated and
-is removed in GitLab Runner 19.7, after which extraction is always parallel.
+is removed in GitLab Runner 19.9, after which extraction is always parallel.
 The compression levels range from `fastest` (minimal compression for maximum speed) to `slowest` (maximum compression for smallest file size).
 The `default` level provides a balanced trade-off between compression ratio and speed.
 
