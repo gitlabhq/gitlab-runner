@@ -1,3 +1,13 @@
+## v19.4.3 (2026-10-28)
+
+### Bug fixes
+
+- Backport escaping of all PowerShell single-quote characters to 19-4-stable [!7711](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/7711)
+
+### Maintenance
+
+- Update RUNNER_IMAGES_VERSION to 0.0.59 (19-4-stable) [!7715](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/7715)
+
 ## v19.4.2 (2026-10-28)
 
 ### Bug fixes
