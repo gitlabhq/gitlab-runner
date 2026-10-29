@@ -59,7 +59,7 @@ require (
 	github.com/minio/minio-go/v7 v7.0.98
 	github.com/moby/docker-image-spec v1.3.1
 	github.com/moby/moby/api v1.56.1
-	github.com/moby/moby/client v0.6.0
+	github.com/moby/moby/client v0.6.2
 	github.com/openbao/openbao/api/v2 v2.7.0
 	github.com/opencontainers/image-spec v1.1.1
 	github.com/prometheus/client_golang v1.24.1
@@ -120,7 +120,7 @@ require (
 	github.com/Azure/azure-sdk-for-go/sdk/internal v1.13.0 // indirect
 	github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/internal v1.2.0 // indirect
 	github.com/Azure/azure-sdk-for-go/sdk/storage/internal v0.1.0 // indirect
-	github.com/Azure/go-ansiterm v0.0.0-20250102033503-faa5f7b0171c // indirect
+	github.com/Azure/go-ansiterm v0.0.0-20261006220739-8c912ac31dd4 // indirect
 	github.com/Azure/go-ntlmssp v0.1.1 // indirect
 	github.com/AzureAD/microsoft-authentication-library-for-go v1.8.0 // indirect
 	github.com/ChrisTrenkamp/goxpath v0.0.0-20210404020558-97928f7e12b6 // indirect
