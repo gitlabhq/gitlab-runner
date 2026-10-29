@@ -146,6 +146,16 @@
 - Document installing the Helm chart from an OCI registry [!7398](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/7398)
 - go: Update module github.com/aws/aws-sdk-go-v2/service/s3 to v1.111.0 [!7362](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/7362)
 
+## v19.4.3 (2026-10-28)
+
+### Bug fixes
+
+- Backport escaping of all PowerShell single-quote characters to 19-4-stable [!7711](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/7711)
+
+### Maintenance
+
+- Update RUNNER_IMAGES_VERSION to 0.0.59 (19-4-stable) [!7715](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/7715)
+
 ## v19.4.1 (2026-09-24)
 
 ### Maintenance
