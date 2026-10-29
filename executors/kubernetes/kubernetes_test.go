@@ -3898,6 +3898,7 @@ func TestPrepare(t *testing.T) {
 			e.requireDefaultBuildsDirVolume = nil
 			e.requireSharedBuildsDir = nil
 			e.newLogProcessor = nil
+			e.remoteExecutor = nil
 			e.remoteProcessTerminated = nil
 			e.getKubeConfig = nil
 			e.newKubeClient = nil
