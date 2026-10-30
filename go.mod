@@ -75,11 +75,11 @@ require (
 	github.com/stretchr/testify v1.12.1
 	github.com/urfave/cli v1.22.17
 	gitlab.com/ajwalker/phrasestream v0.0.0-20250306164532-3b0af7cb1452
-	gitlab.com/gitlab-org/fleeting/fleeting v0.0.0-20260915191451-6ed75a33d303
+	gitlab.com/gitlab-org/fleeting/fleeting v0.0.0-20260923033724-d721fe1a7bb8
 	gitlab.com/gitlab-org/fleeting/fleeting-artifact v0.0.0-20260911011821-1b7c6957ad1d
 	gitlab.com/gitlab-org/fleeting/fleeting/metrics/prometheus v0.0.0-20260915191451-6ed75a33d303
 	gitlab.com/gitlab-org/fleeting/nesting v0.5.0
-	gitlab.com/gitlab-org/fleeting/taskscaler v0.0.0-20260908152840-1f87885729aa
+	gitlab.com/gitlab-org/fleeting/taskscaler v0.0.0-20261023025524-7db01026e442
 	gitlab.com/gitlab-org/fleeting/taskscaler/metrics/prometheus v0.0.0-20260908152840-1f87885729aa
 	gitlab.com/gitlab-org/gitlab-runner/helpers/runner_wrapper/api v0.1.1
 	gitlab.com/gitlab-org/gitlab-terminal v0.0.0-20230425165333-62e9b619707c
@@ -276,7 +276,7 @@ require (
 	go.yaml.in/yaml/v4 v4.0.0-rc.2 // indirect
 	golang.org/x/exp v0.0.0-20260813180055-c1d0aacb2297 // indirect
 	golang.org/x/mod v0.41.0 // indirect
-	golang.org/x/net v0.58.0 // indirect
+	golang.org/x/net v0.60.0 // indirect
 	golang.org/x/term v0.46.0 // indirect
 	golang.org/x/time v0.16.0 // indirect
 	golang.org/x/tools v0.49.0 // indirect
