@@ -165,7 +165,10 @@ func TestRunInContainerWithExecResendsScriptOnRetry(t *testing.T) {
 	ex.EXPECT().Execute(mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 		RunAndReturn(func(_ context.Context, _ string, _ *url.URL, _ *restclient.Config, stdin io.Reader, _, _ io.Writer, _ bool) error {
 			b, err := io.ReadAll(stdin)
-			require.NoError(t, err)
+			if err != nil {
+				return err
+			}
+
 			attempts = append(attempts, string(b))
 			if len(attempts) == 1 {
 				return fmt.Errorf("read: connection reset by peer")
