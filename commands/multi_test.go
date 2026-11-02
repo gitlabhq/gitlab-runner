@@ -14,6 +14,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus/testutil"
@@ -477,39 +478,41 @@ func TestRunCommand_doJobRequest(t *testing.T) {
 
 	for tn, tt := range tests {
 		t.Run(tn, func(t *testing.T) {
-			runner := new(common.RunnerConfig)
+			synctest.Test(t, func(t *testing.T) {
+				runner := new(common.RunnerConfig)
 
-			network := common.NewMockNetwork(t)
-			network.On("RequestJob", mock.Anything, *runner, mock.Anything).
-				Run(func(args mock.Arguments) {
-					ctx, ok := args.Get(0).(context.Context)
-					require.True(t, ok)
+				network := common.NewMockNetwork(t)
+				network.On("RequestJob", mock.Anything, *runner, mock.Anything).
+					Run(func(args mock.Arguments) {
+						ctx, ok := args.Get(0).(context.Context)
+						require.True(t, ok)
 
-					tt.requestJob(ctx)
-				}).
-				Return(returnedJob, true).
-				Once()
+						tt.requestJob(ctx)
+					}).
+					Return(returnedJob, true).
+					Once()
 
-			c := &RunCommand{
-				network:            network,
-				runInterruptSignal: make(chan os.Signal),
-				runFinished:        make(chan bool),
-			}
+				c := &RunCommand{
+					network:            network,
+					runInterruptSignal: make(chan os.Signal),
+					runFinished:        make(chan bool),
+				}
 
-			ctx, cancelFn := context.WithTimeout(t.Context(), 1*time.Second)
-			defer cancelFn()
+				ctx, cancelFn := context.WithTimeout(t.Context(), 1*time.Second)
+				defer cancelFn()
 
-			go tt.passSignal(c)
+				go tt.passSignal(c)
 
-			job, _ := c.doJobRequest(ctx, runner, nil)
+				job, _ := c.doJobRequest(ctx, runner, nil)
 
-			assert.Equal(t, returnedJob, job)
+				assert.Equal(t, returnedJob, job)
 
-			if tt.expectedContextTimeout {
-				assert.ErrorIs(t, ctx.Err(), context.DeadlineExceeded)
-				return
-			}
-			assert.NoError(t, ctx.Err())
+				if tt.expectedContextTimeout {
+					assert.ErrorIs(t, ctx.Err(), context.DeadlineExceeded)
+					return
+				}
+				assert.NoError(t, ctx.Err())
+			})
 		})
 	}
 }

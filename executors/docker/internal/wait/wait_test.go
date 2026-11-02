@@ -7,6 +7,7 @@ import (
 	"errors"
 	"sync"
 	"testing"
+	"testing/synctest"
 
 	"github.com/moby/moby/api/types/container"
 	"github.com/stretchr/testify/assert"
@@ -50,59 +51,63 @@ func TestDockerWaiter_Wait(t *testing.T) {
 
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
-			mClient := docker.NewMockClient(t)
-			bodyCh := make(chan container.WaitResponse, 1)
-			errCh := make(chan error, tt.attempts)
+			synctest.Test(t, func(t *testing.T) {
+				mClient := docker.NewMockClient(t)
+				bodyCh := make(chan container.WaitResponse, 1)
+				errCh := make(chan error, tt.attempts)
 
-			if tt.expectedErr != nil {
-				for i := 0; i < tt.attempts; i++ {
-					errCh <- tt.waitErr
+				if tt.expectedErr != nil {
+					for i := 0; i < tt.attempts; i++ {
+						errCh <- tt.waitErr
+					}
+				} else {
+					bodyCh <- tt.containerOKBody
 				}
-			} else {
-				bodyCh <- tt.containerOKBody
-			}
 
-			mClient.On("ContainerWait", mock.Anything, mock.Anything, container.WaitConditionNotRunning).
-				Return((<-chan container.WaitResponse)(bodyCh), (<-chan error)(errCh)).
-				Times(tt.attempts)
+				mClient.On("ContainerWait", mock.Anything, mock.Anything, container.WaitConditionNotRunning).
+					Return((<-chan container.WaitResponse)(bodyCh), (<-chan error)(errCh)).
+					Times(tt.attempts)
 
-			waiter := NewDockerKillWaiter(mClient)
+				waiter := NewDockerKillWaiter(mClient)
 
-			err := waiter.Wait(t.Context(), "id")
-			assert.ErrorIs(t, err, tt.expectedErr)
+				err := waiter.Wait(t.Context(), "id")
+				assert.ErrorIs(t, err, tt.expectedErr)
+			})
 		})
 	}
 }
 
 func TestDockerWaiter_StopKillWait(t *testing.T) {
-	mClient := docker.NewMockClient(t)
+	synctest.Test(t, func(t *testing.T) {
+		mClient := docker.NewMockClient(t)
 
-	bodyCh := make(chan container.WaitResponse)
-	mClient.On("ContainerWait", mock.Anything, mock.Anything, container.WaitConditionNotRunning).
-		Return((<-chan container.WaitResponse)(bodyCh), nil).
-		Once()
+		bodyCh := make(chan container.WaitResponse)
+		mClient.On("ContainerWait", mock.Anything, mock.Anything, container.WaitConditionNotRunning).
+			Return((<-chan container.WaitResponse)(bodyCh), nil).
+			Once()
 
-	var wg sync.WaitGroup
+		var wg sync.WaitGroup
 
-	wg.Add(2)
-	mClient.On("ContainerStop", mock.Anything, mock.Anything, mock.Anything).
-		Run(func(mock.Arguments) {
-			wg.Done()
-		}).
-		Return(nil).
-		Twice()
+		wg.Add(2)
+		mClient.On("ContainerStop", mock.Anything, mock.Anything, mock.Anything).
+			Run(func(mock.Arguments) {
+				wg.Done()
+			}).
+			Return(nil).
+			Twice()
 
-	waiter := NewDockerKillWaiter(mClient)
+		waiter := NewDockerKillWaiter(mClient)
 
-	go func() {
-		wg.Wait()
-		bodyCh <- container.WaitResponse{
-			StatusCode: 0,
-		}
-	}()
+		go func() {
+			wg.Wait()
+			bodyCh <- container.WaitResponse{
+				StatusCode: 0,
+			}
+		}()
 
-	err := waiter.StopKillWait(t.Context(), "id", nil, nil)
-	assert.NoError(t, err)
+		err := waiter.StopKillWait(t.Context(), "id", nil, nil)
+		assert.NoError(t, err)
+	})
 }
 
 // TestDockerWaiter_StopKillWait_CancelledContext verifies that, even when the
@@ -111,48 +116,50 @@ func TestDockerWaiter_StopKillWait(t *testing.T) {
 // graceful-exit func and ContainerStop still run, and the graceful-exit func
 // receives a live (detached) context rather than the cancelled one.
 func TestDockerWaiter_StopKillWait_CancelledContext(t *testing.T) {
-	mClient := docker.NewMockClient(t)
+	synctest.Test(t, func(t *testing.T) {
+		mClient := docker.NewMockClient(t)
 
-	bodyCh := make(chan container.WaitResponse)
-	mClient.On("ContainerWait", mock.Anything, mock.Anything, container.WaitConditionNotRunning).
-		Return((<-chan container.WaitResponse)(bodyCh), nil).
-		Once()
+		bodyCh := make(chan container.WaitResponse)
+		mClient.On("ContainerWait", mock.Anything, mock.Anything, container.WaitConditionNotRunning).
+			Return((<-chan container.WaitResponse)(bodyCh), nil).
+			Once()
 
-	var wg sync.WaitGroup
+		var wg sync.WaitGroup
 
-	wg.Add(2)
-	mClient.On("ContainerStop", mock.Anything, mock.Anything, mock.Anything).
-		Run(func(mock.Arguments) {
-			wg.Done()
-		}).
-		Return(nil).
-		Twice()
+		wg.Add(2)
+		mClient.On("ContainerStop", mock.Anything, mock.Anything, mock.Anything).
+			Run(func(mock.Arguments) {
+				wg.Done()
+			}).
+			Return(nil).
+			Twice()
 
-	// The graceful-exit func must run despite the cancelled build context, and
-	// must receive a live (non-cancelled) context so it can do its work.
-	var gracefulCalled bool
-	graceful := func(ctx context.Context, _ string) error {
-		gracefulCalled = true
-		assert.NoError(t, ctx.Err(), "graceful-exit must receive a live, detached context")
-		return nil
-	}
+		// The graceful-exit func must run despite the cancelled build context, and
+		// must receive a live (non-cancelled) context so it can do its work.
+		var gracefulCalled bool
+		graceful := func(ctx context.Context, _ string) error {
+			gracefulCalled = true
+			assert.NoError(t, ctx.Err(), "graceful-exit must receive a live, detached context")
+			return nil
+		}
 
-	waiter := NewDockerKillWaiter(mClient)
+		waiter := NewDockerKillWaiter(mClient)
 
-	go func() {
-		wg.Wait()
-		bodyCh <- container.WaitResponse{StatusCode: 0}
-	}()
+		go func() {
+			wg.Wait()
+			bodyCh <- container.WaitResponse{StatusCode: 0}
+		}()
 
-	// Simulate the build context already being cancelled (Abort() fired).
-	ctx, cancel := context.WithCancel(t.Context())
-	cancel()
+		// Simulate the build context already being cancelled (Abort() fired).
+		ctx, cancel := context.WithCancel(t.Context())
+		cancel()
 
-	err := waiter.StopKillWait(ctx, "id", nil, graceful)
-	assert.NoError(t, err)
-	// Both the graceful-exit func and ContainerStop must run despite cancellation.
-	assert.True(t, gracefulCalled, "graceful-exit must have been called")
-	mClient.AssertExpectations(t)
+		err := waiter.StopKillWait(ctx, "id", nil, graceful)
+		assert.NoError(t, err)
+		// Both the graceful-exit func and ContainerStop must run despite cancellation.
+		assert.True(t, gracefulCalled, "graceful-exit must have been called")
+		mClient.AssertExpectations(t)
+	})
 }
 
 // TestDockerWaiter_StopKillWait_CancelledContext_NilGracefulExit verifies that
@@ -160,39 +167,41 @@ func TestDockerWaiter_StopKillWait_CancelledContext(t *testing.T) {
 // gracefulExitFunc is nil (as when FF_USE_NATIVE_CONTAINER_STOP is enabled).
 // This is the path where PID 1 receives SIGTERM solely via ContainerStop.
 func TestDockerWaiter_StopKillWait_CancelledContext_NilGracefulExit(t *testing.T) {
-	mClient := docker.NewMockClient(t)
+	synctest.Test(t, func(t *testing.T) {
+		mClient := docker.NewMockClient(t)
 
-	bodyCh := make(chan container.WaitResponse)
-	mClient.On("ContainerWait", mock.Anything, mock.Anything, container.WaitConditionNotRunning).
-		Return((<-chan container.WaitResponse)(bodyCh), nil).
-		Once()
+		bodyCh := make(chan container.WaitResponse)
+		mClient.On("ContainerWait", mock.Anything, mock.Anything, container.WaitConditionNotRunning).
+			Return((<-chan container.WaitResponse)(bodyCh), nil).
+			Once()
 
-	var wg sync.WaitGroup
+		var wg sync.WaitGroup
 
-	wg.Add(2)
-	mClient.On("ContainerStop", mock.Anything, mock.Anything, mock.Anything).
-		Run(func(mock.Arguments) {
-			wg.Done()
-		}).
-		Return(nil).
-		Twice()
+		wg.Add(2)
+		mClient.On("ContainerStop", mock.Anything, mock.Anything, mock.Anything).
+			Run(func(mock.Arguments) {
+				wg.Done()
+			}).
+			Return(nil).
+			Twice()
 
-	waiter := NewDockerKillWaiter(mClient)
+		waiter := NewDockerKillWaiter(mClient)
 
-	go func() {
-		wg.Wait()
-		bodyCh <- container.WaitResponse{StatusCode: 0}
-	}()
+		go func() {
+			wg.Wait()
+			bodyCh <- container.WaitResponse{StatusCode: 0}
+		}()
 
-	// Simulate the build context already being cancelled (Abort() fired).
-	ctx, cancel := context.WithCancel(t.Context())
-	cancel()
+		// Simulate the build context already being cancelled (Abort() fired).
+		ctx, cancel := context.WithCancel(t.Context())
+		cancel()
 
-	// gracefulExitFunc is nil — no kill script, only ContainerStop.
-	err := waiter.StopKillWait(ctx, "id", nil, nil)
-	assert.NoError(t, err)
-	// ContainerStop must have been called despite the cancelled context.
-	mClient.AssertExpectations(t)
+		// gracefulExitFunc is nil — no kill script, only ContainerStop.
+		err := waiter.StopKillWait(ctx, "id", nil, nil)
+		assert.NoError(t, err)
+		// ContainerStop must have been called despite the cancelled context.
+		mClient.AssertExpectations(t)
+	})
 }
 
 // TestDockerWaiter_StopKillWait_GracefulExitFuncNotCalledWhenNil verifies that

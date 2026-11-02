@@ -11,6 +11,7 @@ import (
 	"strings"
 	"sync/atomic"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	"github.com/jpillora/backoff"
@@ -382,39 +383,41 @@ func TestRetryCommandRun(t *testing.T) {
 
 	for tn, tt := range tests {
 		t.Run(tn, func(t *testing.T) {
-			attempt := 0
+			synctest.Test(t, func(t *testing.T) {
+				attempt := 0
 
-			// Create mock exec function that tracks attempts
-			execMock := func(env map[string]string, out io.Writer, stderr io.Writer, cmd string, args ...string) (bool, error) {
-				attempt++
-				success, stderrMsg, err := tt.execBehavior(attempt)
+				// Create mock exec function that tracks attempts
+				execMock := func(env map[string]string, out io.Writer, stderr io.Writer, cmd string, args ...string) (bool, error) {
+					attempt++
+					success, stderrMsg, err := tt.execBehavior(attempt)
 
-				if stderrMsg != "" {
-					_, _ = io.WriteString(stderr, stderrMsg)
+					if stderrMsg != "" {
+						_, _ = io.WriteString(stderr, stderrMsg)
+					}
+
+					return success, err
 				}
 
-				return success, err
-			}
+				// Create retryCommand with mocked exec
+				cmd := newRetryCommand("test-cmd", []string{"arg1", "arg2"}, tt.retryableErrs, io.Discard, execMock)
+				// make it a bit faster
+				cmd.backoff = backoff.Backoff{Min: 10 * time.Millisecond, Max: 50 * time.Millisecond}
 
-			// Create retryCommand with mocked exec
-			cmd := newRetryCommand("test-cmd", []string{"arg1", "arg2"}, tt.retryableErrs, io.Discard, execMock)
-			// make it a bit faster
-			cmd.backoff = backoff.Backoff{Min: 10 * time.Millisecond, Max: 50 * time.Millisecond}
+				// Run the command
+				err := cmd.run(t.Context())
 
-			// Run the command
-			err := cmd.run(t.Context())
-
-			// Verify results
-			if tt.expectedError {
-				require.Error(t, err)
-				if tt.errorContains != "" {
-					require.Contains(t, err.Error(), tt.errorContains)
+				// Verify results
+				if tt.expectedError {
+					require.Error(t, err)
+					if tt.errorContains != "" {
+						require.Contains(t, err.Error(), tt.errorContains)
+					}
+				} else {
+					require.NoError(t, err)
 				}
-			} else {
-				require.NoError(t, err)
-			}
 
-			require.Equal(t, tt.expectedAttempt, attempt, "expected %d attempts, got %d", tt.expectedAttempt, attempt)
+				require.Equal(t, tt.expectedAttempt, attempt, "expected %d attempts, got %d", tt.expectedAttempt, attempt)
+			})
 		})
 	}
 }

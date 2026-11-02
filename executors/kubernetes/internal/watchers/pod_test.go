@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"sync"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	"github.com/stretchr/testify/assert"
@@ -113,57 +114,59 @@ func TestPodWatcher(t *testing.T) {
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			ctx, cancel := context.WithCancel(t.Context())
-			defer cancel()
+			synctest.Test(t, func(t *testing.T) {
+				ctx, cancel := context.WithCancel(t.Context())
+				defer cancel()
 
-			fakeKubeClient, waitForWatchStart := newFakeKubeClientWithSyncedWatch("pods")
-			fakeLogger := newMockLogger(t)
+				fakeKubeClient, waitForWatchStart := newFakeKubeClientWithSyncedWatch("pods")
+				fakeLogger := newMockLogger(t)
 
-			podWatcher := NewPodWatcher(ctx, fakeLogger, fakeKubeClient, defaultNamespace, defaultLabels, 0)
-			podErrors := podWatcher.Errors()
+				podWatcher := NewPodWatcher(ctx, fakeLogger, fakeKubeClient, defaultNamespace, defaultLabels, 0)
+				podErrors := podWatcher.Errors()
 
-			err := podWatcher.Start()
-			assert.NoError(t, err, "starting pod watcher")
-			waitForWatchStart(t)
+				err := podWatcher.Start()
+				assert.NoError(t, err, "starting pod watcher")
+				waitForWatchStart(t)
 
-			factory := podWatcher.factory
+				factory := podWatcher.factory
 
-			// This is to mimic the case when we get some error where the executor retries and podWatcher.UpdatePodName should
-			// switch to the new pod name, and ignore any old one.
-			// Currently that is only happening for pull issues.
-			for try := range executorRetries {
-				expectedPodNameForThisTry := fmt.Sprintf("%s-%d", defaultName, try)
-				actualPodNameForThisTry := fmt.Sprintf("%s-%d", test.pod.GetName(), try)
+				// This is to mimic the case when we get some error where the executor retries and podWatcher.UpdatePodName should
+				// switch to the new pod name, and ignore any old one.
+				// Currently that is only happening for pull issues.
+				for try := range executorRetries {
+					expectedPodNameForThisTry := fmt.Sprintf("%s-%d", defaultName, try)
+					actualPodNameForThisTry := fmt.Sprintf("%s-%d", test.pod.GetName(), try)
 
-				testPod := withName(test.pod, actualPodNameForThisTry)
-				podWatcher.UpdatePodName(expectedPodNameForThisTry)
+					testPod := withName(test.pod, actualPodNameForThisTry)
+					podWatcher.UpdatePodName(expectedPodNameForThisTry)
 
-				_, err = fakeKubeClient.CoreV1().Pods(testPod.GetNamespace()).Create(ctx, testPod, metav1.CreateOptions{})
-				assert.NoError(t, err, "(try %d) creating pod")
+					_, err = fakeKubeClient.CoreV1().Pods(testPod.GetNamespace()).Create(ctx, testPod, metav1.CreateOptions{})
+					assert.NoError(t, err, "(try %d) creating pod")
 
-				if test.shouldDelete {
-					err := fakeKubeClient.CoreV1().Pods(testPod.GetNamespace()).Delete(ctx, testPod.GetName(), metav1.DeleteOptions{})
-					assert.NoError(t, err, "(try %d) deleting pod")
-				}
+					if test.shouldDelete {
+						err := fakeKubeClient.CoreV1().Pods(testPod.GetNamespace()).Delete(ctx, testPod.GetName(), metav1.DeleteOptions{})
+						assert.NoError(t, err, "(try %d) deleting pod")
+					}
 
-				podErr := waitForError(podErrors)
-				if test.expectedErrMsg == "" {
-					assert.NoError(t, podErr, "(try %d) not to receive an error from the pod watcher", try)
-				} else {
-					assert.ErrorContains(t, podErr, expectedPodNameForThisTry, "(try %d) expected the error to be for pod %q", try, expectedPodNameForThisTry)
-					assert.ErrorContains(t, podErr, test.expectedErrMsg, "(try %d) expected an error like %q from the pod watcher", try, test.expectedErrMsg)
-					if test.expectedFailureReason != "" {
-						var buildErr *common.BuildError
-						require.ErrorAs(t, podErr, &buildErr)
-						assert.Equal(t, test.expectedFailureReason, buildErr.FailureReason)
+					podErr := waitForError(podErrors)
+					if test.expectedErrMsg == "" {
+						assert.NoError(t, podErr, "(try %d) not to receive an error from the pod watcher", try)
+					} else {
+						assert.ErrorContains(t, podErr, expectedPodNameForThisTry, "(try %d) expected the error to be for pod %q", try, expectedPodNameForThisTry)
+						assert.ErrorContains(t, podErr, test.expectedErrMsg, "(try %d) expected an error like %q from the pod watcher", try, test.expectedErrMsg)
+						if test.expectedFailureReason != "" {
+							var buildErr *common.BuildError
+							require.ErrorAs(t, podErr, &buildErr)
+							assert.Equal(t, test.expectedFailureReason, buildErr.FailureReason)
+						}
 					}
 				}
-			}
 
-			podWatcher.Stop()
-			// We check the factory's context to see if it had actually been canceled and by that inferring that it has been shut
-			// down.
-			assert.Equal(t, context.Canceled, factory.ctx.Err(), "expected factory's context to be canceled")
+				podWatcher.Stop()
+				// We check the factory's context to see if it had actually been canceled and by that inferring that it has been shut
+				// down.
+				assert.Equal(t, context.Canceled, factory.ctx.Err(), "expected factory's context to be canceled")
+			})
 		})
 	}
 }

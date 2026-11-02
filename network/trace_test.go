@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"sync"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -292,51 +293,53 @@ func TestJobOutputLimit(t *testing.T) {
 }
 
 func TestJobFinishTraceUpdateRetry(t *testing.T) {
-	updateMatcher := generateJobInfoMatcher(jobCredentials.ID, common.Success, "")
+	synctest.Test(t, func(t *testing.T) {
+		updateMatcher := generateJobInfoMatcher(jobCredentials.ID, common.Success, "")
 
-	mockNetwork := common.NewMockNetwork(t)
+		mockNetwork := common.NewMockNetwork(t)
 
-	ignoreOptionalTouchJob(mockNetwork)
+		ignoreOptionalTouchJob(mockNetwork)
 
-	b, err := newTestJobTrace(mockNetwork, jobConfig)
-	require.NoError(t, err)
+		b, err := newTestJobTrace(mockNetwork, jobConfig)
+		require.NoError(t, err)
 
-	// accept just 3 bytes
-	mockNetwork.On("PatchTrace", jobConfig, jobCredentials, []byte("My trace send"), 0, false).
-		Return(common.NewPatchTraceResult(3, common.PatchSucceeded, 0)).
-		Once()
+		// accept just 3 bytes
+		mockNetwork.On("PatchTrace", jobConfig, jobCredentials, []byte("My trace send"), 0, false).
+			Return(common.NewPatchTraceResult(3, common.PatchSucceeded, 0)).
+			Once()
 
-	// retry when trying to send next bytes
-	mockNetwork.On("PatchTrace", jobConfig, jobCredentials, []byte("trace send"), 3, false).
-		Return(common.NewPatchTraceResult(0, common.PatchFailed, 0)).
-		Run(func(args mock.Arguments) {
-			// Ensure that short interval is used on retry to speed-up test
-			b.setUpdateInterval(time.Microsecond)
-		}).
-		Once()
+		// retry when trying to send next bytes
+		mockNetwork.On("PatchTrace", jobConfig, jobCredentials, []byte("trace send"), 3, false).
+			Return(common.NewPatchTraceResult(0, common.PatchFailed, 0)).
+			Run(func(args mock.Arguments) {
+				// Ensure that short interval is used on retry to speed-up test
+				b.setUpdateInterval(time.Microsecond)
+			}).
+			Once()
 
-	// accept 6 more bytes
-	mockNetwork.On("PatchTrace", jobConfig, jobCredentials, []byte("trace send"), 3, false).
-		Return(common.NewPatchTraceResult(9, common.PatchSucceeded, 0)).
-		Once()
+		// accept 6 more bytes
+		mockNetwork.On("PatchTrace", jobConfig, jobCredentials, []byte("trace send"), 3, false).
+			Return(common.NewPatchTraceResult(9, common.PatchSucceeded, 0)).
+			Once()
 
-	// restart most of trace
-	mockNetwork.On("PatchTrace", jobConfig, jobCredentials, []byte("send"), 9, false).
-		Return(common.NewPatchTraceResult(6, common.PatchRangeMismatch, 0)).
-		Once()
+		// restart most of trace
+		mockNetwork.On("PatchTrace", jobConfig, jobCredentials, []byte("send"), 9, false).
+			Return(common.NewPatchTraceResult(6, common.PatchRangeMismatch, 0)).
+			Once()
 
-	// accept rest of trace
-	mockNetwork.On("PatchTrace", jobConfig, jobCredentials, []byte("ce send"), 6, false).
-		Return(common.NewPatchTraceResult(13, common.PatchSucceeded, 0)).
-		Once()
+		// accept rest of trace
+		mockNetwork.On("PatchTrace", jobConfig, jobCredentials, []byte("ce send"), 6, false).
+			Return(common.NewPatchTraceResult(13, common.PatchSucceeded, 0)).
+			Once()
 
-	mockNetwork.On("UpdateJob", jobConfig, jobCredentials, updateMatcher).
-		Return(common.UpdateJobResult{State: common.UpdateSucceeded}).
-		Once()
+		mockNetwork.On("UpdateJob", jobConfig, jobCredentials, updateMatcher).
+			Return(common.UpdateJobResult{State: common.UpdateSucceeded}).
+			Once()
 
-	b.start()
-	fmt.Fprint(b, "My trace send")
-	assert.NoError(t, b.Success())
+		b.start()
+		fmt.Fprint(b, "My trace send")
+		assert.NoError(t, b.Success())
+	})
 }
 
 func TestJobDelayedTraceProcessingWithRejection(t *testing.T) {
@@ -448,31 +451,33 @@ func TestJobMaxTracePatchSize(t *testing.T) {
 }
 
 func TestJobFinishStatusUpdateRetry(t *testing.T) {
-	updateMatcher := generateJobInfoMatcher(jobCredentials.ID, common.Success, "")
+	synctest.Test(t, func(t *testing.T) {
+		updateMatcher := generateJobInfoMatcher(jobCredentials.ID, common.Success, "")
 
-	mockNetwork := common.NewMockNetwork(t)
+		mockNetwork := common.NewMockNetwork(t)
 
-	b, err := newTestJobTrace(mockNetwork, jobConfig)
-	require.NoError(t, err)
+		b, err := newTestJobTrace(mockNetwork, jobConfig)
+		require.NoError(t, err)
 
-	b.finalUpdateBackoffMax = time.Second
-	ignoreOptionalTouchJob(mockNetwork)
+		b.finalUpdateBackoffMax = time.Second
+		ignoreOptionalTouchJob(mockNetwork)
 
-	// fail job 5 times
-	mockNetwork.On("UpdateJob", jobConfig, jobCredentials, updateMatcher).
-		Return(common.UpdateJobResult{State: common.UpdateFailed}).
-		Run(func(args mock.Arguments) {
-			// Ensure that short interval is used on retry to speed-up test
-			b.setUpdateInterval(time.Microsecond)
-		}).
-		Times(5)
+		// fail job 5 times
+		mockNetwork.On("UpdateJob", jobConfig, jobCredentials, updateMatcher).
+			Return(common.UpdateJobResult{State: common.UpdateFailed}).
+			Run(func(args mock.Arguments) {
+				// Ensure that short interval is used on retry to speed-up test
+				b.setUpdateInterval(time.Microsecond)
+			}).
+			Times(5)
 
-	// accept job
-	mockNetwork.On("UpdateJob", jobConfig, jobCredentials, updateMatcher).
-		Return(common.UpdateJobResult{State: common.UpdateSucceeded}).Once()
+		// accept job
+		mockNetwork.On("UpdateJob", jobConfig, jobCredentials, updateMatcher).
+			Return(common.UpdateJobResult{State: common.UpdateSucceeded}).Once()
 
-	b.start()
-	assert.NoError(t, b.Success())
+		b.start()
+		assert.NoError(t, b.Success())
+	})
 }
 
 func TestJobIncrementalPatchSend(t *testing.T) {
