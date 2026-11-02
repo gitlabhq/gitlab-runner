@@ -1335,6 +1335,8 @@ func (mr *RunCommand) processBuildOnRunner(
 		"runner":                runner.ShortDescription(),
 		"runner_name":           runner.Name,
 		"job":                   build.ID,
+		"job_stage":             build.JobInfo.Stage,
+		"ref":                   build.GitInfo.Ref,
 		"pipeline_id":           build.JobInfo.PipelineID,
 		"project":               build.JobInfo.ProjectID,
 		"project_full_path":     build.JobInfo.ProjectFullPath,
@@ -1350,6 +1352,9 @@ func (mr *RunCommand) processBuildOnRunner(
 
 	if build.JobInfo.ScopedUserID != nil {
 		fields["gitlab_scoped_user_id"] = *build.JobInfo.ScopedUserID
+	}
+	if build.GitInfo.Protected != nil {
+		fields["ref_protected"] = *build.GitInfo.Protected
 	}
 
 	mr.log().WithFields(fields).Infoln("Added job to processing list")

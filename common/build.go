@@ -328,6 +328,8 @@ func (b *Build) Log() *logrus.Entry {
 	fields := logrus.Fields{
 		"job":               b.ID,
 		"job_name":          b.JobInfo.Name,
+		"job_stage":         b.JobInfo.Stage,
+		"ref":               b.GitInfo.Ref,
 		"pipeline_id":       b.JobInfo.PipelineID,
 		"project":           b.JobInfo.ProjectID,
 		"project_full_path": b.JobInfo.ProjectFullPath,
@@ -341,6 +343,9 @@ func (b *Build) Log() *logrus.Entry {
 
 	if b.JobInfo.ScopedUserID != nil {
 		l = l.WithField("gitlab_scoped_user_id", *b.JobInfo.ScopedUserID)
+	}
+	if b.GitInfo.Protected != nil {
+		l = l.WithField("ref_protected", *b.GitInfo.Protected)
 	}
 
 	// this is only set after the prepare stage has run
