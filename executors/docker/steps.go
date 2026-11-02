@@ -149,14 +149,7 @@ func (s *commandExecutor) Connect(ctx context.Context) (func() (io.ReadWriteClos
 		}
 
 		r, w := io.Pipe()
-		go func() {
-			stderr := omitwriter.New()
-			_, err := stdcopy.StdCopy(w, stderr, hijacked.Reader)
-			if err != nil {
-				err = fmt.Errorf("%w: %w", err, stderr.Error())
-			}
-			w.CloseWithError(err)
-		}()
+		go copyStepsProxyOutput(w, hijacked.Reader)
 
 		return &conn{
 			resp:   hijacked,
@@ -168,6 +161,25 @@ func (s *commandExecutor) Connect(ctx context.Context) (func() (io.ReadWriteClos
 			},
 		}, nil
 	}, nil
+}
+
+// copyStepsProxyOutput splits the attached stream of `steps proxy`: stdout
+// goes to w, which the step-runner client reads, and stderr is kept for the
+// error w is closed with.
+func copyStepsProxyOutput(w *io.PipeWriter, src io.Reader) {
+	stderr := omitwriter.New()
+	_, err := stdcopy.StdCopy(w, stderr, src)
+	if stderrErr := stderr.Error(); stderrErr != nil {
+		if err == nil {
+			// The stream ended. `steps proxy` writes to stderr only when it
+			// fails, so what it wrote is the only account of why, and
+			// closing the pipe without an error would drop it.
+			err = fmt.Errorf("steps proxy: %w", stderrErr)
+		} else {
+			err = fmt.Errorf("%w: steps proxy: %w", err, stderrErr)
+		}
+	}
+	w.CloseWithError(err)
 }
 
 func (e *executor) bootstrap() error {
