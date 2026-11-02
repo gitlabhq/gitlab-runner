@@ -95,7 +95,7 @@ func TestAcquireWithRetry(t *testing.T) {
 		p := common.NewMockExecutorProvider(t)
 		p.On("Acquire", runner).Return(data, nil).Once()
 
-		got, err := acquireWithRetry(t.Context(), p, runner, time.Millisecond, time.Millisecond)
+		got, err := acquireWithRetry(t.Context(), p.Acquire, runner, time.Millisecond, time.Millisecond)
 		require.NoError(t, err)
 		assert.Equal(t, data, got)
 	})
@@ -105,7 +105,7 @@ func TestAcquireWithRetry(t *testing.T) {
 		p.On("Acquire", runner).Return(nil, errors.New("no free machines")).Once()
 		p.On("Acquire", runner).Return(data, nil).Once()
 
-		got, err := acquireWithRetry(t.Context(), p, runner, time.Millisecond, time.Millisecond)
+		got, err := acquireWithRetry(t.Context(), p.Acquire, runner, time.Millisecond, time.Millisecond)
 		require.NoError(t, err)
 		assert.Equal(t, data, got)
 	})
@@ -118,7 +118,7 @@ func TestAcquireWithRetry(t *testing.T) {
 		// Long backoff so cancellation wins the select rather than the timer.
 		p.On("Acquire", runner).Return(nil, errors.New("no free machines")).Once()
 
-		_, err := acquireWithRetry(ctx, p, runner, time.Hour, time.Hour)
+		_, err := acquireWithRetry(ctx, p.Acquire, runner, time.Hour, time.Hour)
 		assert.ErrorIs(t, err, context.Canceled)
 	})
 }

@@ -20,6 +20,10 @@ type Policy struct {
 	// IdleTime is how long a pod can be idle before being removed.
 	IdleTime time.Duration
 
+	// PreemptiveMode requests a job only when a pause pod is scheduled. Off unless set, unlike the
+	// instance autoscaler, so existing pause pod users are not switched over on upgrade.
+	PreemptiveMode bool
+
 	// ScaleFactor scales idle capacity based on active jobs.
 	// Idle capacity = max(IdleCount, activeJobs * ScaleFactor)
 	ScaleFactor float64
@@ -88,4 +92,18 @@ func (pl PolicyList) Active(t time.Time) Policy {
 		}
 	}
 	return DefaultPolicy
+}
+
+// Preemptive is false with idle_count = 0: there are no pause pods to check against.
+func (p Policy) Preemptive() bool {
+	return p.PreemptiveMode && p.IdleCount > 0
+}
+
+func (pl PolicyList) AnyPreemptive() bool {
+	for _, p := range pl {
+		if p.Preemptive() {
+			return true
+		}
+	}
+	return false
 }

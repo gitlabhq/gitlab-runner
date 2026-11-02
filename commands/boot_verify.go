@@ -110,9 +110,7 @@ func (mr *RunCommand) bootVerifyOneRunner(ctx context.Context, runner *common.Ru
 		}
 	}
 
-	// Acquire returns "no free machines" until the idle pool warms, so retry.
-	executorData, err := acquireWithRetry(ctx, provider, runner,
-		bootVerify.GetAcquireMinBackoff(), bootVerify.GetAcquireMaxBackoff())
+	executorData, err := acquireCanary(ctx, provider, runner, bootVerify)
 	if err != nil {
 		return fmt.Errorf("Acquire: %w", err)
 	}
@@ -174,14 +172,25 @@ func (mr *RunCommand) bootVerifyAuth(ctx context.Context, runner *common.RunnerC
 	return nil
 }
 
-func acquireWithRetry(ctx context.Context, provider common.ExecutorProvider, runner *common.RunnerConfig, minBackoff, maxBackoff time.Duration) (common.ExecutorData, error) {
+// acquireCanary retries because Acquire returns "no free machines" until the idle pool warms, and
+// because a provider's setup can fail on a transient API error.
+func acquireCanary(ctx context.Context, provider common.ExecutorProvider, runner *common.RunnerConfig, bootVerify *common.BootVerify) (common.ExecutorData, error) {
+	acquire := provider.Acquire
+	if canary, ok := provider.(common.CanaryAcquirer); ok {
+		acquire = canary.AcquireCanary
+	}
+
+	return acquireWithRetry(ctx, acquire, runner, bootVerify.GetAcquireMinBackoff(), bootVerify.GetAcquireMaxBackoff())
+}
+
+func acquireWithRetry(ctx context.Context, acquire func(*common.RunnerConfig) (common.ExecutorData, error), runner *common.RunnerConfig, minBackoff, maxBackoff time.Duration) (common.ExecutorData, error) {
 	bo := &backoff.Backoff{Min: minBackoff, Max: maxBackoff, Factor: 2, Jitter: true}
 	timer := time.NewTimer(bo.Duration())
 	defer timer.Stop()
 
 	var lastErr error
 	for {
-		data, err := provider.Acquire(runner)
+		data, err := acquire(runner)
 		if err == nil {
 			return data, nil
 		}

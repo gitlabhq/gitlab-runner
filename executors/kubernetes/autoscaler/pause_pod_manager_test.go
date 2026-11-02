@@ -17,6 +17,8 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
+
+	"gitlab.com/gitlab-org/gitlab-runner/common"
 )
 
 func TestNewPausePodManager(t *testing.T) {
@@ -196,7 +198,16 @@ func TestPausePodManager_BuildDeployment(t *testing.T) {
 			api.ResourceCPU:    resource.MustParse("100m"),
 			api.ResourceMemory: resource.MustParse("128Mi"),
 		},
-
+		Affinity: &api.Affinity{
+			NodeAffinity: &api.NodeAffinity{
+				RequiredDuringSchedulingIgnoredDuringExecution: &api.NodeSelector{
+					NodeSelectorTerms: []api.NodeSelectorTerm{{
+						MatchExpressions: []api.NodeSelectorRequirement{{Key: "zone", Operator: api.NodeSelectorOpIn, Values: []string{"a"}}},
+					}},
+				},
+			},
+		},
+		SchedulerName: "custom-scheduler",
 		ImagePullSecrets: []api.LocalObjectReference{
 			{Name: "test-secret"},
 		},
@@ -229,6 +240,8 @@ func TestPausePodManager_BuildDeployment(t *testing.T) {
 	assert.Len(t, podSpec.Tolerations, 1)
 	assert.Equal(t, int64(0), *podSpec.TerminationGracePeriodSeconds)
 	assert.Equal(t, []api.LocalObjectReference{{Name: "test-secret"}}, podSpec.ImagePullSecrets)
+	assert.Equal(t, config.Affinity, podSpec.Affinity)
+	assert.Equal(t, "custom-scheduler", podSpec.SchedulerName)
 
 	// Check container
 	require.Len(t, podSpec.Containers, 1)
@@ -782,59 +795,73 @@ func TestPausePodManager_Stop(t *testing.T) {
 }
 
 func TestBuildResourceRequests(t *testing.T) {
-	tests := []struct {
-		name           string
-		cpuRequest     string
-		memoryRequest  string
-		expectedCPU    string
-		expectedMemory string
+	tests := map[string]struct {
+		k8s      common.KubernetesConfig
+		expected map[api.ResourceName]string
 	}{
-		{
-			name:           "both set",
-			cpuRequest:     "500m",
-			memoryRequest:  "256Mi",
-			expectedCPU:    "500m",
-			expectedMemory: "256Mi",
+		"build container only": {
+			k8s:      common.KubernetesConfig{CPURequest: "500m", MemoryRequest: "256Mi"},
+			expected: map[api.ResourceName]string{api.ResourceCPU: "500m", api.ResourceMemory: "256Mi"},
 		},
-		{
-			name:           "only cpu",
-			cpuRequest:     "1",
-			memoryRequest:  "",
-			expectedCPU:    "1",
-			expectedMemory: "",
+		"build and helper are added up": {
+			k8s: common.KubernetesConfig{
+				CPURequest: "1", MemoryRequest: "1Gi", EphemeralStorageRequest: "2Gi",
+				HelperCPURequest: "250m", HelperMemoryRequest: "128Mi", HelperEphemeralStorageRequest: "512Mi",
+			},
+			expected: map[api.ResourceName]string{
+				api.ResourceCPU: "1250m", api.ResourceMemory: "1152Mi", api.ResourceEphemeralStorage: "2560Mi",
+			},
 		},
-		{
-			name:           "only memory",
-			cpuRequest:     "",
-			memoryRequest:  "1Gi",
-			expectedCPU:    "",
-			expectedMemory: "1Gi",
+		"pod-level request replaces the container sum": {
+			k8s: common.KubernetesConfig{
+				PodCPURequest: "2", PodMemoryRequest: "4Gi",
+				CPURequest: "1", MemoryRequest: "1Gi", HelperMemoryRequest: "128Mi",
+				EphemeralStorageRequest: "1Gi",
+			},
+			expected: map[api.ResourceName]string{
+				api.ResourceCPU: "2", api.ResourceMemory: "4Gi", api.ResourceEphemeralStorage: "1Gi",
+			},
 		},
-		{
-			name:           "neither set",
-			cpuRequest:     "",
-			memoryRequest:  "",
-			expectedCPU:    "",
-			expectedMemory: "",
+		"helper only": {
+			k8s:      common.KubernetesConfig{HelperMemoryRequest: "64Mi"},
+			expected: map[api.ResourceName]string{api.ResourceMemory: "64Mi"},
+		},
+		"limit only becomes the request": {
+			k8s:      common.KubernetesConfig{CPULimit: "2", HelperCPULimit: "250m", MemoryLimit: "1Gi"},
+			expected: map[api.ResourceName]string{api.ResourceCPU: "2250m", api.ResourceMemory: "1Gi"},
+		},
+		"request wins over limit per container": {
+			k8s:      common.KubernetesConfig{CPURequest: "500m", CPULimit: "2", HelperCPULimit: "250m"},
+			expected: map[api.ResourceName]string{api.ResourceCPU: "750m"},
+		},
+		"pod-level limit becomes the pod-level request": {
+			k8s:      common.KubernetesConfig{PodMemoryLimit: "4Gi", MemoryRequest: "1Gi"},
+			expected: map[api.ResourceName]string{api.ResourceMemory: "4Gi"},
+		},
+		"explicit zero request is zero": {
+			k8s:      common.KubernetesConfig{CPURequest: "0", CPULimit: "2"},
+			expected: map[api.ResourceName]string{api.ResourceCPU: "0"},
+		},
+		"unparsable quantity is skipped": {
+			k8s:      common.KubernetesConfig{CPURequest: "lots", MemoryRequest: "1Gi"},
+			expected: map[api.ResourceName]string{api.ResourceMemory: "1Gi"},
+		},
+		"nothing set": {
+			k8s:      common.KubernetesConfig{},
+			expected: map[api.ResourceName]string{},
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			resources := BuildResourceRequests(tt.cpuRequest, tt.memoryRequest)
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			resources := BuildResourceRequests(&tt.k8s)
 
-			if tt.expectedCPU != "" {
-				assert.Equal(t, resource.MustParse(tt.expectedCPU), resources[api.ResourceCPU])
-			} else {
-				_, exists := resources[api.ResourceCPU]
-				assert.False(t, exists)
-			}
-
-			if tt.expectedMemory != "" {
-				assert.Equal(t, resource.MustParse(tt.expectedMemory), resources[api.ResourceMemory])
-			} else {
-				_, exists := resources[api.ResourceMemory]
-				assert.False(t, exists)
+			assert.Len(t, resources, len(tt.expected))
+			for res, want := range tt.expected {
+				got, ok := resources[res]
+				require.True(t, ok, "%s missing", res)
+				wantQ := resource.MustParse(want)
+				assert.Zero(t, wantQ.Cmp(got), "%s: want %s, got %s", res, want, got.String())
 			}
 		})
 	}
@@ -1465,4 +1492,40 @@ func TestPausePodManager_Start_StopsViaStopMethod(t *testing.T) {
 	_, err = client.AppsV1().Deployments("default").Get(
 		t.Context(), "runner-pause-test-runner-stestsystem", metav1.GetOptions{})
 	assert.Error(t, err, "deployment should be deleted after Stop")
+}
+
+func TestPausePodManager_BeginShutdown_ScalesToZero(t *testing.T) {
+	client := fake.NewClientset()
+	config := PausePodManagerConfig{
+		Namespace:        "default",
+		RunnerShortToken: "test-runner",
+		SystemID:         "s_testsystem",
+		Policies: PolicyList{
+			{Periods: []string{"* * * * *"}, IdleCount: 3, IdleTime: time.Hour},
+		},
+	}
+
+	manager, err := NewPausePodManager(client, config, logrus.NewEntry(logrus.New()), nil)
+	require.NoError(t, err)
+
+	ctx := t.Context()
+	manager.reconcile(ctx)
+	deployment, err := client.AppsV1().Deployments("default").Get(ctx, manager.deploymentName(), metav1.GetOptions{})
+	require.NoError(t, err)
+	assert.Equal(t, int32(3), *deployment.Spec.Replicas)
+
+	manager.BeginShutdown()
+	select {
+	case <-manager.reconcileNow:
+	default:
+		t.Fatal("BeginShutdown did not request a reconcile")
+	}
+
+	manager.reconcile(ctx)
+	deployment, err = client.AppsV1().Deployments("default").Get(ctx, manager.deploymentName(), metav1.GetOptions{})
+	require.NoError(t, err)
+	assert.Equal(t, int32(0), *deployment.Spec.Replicas)
+
+	manager.BeginShutdown()
+	manager.BeginShutdown()
 }

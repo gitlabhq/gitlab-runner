@@ -777,7 +777,7 @@ func TestWaitForPodRunning(t *testing.T) {
 						return len(b), nil
 					},
 				}
-				phase, err := waitForPodRunning(t.Context(), c, test.Pod, fw, test.Config)
+				phase, err := waitForPodRunning(t.Context(), c, test.Pod, fw, test.Config, nil)
 
 				if err != nil && !test.Error {
 					t.Errorf("[%s] Expected success. Got: %s", test.Name, err.Error())

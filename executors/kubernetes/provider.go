@@ -19,6 +19,14 @@ func (d *executorData) LogFields() map[string]string {
 	return map[string]string{"pod_name": d.PodName}
 }
 
+func podExecutorData(data common.ExecutorData) (*executorData, bool) {
+	if u, ok := data.(interface{ Unwrap() common.ExecutorData }); ok {
+		data = u.Unwrap()
+	}
+	d, ok := data.(*executorData)
+	return d, ok
+}
+
 type executorProvider struct {
 	executors.DefaultExecutorProvider
 

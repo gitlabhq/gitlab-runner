@@ -9,6 +9,8 @@ var metricLabels = []string{"runner", "runner_name", "system_id"}
 type Metrics struct {
 	desiredPods     *prometheus.GaugeVec
 	currentPods     *prometheus.GaugeVec
+	scheduledPods   *prometheus.GaugeVec
+	reservedPods    *prometheus.GaugeVec
 	reconcileErrors *prometheus.CounterVec
 	scaleOperations *prometheus.CounterVec
 }
@@ -44,6 +46,20 @@ func NewMetrics() *Metrics {
 			},
 			append(append([]string{}, metricLabels...), "direction"), // direction: up, down
 		),
+		scheduledPods: prometheus.NewGaugeVec(
+			prometheus.GaugeOpts{
+				Name: "gitlab_runner_kubernetes_autoscaler_pause_pods_scheduled",
+				Help: "Pause pods of this runner that are bound to a node and not terminating.",
+			},
+			metricLabels,
+		),
+		reservedPods: prometheus.NewGaugeVec(
+			prometheus.GaugeOpts{
+				Name: "gitlab_runner_kubernetes_autoscaler_pause_pods_reserved",
+				Help: "Job requests counted against the scheduled pause pods: accepted jobs whose pod has no node yet.",
+			},
+			metricLabels,
+		),
 	}
 }
 
@@ -51,6 +67,8 @@ func NewMetrics() *Metrics {
 func (m *Metrics) Describe(ch chan<- *prometheus.Desc) {
 	m.desiredPods.Describe(ch)
 	m.currentPods.Describe(ch)
+	m.scheduledPods.Describe(ch)
+	m.reservedPods.Describe(ch)
 	m.reconcileErrors.Describe(ch)
 	m.scaleOperations.Describe(ch)
 }
@@ -59,8 +77,18 @@ func (m *Metrics) Describe(ch chan<- *prometheus.Desc) {
 func (m *Metrics) Collect(ch chan<- prometheus.Metric) {
 	m.desiredPods.Collect(ch)
 	m.currentPods.Collect(ch)
+	m.scheduledPods.Collect(ch)
+	m.reservedPods.Collect(ch)
 	m.reconcileErrors.Collect(ch)
 	m.scaleOperations.Collect(ch)
+}
+
+func (m *Metrics) SetScheduledPods(runner, runnerName, systemID string, count int) {
+	m.scheduledPods.WithLabelValues(runner, runnerName, systemID).Set(float64(count))
+}
+
+func (m *Metrics) SetReservedPods(runner, runnerName, systemID string, count int) {
+	m.reservedPods.WithLabelValues(runner, runnerName, systemID).Set(float64(count))
 }
 
 // SetDesiredPods sets the desired pods gauge.
