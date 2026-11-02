@@ -21,8 +21,9 @@ func (r JobFailureReason) String() string {
 }
 
 type JobInfo struct {
-	Name  string `json:"name"`
-	Stage string `json:"stage"`
+	Name    string   `json:"name"`
+	Stage   string   `json:"stage"`
+	TagList []string `json:"tag_list"`
 
 	PipelineID int64 `json:"pipeline_id"`
 

@@ -330,6 +330,7 @@ func (b *Build) Log() *logrus.Entry {
 		"job_name":          b.JobInfo.Name,
 		"job_stage":         b.JobInfo.Stage,
 		"ref":               b.GitInfo.Ref,
+		"job_tags":          b.JobInfo.TagList,
 		"pipeline_id":       b.JobInfo.PipelineID,
 		"project":           b.JobInfo.ProjectID,
 		"project_full_path": b.JobInfo.ProjectFullPath,

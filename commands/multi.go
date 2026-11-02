@@ -1337,6 +1337,7 @@ func (mr *RunCommand) processBuildOnRunner(
 		"job":                   build.ID,
 		"job_stage":             build.JobInfo.Stage,
 		"ref":                   build.GitInfo.Ref,
+		"job_tags":              build.JobInfo.TagList,
 		"pipeline_id":           build.JobInfo.PipelineID,
 		"project":               build.JobInfo.ProjectID,
 		"project_full_path":     build.JobInfo.ProjectFullPath,
