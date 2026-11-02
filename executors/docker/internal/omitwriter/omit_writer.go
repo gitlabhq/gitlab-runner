@@ -17,7 +17,11 @@ func New() *omitWriter {
 	}
 }
 
-func (r *omitWriter) Write(p []byte) (n int, err error) {
+// Write keeps the most recent bytes written to it, as many as its buffer
+// holds, and drops older ones. It always reports all of p as written, as
+// io.Writer requires: io.Copy and stdcopy.StdCopy fail with
+// io.ErrShortWrite on a write that reports less.
+func (r *omitWriter) Write(p []byte) (int, error) {
 	r.n += int64(len(p))
 
 	for _, b := range p {
@@ -27,7 +31,7 @@ func (r *omitWriter) Write(p []byte) (n int, err error) {
 			r.start = (r.start + 1) % cap(r.buf)
 		}
 	}
-	return n, nil
+	return len(p), nil
 }
 
 func (r *omitWriter) bytes() []byte {
@@ -44,7 +48,13 @@ func (r *omitWriter) bytes() []byte {
 	return r.buf[r.start:r.end]
 }
 
+// Error returns what was written as an error, prefixed with how many bytes
+// were dropped when it no longer fit, or nil when nothing was written.
 func (r *omitWriter) Error() error {
+	if r.n == 0 {
+		return nil
+	}
+
 	length := int64(r.end - r.start)
 	if r.end < r.start {
 		length = int64(cap(r.buf) - (r.start - r.end))
