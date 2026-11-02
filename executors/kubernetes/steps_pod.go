@@ -207,7 +207,7 @@ func (s *executor) setupStepsPod(ctx context.Context, initContainers []api.Conta
 		return err
 	}
 
-	if data, ok := s.Build.ExecutorData.(*executorData); ok {
+	if data, ok := podExecutorData(s.Build.ExecutorData); ok {
 		data.PodName = s.pod.GetName()
 	}
 

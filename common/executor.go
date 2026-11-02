@@ -152,6 +152,14 @@ type ManagedExecutorProvider interface {
 	Shutdown(ctx context.Context, config *Config)
 }
 
+// CanaryAcquirer is an optional interface for executor providers whose Acquire
+// can decline a job until capacity is free, when the boot-verify canary is
+// itself what frees that capacity and so must not wait for it.
+type CanaryAcquirer interface {
+	// AcquireCanary is Acquire without the capacity check. The data is released with Release.
+	AcquireCanary(config *RunnerConfig) (ExecutorData, error)
+}
+
 // WarmupReporter is an optional interface for executor providers that build
 // capacity at startup. /health/ready waits for it after boot-verify.
 type WarmupReporter interface {

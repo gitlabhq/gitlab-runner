@@ -199,31 +199,32 @@ func isRunning(pod *api.Pod, containers ...string) (bool, error) {
 }
 
 type podPhaseResponse struct {
-	done  bool
-	phase api.PodPhase
-	err   error
+	done     bool
+	phase    api.PodPhase
+	err      error
+	nodeName string
 }
 
 func getPodPhase(ctx context.Context, client kubernetes.Interface, pod *api.Pod, out io.Writer, printPodWarningEvents bool, containers ...string) (pf podPhaseResponse) {
 	// kubeAPI: pods, get
 	pod, err := client.CoreV1().Pods(pod.Namespace).Get(ctx, pod.Name, metav1.GetOptions{})
 	if err != nil {
-		return podPhaseResponse{true, api.PodUnknown, err}
+		return podPhaseResponse{done: true, phase: api.PodUnknown, err: err}
 	}
 
 	ready, err := isRunning(pod, containers...)
 	if err != nil || ready {
-		return podPhaseResponse{true, pod.Status.Phase, err}
+		return podPhaseResponse{done: true, phase: pod.Status.Phase, err: err, nodeName: pod.Spec.NodeName}
 	}
 
 	containerStatuses := slices.Concat(pod.Status.ContainerStatuses, pod.Status.InitContainerStatuses)
 	if err := watchers.CheckTerminalContainerErrors(containerStatuses); err != nil {
-		return podPhaseResponse{true, api.PodUnknown, err}
+		return podPhaseResponse{done: true, phase: api.PodUnknown, err: err}
 	}
 
 	if podUsesUserNamespaces(pod) {
 		if err := checkPodSandboxUserNamespaceFailure(ctx, client, pod); err != nil {
-			return podPhaseResponse{true, api.PodUnknown, err}
+			return podPhaseResponse{done: true, phase: api.PodUnknown, err: err}
 		}
 	}
 
@@ -254,7 +255,7 @@ func getPodPhase(ctx context.Context, client kubernetes.Interface, pod *api.Pod,
 		}
 	}
 
-	return podPhaseResponse{false, pod.Status.Phase, nil}
+	return podPhaseResponse{phase: pod.Status.Phase, nodeName: pod.Spec.NodeName}
 }
 
 // podUsesUserNamespaces reports whether the pod opted into a private Linux user
@@ -330,6 +331,7 @@ func waitForPodRunning(
 	pod *api.Pod,
 	out io.Writer,
 	config *common.KubernetesConfig,
+	onScheduled func(),
 	containers ...string,
 ) (api.PodPhase, error) {
 	pollInterval := config.GetPollInterval()
@@ -338,6 +340,10 @@ func waitForPodRunning(
 	for i := 0; i <= pollAttempts; i++ {
 		select {
 		case r := <-triggerPodPhaseCheck(ctx, c, pod, out, config.GetPrintPodWarningEvents(), containers...):
+			if r.nodeName != "" && onScheduled != nil {
+				onScheduled()
+				onScheduled = nil
+			}
 			if !r.done {
 				lastPhase = r.phase
 				time.Sleep(time.Duration(pollInterval) * time.Second)

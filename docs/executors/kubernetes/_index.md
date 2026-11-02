@@ -532,6 +532,16 @@ autoscaler to provision new nodes.
 1. When a pause pod is preempted, the job pod takes its place immediately.
 1. The `Deployment` recreates the preempted pause pod, potentially triggering the cluster autoscaler to add a new node.
 
+Pause pods request the same resources as a job pod with the default settings.
+They use the pod-level requests when set, or the build and helper container requests
+combined. They use the same node selector, tolerations, node affinity, runtime class,
+and scheduler as job pods. Pause pods do not reflect service containers, volumes, or
+pod affinity and anti-affinity. A required anti-affinity term on a pause pod would
+block the job pod from its node.
+
+When the runner starts to shut down, it scales the `Deployment` to zero immediately.
+The `idle_time` cooldown does not apply.
+
 ### Configure pause pods
 
 To enable pause pods, add a `[runners.kubernetes.autoscaler]` section to your
@@ -611,6 +621,68 @@ To use a custom `PriorityClass` instead, specify it in your configuration:
 If your job pods use a custom priority class, ensure it has a higher value than
 the pause pod priority class.
 
+### Preemptive mode
+
+{{< details >}}
+
+- Status: Experiment
+
+{{< /details >}}
+
+{{< history >}}
+
+- [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/7692) in GitLab Runner 19.6 as an [experiment](https://docs.gitlab.com/policy/development_stages_support/#experiment).
+
+{{< /history >}}
+
+By default, the runner requests a job before it knows whether the cluster has room
+for the job pod. If the cluster does not have room, the job waits for a node until
+`poll_timeout` and then fails.
+
+You can configure the runner to request a job only when it has more pause pods
+scheduled on nodes than accepted jobs whose pod has not been placed yet. This behavior is similar
+to how the `docker+machine` executor requests a job only when it has an idle
+machine. Otherwise the runner skips the request, and the job remains in the queue
+for other runners with the same tags.
+
+To enable this behavior, set `preemptive_mode` on a policy:
+
+```toml
+[runners.kubernetes.autoscaler]
+  [[runners.kubernetes.autoscaler.policy]]
+    idle_count = 3
+    scale_factor = 1.0
+    preemptive_mode = true
+```
+
+The setting has the same meaning as `preemptive_mode` for the
+[instance autoscaler](../../configuration/advanced-configuration.md#the-runnersautoscalerpolicy-sections).
+For the instance autoscaler, it defaults to on when `idle_count` is greater than zero. For pause pods, it
+is off unless set, and existing pause pod configurations do not change on upgrade.
+
+Each job request counts against the scheduled pause pods from the request until
+the job pod is assigned a node, typically 5 to 15 seconds, or until the request
+returns without a job. The runner can therefore start at most `idle_count` jobs
+in that time, and a higher `request_concurrency` has no effect while all pause
+pods are accounted for. Set `idle_count` to the number of jobs the runner should
+be able to start at once. With `scale_factor`, the pause pod count grows with
+running jobs. Without it, only `idle_count` jobs from a backlog are admitted
+for each cluster autoscaler cycle.
+
+The setting is for each policy. A policy without it, or with `idle_count = 0`, requests
+jobs as before. When a preemptive policy becomes active, the runner skips requests
+until its pause pods are scheduled. The same applies after a configuration reload:
+the pause pod `Deployment` is created again, and the runner skips requests until
+its pods are scheduled.
+
+The check is for each runner process and counts only the pause pods of that process.
+A job pod from another runner on the same cluster can preempt one of them between
+the check and the job pod's creation. The same can happen within one runner when
+the pause pod watch is behind the job pod poll. In either case, the job pod still
+waits for a node. The check assumes the job pod looks like a pause pod. Jobs with service
+containers, or with `KUBERNETES_*_REQUEST` or node selector overrides, need
+more or different capacity than a pause pod reserves.
+
 ### Policy settings
 
 You can define multiple policies. The last matching policy based on the current
@@ -624,6 +696,7 @@ time is used.
 | `idle_time` | Scale-down cooldown. When desired capacity decreases, pause pods are removed after this wait time. Prevents thrashing when using `scale_factor`. Defaults to `5m`. |
 | `scale_factor` | Scale pause pods based on active jobs: `max(idle_count, active_jobs * scale_factor)`. Defaults to `0` (disabled). |
 | `scale_factor_limit` | Maximum pause pods when using `scale_factor`. Defaults to `0` (no limit). |
+| `preemptive_mode` | Experiment. Request a job only when one of the runner's pause pods is scheduled on a node. See [preemptive mode](#preemptive-mode). Off unless set. Introduced in [GitLab Runner 19.6](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/7692). |
 
 ### Cron syntax
 
@@ -673,6 +746,14 @@ To use pause pods, configure additional permissions for the runner service accou
 - apiGroups: ["scheduling.k8s.io"]
   resources: ["priorityclasses"]
   verbs: ["get", "create"]
+```
+
+With `preemptive_mode`, the runner also watches its pause pods:
+
+```yaml
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["list", "watch"]
 ```
 
 > [!note]

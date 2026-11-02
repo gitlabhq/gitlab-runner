@@ -1328,7 +1328,12 @@ func (s *executor) buildInitContainers() ([]api.Container, error) {
 }
 
 func (s *executor) waitForPod(ctx context.Context, writer io.WriteCloser) error {
-	status, err := waitForPodRunning(ctx, s.kubeClient, s.pod, writer, s.Config.Kubernetes, buildContainerName)
+	var onScheduled func()
+	if c, ok := s.Build.ExecutorData.(interface{ PodScheduled() }); ok {
+		onScheduled = c.PodScheduled
+	}
+
+	status, err := waitForPodRunning(ctx, s.kubeClient, s.pod, writer, s.Config.Kubernetes, onScheduled, buildContainerName)
 	if err != nil {
 		return fmt.Errorf("waiting for pod running: %w", err)
 	}
@@ -2520,7 +2525,7 @@ func (s *executor) setupBuildPod(ctx context.Context, initContainers []api.Conta
 		return err
 	}
 
-	if data, ok := s.Build.ExecutorData.(*executorData); ok {
+	if data, ok := podExecutorData(s.Build.ExecutorData); ok {
 		data.PodName = s.pod.GetName()
 	}
 

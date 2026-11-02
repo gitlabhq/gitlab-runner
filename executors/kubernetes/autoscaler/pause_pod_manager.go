@@ -20,9 +20,11 @@ import (
 	apivalidation "k8s.io/apimachinery/pkg/api/validation"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	metav1validation "k8s.io/apimachinery/pkg/apis/meta/v1/validation"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/client-go/kubernetes"
 
+	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/dns"
 )
 
@@ -94,7 +96,9 @@ type PausePodManagerConfig struct {
 	// NodeSelector for pause pods.
 	NodeSelector map[string]string
 	// Tolerations for pause pods.
-	Tolerations []api.Toleration
+	Tolerations   []api.Toleration
+	Affinity      *api.Affinity
+	SchedulerName string
 	// ServiceAccountName for pause pods.
 	ServiceAccountName string
 	// RuntimeClassName for pause pods.
@@ -115,6 +119,7 @@ type PausePodManager struct {
 	client  kubernetes.Interface
 	log     logrus.FieldLogger
 	metrics *Metrics
+	tracker *capacityTracker
 
 	mu                  sync.RWMutex
 	activeJobs          int
@@ -122,7 +127,9 @@ type PausePodManager struct {
 	scaleDownAllowedAt  time.Time
 	lastHeartbeat       time.Time
 	stopCh              chan struct{}
+	reconcileNow        chan struct{}
 	stopped             bool
+	draining            bool
 }
 
 // NewPausePodManager creates a new pause pod manager.
@@ -135,13 +142,25 @@ func NewPausePodManager(client kubernetes.Interface, config PausePodManagerConfi
 		return nil, err
 	}
 
-	return &PausePodManager{
-		config:  config,
-		client:  client,
-		log:     log.WithFields(runnerlog.DeprecatedField("component", "pause-pod-manager")),
-		metrics: metrics,
-		stopCh:  make(chan struct{}),
-	}, nil
+	m := &PausePodManager{
+		config:       config,
+		client:       client,
+		log:          log.WithFields(runnerlog.DeprecatedField("component", "pause-pod-manager")),
+		metrics:      metrics,
+		stopCh:       make(chan struct{}),
+		reconcileNow: make(chan struct{}, 1),
+	}
+
+	if config.Policies.AnyPreemptive() {
+		m.tracker = newCapacityTracker(func(scheduled, reserved int) {
+			if m.metrics != nil {
+				m.metrics.SetScheduledPods(config.RunnerShortToken, config.RunnerName, config.SystemID, scheduled)
+				m.metrics.SetReservedPods(config.RunnerShortToken, config.RunnerName, config.SystemID, reserved)
+			}
+		})
+	}
+
+	return m, nil
 }
 
 // Start begins the pause pod reconciliation loop.
@@ -151,6 +170,12 @@ func (m *PausePodManager) Start(ctx context.Context) {
 	// Ensure PriorityClass exists if using default
 	if err := m.ensurePriorityClass(ctx); err != nil {
 		m.log.WithError(err).Warn("Failed to ensure PriorityClass exists")
+	}
+
+	if m.tracker != nil {
+		if err := m.tracker.start(ctx, m.client, m.config.Namespace, m.podSelector(), m.log); err != nil {
+			m.log.WithError(err).Error("Failed to watch pause pods, job requests will be declined")
+		}
 	}
 
 	ticker := time.NewTicker(defaultReconcileInterval)
@@ -167,10 +192,53 @@ func (m *PausePodManager) Start(ctx context.Context) {
 		case <-m.stopCh:
 			m.log.Info("Pause pod manager stopped")
 			return
+		case <-m.reconcileNow:
+			m.reconcile(ctx)
 		case <-ticker.C:
 			m.reconcile(ctx)
 		}
 	}
+}
+
+// BeginShutdown scales the pause pods to zero. The runner no longer requests jobs, so idle capacity
+// would sit unused until Shutdown.
+func (m *PausePodManager) BeginShutdown() {
+	m.mu.Lock()
+	m.draining = true
+	m.mu.Unlock()
+
+	select {
+	case m.reconcileNow <- struct{}{}:
+	default:
+	}
+}
+
+func (m *PausePodManager) isDraining() bool {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	return m.draining
+}
+
+func (m *PausePodManager) preemptive(now time.Time) bool {
+	return m.config.Policies.Active(now).Preemptive()
+}
+
+func (m *PausePodManager) Reserve() bool {
+	return m.tracker != nil && m.tracker.reserve()
+}
+
+func (m *PausePodManager) Release() {
+	if m.tracker != nil {
+		m.tracker.release()
+	}
+}
+
+func (m *PausePodManager) podSelector() labels.Selector {
+	return labels.SelectorFromSet(labels.Set{
+		pausePodLabel: pausePodLabelValue,
+		runnerIDLabel: m.config.RunnerShortToken,
+		systemIDLabel: m.config.SystemID,
+	})
 }
 
 // Stop stops the pause pod manager and cleans up the deployment.
@@ -240,6 +308,9 @@ func (m *PausePodManager) reconcile(ctx context.Context) {
 	policy := m.config.Policies.Active(now)
 	desiredReplicas := m.calculateDesiredReplicas(policy)
 	targetReplicas := m.applyScaleDownCooldown(desiredReplicas, policy, now)
+	if m.isDraining() {
+		desiredReplicas, targetReplicas = 0, 0
+	}
 	activeJobs := m.getActiveJobs()
 
 	log.WithFields(logrus.Fields{
@@ -520,6 +591,8 @@ func (m *PausePodManager) buildDeployment(replicas int) *appsv1.Deployment {
 					TerminationGracePeriodSeconds: new(int64(0)),
 					NodeSelector:                  m.config.NodeSelector,
 					Tolerations:                   m.config.Tolerations,
+					Affinity:                      m.config.Affinity,
+					SchedulerName:                 m.config.SchedulerName,
 					ServiceAccountName:            m.config.ServiceAccountName,
 					RuntimeClassName:              m.config.RuntimeClassName,
 					ImagePullSecrets:              m.config.ImagePullSecrets,
@@ -573,23 +646,62 @@ func (m *PausePodManager) podTemplateLabels(runnerLabels map[string]string) map[
 	return labels
 }
 
-// BuildResourceRequests creates resource requests matching typical job pod requirements.
-func BuildResourceRequests(cpuRequest, memoryRequest string) api.ResourceList {
+// BuildResourceRequests is what a job pod with the default settings requests: the pod-level request
+// where set, otherwise build plus helper, with the limit standing in for an unset request as in
+// Kubernetes. Services are left out, their number depends on the job.
+func BuildResourceRequests(k8s *common.KubernetesConfig) api.ResourceList {
 	resources := api.ResourceList{}
 
-	if cpuRequest != "" {
-		if q, err := resource.ParseQuantity(cpuRequest); err == nil {
-			resources[api.ResourceCPU] = q
+	set := func(name api.ResourceName, podLevel string, containers ...string) {
+		if podLevel != "" {
+			if q, err := resource.ParseQuantity(podLevel); err == nil {
+				resources[name] = q
+			}
+			return
+		}
+		if sum, ok := sumQuantities(containers); ok {
+			resources[name] = sum
 		}
 	}
 
-	if memoryRequest != "" {
-		if q, err := resource.ParseQuantity(memoryRequest); err == nil {
-			resources[api.ResourceMemory] = q
-		}
-	}
+	set(api.ResourceCPU,
+		effectiveRequest(k8s.PodCPURequest, k8s.PodCPULimit),
+		effectiveRequest(k8s.CPURequest, k8s.CPULimit),
+		effectiveRequest(k8s.HelperCPURequest, k8s.HelperCPULimit))
+	set(api.ResourceMemory,
+		effectiveRequest(k8s.PodMemoryRequest, k8s.PodMemoryLimit),
+		effectiveRequest(k8s.MemoryRequest, k8s.MemoryLimit),
+		effectiveRequest(k8s.HelperMemoryRequest, k8s.HelperMemoryLimit))
+	set(api.ResourceEphemeralStorage,
+		"",
+		effectiveRequest(k8s.EphemeralStorageRequest, k8s.EphemeralStorageLimit),
+		effectiveRequest(k8s.HelperEphemeralStorageRequest, k8s.HelperEphemeralStorageLimit))
 
 	return resources
+}
+
+func effectiveRequest(request, limit string) string {
+	if request != "" {
+		return request
+	}
+	return limit
+}
+
+func sumQuantities(values []string) (resource.Quantity, bool) {
+	var sum resource.Quantity
+	found := false
+	for _, v := range values {
+		if v == "" {
+			continue
+		}
+		q, err := resource.ParseQuantity(v)
+		if err != nil {
+			continue
+		}
+		sum.Add(q)
+		found = true
+	}
+	return sum, found
 }
 
 // CleanupOrphanedDeployments removes pause pod deployments that haven't received
