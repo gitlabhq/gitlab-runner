@@ -38,6 +38,7 @@ type requestCredentials interface {
 	GetTLSCAFile() string
 	GetTLSCertFile() string
 	GetTLSKeyFile() string
+	GetAllowHTTP2() *bool
 }
 
 var dialer = net.Dialer{
@@ -62,6 +63,7 @@ type client struct {
 	connectionMaxAge  time.Duration
 	requester         requester
 	httpClientOptions HttpClientOptions
+	allowHTTP2        *bool
 }
 
 type ResponseTLSData struct {
@@ -116,11 +118,13 @@ func (n *client) ensureTLSConfig() {
 	}
 }
 
-// To ensure long-lived TLS connections pick up rotated certificates
-// and to ensure load balancers distribute connections evenly, limit
-// the age of a connection to 15 minutes. Go has an upstream proposal
-// to do this in https://github.com/golang/go/issues/54429, but this
-// feature is not yet available.
+// To ensure idle TLS connections pick up rotated certificates and allow
+// load balancers to redistribute idle connections, close them after the
+// configured maximum age. CloseIdleConnections does not interrupt active
+// requests or HTTP/2 streams, so long-lived active HTTP/2 connections can
+// outlive this limit. Go has an upstream proposal to limit connection age
+// in https://github.com/golang/go/issues/54429, but this feature is not yet
+// available.
 func (n *client) ensureTransportMaxAge() {
 	if n.connectionMaxAge == 0 {
 		return
@@ -206,6 +210,11 @@ func (n *client) createTransport() {
 	n.addTLSCA(&tlsConfig)
 	n.addTLSAuth(&tlsConfig)
 
+	forceAttemptHTTP2 := false
+	if n.allowHTTP2 != nil {
+		forceAttemptHTTP2 = *n.allowHTTP2
+	}
+
 	// create transport
 	transport := &http.Transport{
 		Proxy: http.ProxyFromEnvironment,
@@ -219,6 +228,11 @@ func (n *client) createTransport() {
 		TLSHandshakeTimeout:   10 * time.Second,
 		ExpectContinueTimeout: 1 * time.Second,
 		ResponseHeaderTimeout: 10 * time.Minute,
+		ForceAttemptHTTP2:     forceAttemptHTTP2,
+		HTTP2: &http.HTTP2Config{
+			SendPingTimeout: 30 * time.Second,
+			PingTimeout:     15 * time.Second,
+		},
 	}
 	n.Timeout = common.DefaultNetworkClientTimeout
 
@@ -607,6 +621,7 @@ func newClient(requestCredentials requestCredentials, collector *APIRequestsColl
 		certFile: requestCredentials.GetTLSCertFile(),
 		keyFile:  requestCredentials.GetTLSKeyFile(),
 	}
+	c.allowHTTP2 = requestCredentials.GetAllowHTTP2()
 	c.requester = newRetryRequester(&c.Client, collector)
 
 	for _, o := range options {

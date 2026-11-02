@@ -1452,6 +1452,7 @@ type RunnerCredentials struct {
 	TLSCAFile       string    `toml:"tls-ca-file,omitempty" json:"tls-ca-file" long:"tls-ca-file" env:"CI_SERVER_TLS_CA_FILE" description:"File containing the certificates to verify the peer when using HTTPS"`
 	TLSCertFile     string    `toml:"tls-cert-file,omitempty" json:"tls-cert-file" long:"tls-cert-file" env:"CI_SERVER_TLS_CERT_FILE" description:"File containing certificate for TLS client auth when using HTTPS"`
 	TLSKeyFile      string    `toml:"tls-key-file,omitempty" json:"tls-key-file" long:"tls-key-file" env:"CI_SERVER_TLS_KEY_FILE" description:"File containing private key for TLS client auth when using HTTPS"`
+	AllowHTTP2      *bool     `toml:"allow_http2,omitzero" json:"allow_http2,omitempty" long:"allow-http2" env:"RUNNER_ALLOW_HTTP2" description:"Enable or disable HTTP/2 for GitLab API requests. Disabled by default."`
 
 	Logger logrus.FieldLogger `toml:"-" json:",omitempty"`
 }
@@ -2529,6 +2530,10 @@ func (c *RunnerCredentials) GetTLSCertFile() string {
 
 func (c *RunnerCredentials) GetTLSKeyFile() string {
 	return c.TLSKeyFile
+}
+
+func (c *RunnerCredentials) GetAllowHTTP2() *bool {
+	return c.AllowHTTP2
 }
 
 func (c *RunnerCredentials) GetToken() string {

@@ -3794,3 +3794,40 @@ func TestUpdateJob_RuntimeEnvironmentKey(t *testing.T) {
 		})
 	}
 }
+
+func TestGitLabClient_GetClient_HTTP2(t *testing.T) {
+	t.Parallel()
+
+	trueVal := true
+	falseVal := false
+
+	glc := NewGitLabClient()
+
+	credsDefault := &RunnerCredentials{URL: "https://example.com", Token: "token1"}
+	credsDisabled := &RunnerCredentials{URL: "https://example.com", Token: "token1", AllowHTTP2: &falseVal}
+	credsEnabled := &RunnerCredentials{URL: "https://example.com", Token: "token1", AllowHTTP2: &trueVal}
+
+	cDefault, err := glc.getClient(credsDefault)
+	require.NoError(t, err)
+
+	cDisabled, err := glc.getClient(credsDisabled)
+	require.NoError(t, err)
+
+	cEnabled, err := glc.getClient(credsEnabled)
+	require.NoError(t, err)
+
+	assert.NotSame(t, cDefault, cDisabled)
+	assert.NotSame(t, cDisabled, cEnabled)
+
+	cDefault2, err := glc.getClient(credsDefault)
+	require.NoError(t, err)
+	assert.Same(t, cDefault, cDefault2)
+
+	cDefault.createTransport()
+	cDisabled.createTransport()
+	cEnabled.createTransport()
+
+	assert.False(t, cDefault.Client.Transport.(*http.Transport).ForceAttemptHTTP2)
+	assert.False(t, cDisabled.Client.Transport.(*http.Transport).ForceAttemptHTTP2)
+	assert.True(t, cEnabled.Client.Transport.(*http.Transport).ForceAttemptHTTP2)
+}

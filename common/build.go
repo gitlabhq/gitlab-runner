@@ -1078,6 +1078,7 @@ func (b *Build) executeUploadReferees(ctx context.Context, startTime, endTime ti
 		TLSCAFile:   b.Runner.RunnerCredentials.TLSCAFile,
 		TLSCertFile: b.Runner.RunnerCredentials.TLSCertFile,
 		TLSKeyFile:  b.Runner.RunnerCredentials.TLSKeyFile,
+		AllowHTTP2:  b.Runner.RunnerCredentials.AllowHTTP2,
 	}
 
 	// execute and upload the results of each referee
@@ -1955,6 +1956,27 @@ func (b *Build) GetCITLSVariables() spec.Variables {
 	return variables
 }
 
+// GetCIHTTP2Variables exposes the manager's resolved HTTP/2 setting to helper processes
+// that construct their own GitLab API client inside the build container.
+func (b *Build) GetCIHTTP2Variables() spec.Variables {
+	if b.Runner == nil {
+		return nil
+	}
+
+	allowHTTP2 := false
+	if b.Runner.RunnerCredentials.AllowHTTP2 != nil {
+		allowHTTP2 = *b.Runner.RunnerCredentials.AllowHTTP2
+	}
+
+	return spec.Variables{{
+		Key:      "RUNNER_ALLOW_HTTP2",
+		Value:    strconv.FormatBool(allowHTTP2),
+		Public:   true,
+		Internal: true,
+		File:     false,
+	}}
+}
+
 func (b *Build) IsSharedEnv() bool {
 	return b.ExecutorFeatures.Shared
 }
@@ -1989,6 +2011,7 @@ func (b *Build) getBaseVariablesBeforeJob() spec.Variables {
 func (b *Build) getBaseVariablesAfterJob() spec.Variables {
 	variables := make(spec.Variables, 0)
 
+	variables = append(variables, b.GetCIHTTP2Variables()...)
 	variables = append(variables, b.GetSharedEnvVariable())
 	variables = append(variables, AppVersion.Variables()...)
 	variables = append(variables, b.secretsVariables...)
