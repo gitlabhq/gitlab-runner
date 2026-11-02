@@ -2398,11 +2398,13 @@ func TestGitLFSPullFlags(t *testing.T) {
 }
 
 func TestDefaultVariables(t *testing.T) {
+	boolPtr := func(value bool) *bool { return &value }
 	tests := map[string]struct {
 		jobVariables  spec.Variables
 		rootDir       string
 		key           string
 		expectedValue string
+		allowHTTP2    *bool
 	}{
 		"get default CI_SERVER value": {
 			jobVariables:  spec.Variables{},
@@ -2450,6 +2452,36 @@ func TestDefaultVariables(t *testing.T) {
 			key:           "CI_BUILD_NETWORK_NAME",
 			expectedValue: "runner-1234-0-0-0",
 		},
+		"RUNNER_ALLOW_HTTP2 resolves to false when runner configuration is unset": {
+			rootDir:       "/builds",
+			key:           "RUNNER_ALLOW_HTTP2",
+			expectedValue: "false",
+		},
+		"RUNNER_ALLOW_HTTP2 false is exposed to helper processes": {
+			rootDir:       "/builds",
+			key:           "RUNNER_ALLOW_HTTP2",
+			expectedValue: "false",
+			allowHTTP2:    boolPtr(false),
+		},
+		"RUNNER_ALLOW_HTTP2 true is exposed to helper processes": {
+			rootDir:       "/builds",
+			key:           "RUNNER_ALLOW_HTTP2",
+			expectedValue: "true",
+			allowHTTP2:    boolPtr(true),
+		},
+		"job variable cannot override runner HTTP2 configuration": {
+			jobVariables:  spec.Variables{{Key: "RUNNER_ALLOW_HTTP2", Value: "true", Public: true}},
+			rootDir:       "/builds",
+			key:           "RUNNER_ALLOW_HTTP2",
+			expectedValue: "false",
+			allowHTTP2:    boolPtr(false),
+		},
+		"job variable cannot override unset runner HTTP2 configuration": {
+			jobVariables:  spec.Variables{{Key: "RUNNER_ALLOW_HTTP2", Value: "true", Public: true}},
+			rootDir:       "/builds",
+			key:           "RUNNER_ALLOW_HTTP2",
+			expectedValue: "false",
+		},
 	}
 
 	for name, test := range tests {
@@ -2463,7 +2495,8 @@ func TestDefaultVariables(t *testing.T) {
 				},
 				Runner: &RunnerConfig{
 					RunnerCredentials: RunnerCredentials{
-						Token: "1234",
+						Token:      "1234",
+						AllowHTTP2: test.allowHTTP2,
 					},
 				},
 			}
@@ -6086,6 +6119,7 @@ func TestGetServiceVariablesDoesNotExposeNonPublicViaChain(t *testing.T) {
 }
 
 func TestExecuteUploadReferees_UsesManagerCredentials(t *testing.T) {
+	allowHTTP2 := false
 	referee := referees.NewMockReferee(t)
 	referee.On("Execute", mock.Anything, mock.Anything, mock.Anything).Return(bytes.NewReader([]byte("metrics")), nil)
 	referee.On("ArtifactBaseName").Return("metrics.json")
@@ -6102,6 +6136,7 @@ func TestExecuteUploadReferees_UsesManagerCredentials(t *testing.T) {
 				TLSCAFile:   "/etc/ca.pem",
 				TLSCertFile: "/etc/cert.pem",
 				TLSKeyFile:  "/etc/key.pem",
+				AllowHTTP2:  &allowHTTP2,
 			},
 		},
 		Referees: []referees.Referee{referee},
@@ -6120,5 +6155,6 @@ func TestExecuteUploadReferees_UsesManagerCredentials(t *testing.T) {
 		TLSCAFile:   "/etc/ca.pem",
 		TLSCertFile: "/etc/cert.pem",
 		TLSKeyFile:  "/etc/key.pem",
+		AllowHTTP2:  &allowHTTP2,
 	}, uploaded)
 }

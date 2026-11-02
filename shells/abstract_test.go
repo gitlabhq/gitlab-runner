@@ -398,6 +398,7 @@ func TestWriteWritingArtifactsOnFailure(t *testing.T) {
 
 func TestArtifactsHelperCommandsIgnoreAPIURL(t *testing.T) {
 	gitlabURL := "https://example.com:3443"
+	allowHTTP2 := false
 
 	shell := AbstractShell{}
 	build := &common.Build{
@@ -410,8 +411,9 @@ func TestArtifactsHelperCommandsIgnoreAPIURL(t *testing.T) {
 		},
 		Runner: &common.RunnerConfig{
 			RunnerCredentials: common.RunnerCredentials{
-				URL:    gitlabURL,
-				APIURL: "https://api.internal.example.com",
+				URL:        gitlabURL,
+				APIURL:     "https://api.internal.example.com",
+				AllowHTTP2: &allowHTTP2,
 			},
 		},
 	}
@@ -421,6 +423,9 @@ func TestArtifactsHelperCommandsIgnoreAPIURL(t *testing.T) {
 	}
 
 	mockWriter := NewMockShellWriter(t)
+	mockWriter.On("Variable", mock.MatchedBy(func(variable spec.Variable) bool {
+		return variable.Key == "RUNNER_ALLOW_HTTP2" && variable.Value == "false" && variable.Internal
+	})).Once()
 	mockWriter.On("Variable", mock.Anything)
 	mockWriter.On("TmpFile", "gitlab_runner_env").Return("path/to/env/file").Once()
 	mockWriter.On("SourceEnv", "path/to/env/file").Once()

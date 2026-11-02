@@ -67,25 +67,34 @@ func (n *GitLabClient) getClient(credentials requestCredentials) (*client, error
 	if n.clients == nil {
 		n.clients = make(map[string]*client)
 	}
+	allowHTTP2 := credentials.GetAllowHTTP2()
+	allowHTTP2Str := ""
+	if allowHTTP2 != nil {
+		allowHTTP2Str = fmt.Sprintf("_%t", *allowHTTP2)
+	}
 	key := fmt.Sprintf(
-		"%s_%s_%s_%s_%s",
+		"%s_%s_%s_%s_%s%s",
 		credentials.GetURL(),
 		credentials.GetAPIURL(),
 		credentials.GetToken(),
 		credentials.GetTLSCAFile(),
 		credentials.GetTLSCertFile(),
+		allowHTTP2Str,
 	)
 	c, ok := n.clients[key]
 	if ok {
 		return c, nil
 	}
 
-	c, err := newClient(
-		credentials,
-		n.apiRequestsCollector,
+	opts := []option{
 		withMaxAge(n.connectionMaxAge),
 		withHttpClientOptions(n.httpClientOptions),
 		withCertificateDirectory(n.certDirectory),
+	}
+	c, err := newClient(
+		credentials,
+		n.apiRequestsCollector,
+		opts...,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("new client: %w", err)

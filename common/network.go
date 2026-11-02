@@ -332,6 +332,7 @@ type JobCredentials struct {
 	TLSCAFile   string `long:"tls-ca-file" env:"CI_SERVER_TLS_CA_FILE" description:"File containing the certificates to verify the peer when using HTTPS"`
 	TLSCertFile string `long:"tls-cert-file" env:"CI_SERVER_TLS_CERT_FILE" description:"File containing certificate for TLS client auth with runner when using HTTPS"`
 	TLSKeyFile  string `long:"tls-key-file" env:"CI_SERVER_TLS_KEY_FILE" description:"File containing private key for TLS client auth with runner when using HTTPS"`
+	AllowHTTP2  *bool  `long:"allow-http2" env:"RUNNER_ALLOW_HTTP2" description:"Enable or disable HTTP/2 for GitLab API requests. Disabled by default."`
 }
 
 func (j *JobCredentials) GetURL() string {
@@ -352,6 +353,10 @@ func (j *JobCredentials) GetTLSCertFile() string {
 
 func (j *JobCredentials) GetTLSKeyFile() string {
 	return j.TLSKeyFile
+}
+
+func (j *JobCredentials) GetAllowHTTP2() *bool {
+	return j.AllowHTTP2
 }
 
 func (j *JobCredentials) GetToken() string {

@@ -169,6 +169,19 @@ func TestNewClient(t *testing.T) {
 	}
 }
 
+func TestNewClientRequestCredentialsControlHTTP2(t *testing.T) {
+	allowHTTP2 := false
+	credentials := &JobCredentials{URL: "https://example.com/", AllowHTTP2: &allowHTTP2}
+
+	c, err := newClient(credentials, NewAPIRequestsCollector())
+	require.NoError(t, err)
+	c.createTransport()
+
+	transport, ok := c.Client.Transport.(*http.Transport)
+	require.True(t, ok)
+	assert.False(t, transport.ForceAttemptHTTP2)
+}
+
 func TestServerCertificateChange(t *testing.T) {
 	gen := certificate.X509Generator{}
 
@@ -1162,5 +1175,129 @@ func TestWithMaxAge(t *testing.T) {
 		withMaxAge(tc.age)(c)
 
 		assert.Equal(t, c.connectionMaxAge, tc.age)
+	}
+}
+
+func TestClient_HTTP2Support(t *testing.T) {
+	t.Parallel()
+
+	trueVal := true
+	falseVal := false
+
+	testCases := []struct {
+		name                 string
+		creds                *RunnerCredentials
+		expectedAttemptHTTP2 bool
+	}{
+		{
+			name:                 "default disables HTTP2",
+			creds:                &RunnerCredentials{URL: "https://example.com"},
+			expectedAttemptHTTP2: false,
+		},
+		{
+			name:                 "creds disable HTTP2",
+			creds:                &RunnerCredentials{URL: "https://example.com", AllowHTTP2: &falseVal},
+			expectedAttemptHTTP2: false,
+		},
+		{
+			name:                 "creds enable HTTP2",
+			creds:                &RunnerCredentials{URL: "https://example.com", AllowHTTP2: &trueVal},
+			expectedAttemptHTTP2: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			c, err := newClient(tc.creds, NewAPIRequestsCollector())
+			require.NoError(t, err)
+
+			c.createTransport()
+			tr, ok := c.Client.Transport.(*http.Transport)
+			require.True(t, ok)
+			assert.Equal(t, tc.expectedAttemptHTTP2, tr.ForceAttemptHTTP2)
+			require.NotNil(t, tr.HTTP2)
+			assert.Equal(t, 30*time.Second, tr.HTTP2.SendPingTimeout)
+			assert.Equal(t, 15*time.Second, tr.HTTP2.PingTimeout)
+		})
+	}
+}
+
+func TestClient_HTTP2Negotiation(t *testing.T) {
+	t.Parallel()
+
+	falseVal := false
+	trueVal := true
+
+	testCases := []struct {
+		name          string
+		serverH2      bool
+		allowHTTP2    *bool
+		expectedProto string
+	}{
+		{
+			name:          "default negotiates HTTP/1.1 against h2 server",
+			serverH2:      true,
+			allowHTTP2:    nil,
+			expectedProto: "HTTP/1.1",
+		},
+		{
+			name:          "explicitly enabled negotiates HTTP/2 against h2 server",
+			serverH2:      true,
+			allowHTTP2:    &trueVal,
+			expectedProto: "HTTP/2.0",
+		},
+		{
+			name:          "disabled negotiates HTTP/1.1 against h2 server",
+			serverH2:      true,
+			allowHTTP2:    &falseVal,
+			expectedProto: "HTTP/1.1",
+		},
+		{
+			name:          "explicitly enabled falls back to HTTP/1.1 against h1-only server",
+			serverH2:      false,
+			allowHTTP2:    &trueVal,
+			expectedProto: "HTTP/1.1",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			var receivedProto string
+			server := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				receivedProto = r.Proto
+				w.Header().Set("Content-Type", "application/json")
+				_ = json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
+			}))
+			server.EnableHTTP2 = tc.serverH2
+			server.StartTLS()
+			defer server.Close()
+
+			caFile := filepath.Join(t.TempDir(), "ca.crt")
+			caCert := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: server.Certificate().Raw})
+			require.NoError(t, os.WriteFile(caFile, caCert, 0600))
+
+			creds := &RunnerCredentials{
+				URL:        server.URL,
+				TLSCAFile:  caFile,
+				AllowHTTP2: tc.allowHTTP2,
+			}
+
+			c, err := newClient(creds, NewAPIRequestsCollector())
+			require.NoError(t, err)
+
+			c.createTransport()
+
+			statusCode, statusText, _ := c.doJSON(
+				t.Context(),
+				"test/h2",
+				http.MethodGet,
+				http.StatusOK,
+				nil,
+				nil,
+				nil,
+			)
+			assert.Equal(t, http.StatusOK, statusCode, statusText)
+			assert.Equal(t, tc.expectedProto, receivedProto)
+		})
 	}
 }
