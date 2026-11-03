@@ -11,7 +11,7 @@ func ParseUIDGID(output string) (int, int, error) {
 	var uid, gid int
 	var hasUID, hasGID bool
 
-	for _, field := range strings.Fields(output) {
+	for field := range strings.FieldsSeq(output) {
 		switch {
 		case strings.HasPrefix(field, "uid="):
 			value := strings.TrimPrefix(field, "uid=")
