@@ -13,6 +13,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
+	azblobblob "github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/blob"
+	awsmiddleware "github.com/aws/aws-sdk-go-v2/aws/middleware"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
+	smithyhttp "github.com/aws/smithy-go/transport/http"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 
@@ -235,6 +240,61 @@ func (c *CacheExtractorCommand) gocloudParallelRangeSupported(ctx context.Contex
 	return c.gocloudSupportsRange(ctx, b, objectName)
 }
 
+// goCloudRangeFetchChunk returns the chunk fetcher of the parallel GoCloud download. The s3blob and
+// azureblob drivers return the body of any 2xx answer, so a server in front of the store that ignores
+// Range and answers 200 with the whole object would have the opening bytes of the object written at
+// the chunk's offset. For those two drivers the chunk's HTTP response is read and decided by
+// checkChunkRange, as the chunks of the presigned download are. Other drivers are not checked: the
+// GCS client of gcsblob already refuses an answer other than 206 to a range that starts after byte 0,
+// and fileblob reads a local file.
+func goCloudRangeFetchChunk(ctx context.Context, b *blob.Bucket, key string) transfer.FetchChunk {
+	return func(offset, length int64) (io.ReadCloser, error) {
+		var captured *http.Response
+		r, err := b.NewRangeReader(policy.WithCaptureResponse(ctx, &captured), key, offset, length, nil)
+		if err != nil {
+			return nil, err
+		}
+		code, status, contentRange, ok := goCloudChunkStatus(r, captured)
+		if !ok {
+			return r, nil
+		}
+		if err := checkChunkRange(code, status, contentRange, offset, length); err != nil {
+			_ = r.Close()
+			return nil, err
+		}
+		return r, nil
+	}
+}
+
+// goCloudChunkStatus reads the status and the Content-Range of the HTTP response behind r: for
+// s3blob, from the raw response of the s3.GetObjectOutput that Reader.As exposes; for azureblob,
+// whose Reader.As exposes a DownloadStreamResponse without the status, from the response captured
+// through the request's context. ok is false for any other driver, and also in two cases where the
+// driver is S3 or Azure: a raw response that is not a *smithyhttp.Response, and no response captured.
+// The SDK transports in use always provide the response, so those would take a future SDK or a
+// custom transport, and the chunk would then be written without the range check, so they are logged
+// at debug level.
+func goCloudChunkStatus(r *blob.Reader, captured *http.Response) (code int, status, contentRange string, ok bool) {
+	var resp *http.Response
+	var s3Out s3.GetObjectOutput
+	var azureOut azblobblob.DownloadStreamResponse
+	switch {
+	case r.As(&s3Out):
+		if raw, isHTTP := awsmiddleware.GetRawResponse(s3Out.ResultMetadata).(*smithyhttp.Response); isHTTP {
+			resp = raw.Response
+		}
+	case r.As(&azureOut):
+		resp = captured
+	default:
+		return 0, "", "", false
+	}
+	if resp == nil {
+		logrus.Debugln("GoCloud chunk response could not be read, chunk range not checked")
+		return 0, "", "", false
+	}
+	return resp.StatusCode, resp.Status, resp.Header.Get("Content-Range"), true
+}
+
 func (c *CacheExtractorCommand) handlePresignedURL() error {
 	if c.presignedParallelDownloadEligible() {
 		done, err := c.tryPresignedParallelDownload()
@@ -359,18 +419,29 @@ func (c *CacheExtractorCommand) presignedRangeFetchChunk(rawURL string) func(off
 		if err != nil {
 			return nil, err
 		}
-		// Anything but a 206 for exactly this range (a 200 full body, or a 206
-		// for another range) would put the wrong bytes at this chunk's offset.
-		wantRange := fmt.Sprintf("bytes %d-%d/", offset, offset+length-1)
-		if resp.StatusCode != http.StatusPartialContent || !strings.HasPrefix(resp.Header.Get("Content-Range"), wantRange) {
+		if err := checkChunkRange(resp.StatusCode, resp.Status, resp.Header.Get("Content-Range"), offset, length); err != nil {
 			_ = resp.Body.Close()
-			if resp.StatusCode == http.StatusOK {
-				return nil, fmt.Errorf("range request failed: %s: %w", resp.Status, errRangeNotHonored)
-			}
-			return nil, fmt.Errorf("range request failed: %s", resp.Status)
+			return nil, err
 		}
 		return resp.Body, nil
 	}
+}
+
+// checkChunkRange decides whether the answer to the request for length bytes at offset, with its
+// status code, status line and Content-Range, can be written at that offset. The presigned and the
+// GoCloud chunk fetchers both decide with it. Only a 206 whose Content-Range is the requested range
+// is accepted: anything else (a 200 with the whole object, or a 206 for another range) would put the
+// wrong bytes at the chunk's offset. A 200 is marked with errRangeNotHonored, so that the caller
+// downloads the object with a single request instead.
+func checkChunkRange(code int, status, contentRange string, offset, length int64) error {
+	wantRange := fmt.Sprintf("bytes %d-%d/", offset, offset+length-1)
+	if code == http.StatusPartialContent && strings.HasPrefix(contentRange, wantRange) {
+		return nil
+	}
+	if code == http.StatusOK {
+		return fmt.Errorf("range request failed: %s: %w", status, errRangeNotHonored)
+	}
+	return fmt.Errorf("range request failed: %s", status)
 }
 
 // resolveGoCloudSource opens the primary GoCloud bucket and the alternate bucket (if configured),
@@ -511,10 +582,12 @@ func (c *CacheExtractorCommand) handleGoCloudURL() error {
 	if featureflags.IsOn(logger, os.Getenv(featureflags.UseParallelCacheTransfer)) && c.Concurrency > 1 && attrs.Size > 0 { //nolint:nestif
 		if c.gocloudParallelRangeSupported(ctx, u.Scheme, selectedBucket, selectedObjectName) {
 			if attrs.Size > int64(c.effectiveParallelChunkSize()) {
-				fetchChunk := func(offset, length int64) (io.ReadCloser, error) {
-					return selectedBucket.NewRangeReader(ctx, selectedObjectName, offset, length, nil)
+				fetchChunk := goCloudRangeFetchChunk(ctx, selectedBucket, selectedObjectName)
+				err := c.downloadParallel(attrs.Size, attrs.ModTime, attrs.ETag, cleanedURL, attrs.Metadata, fetchChunk)
+				if !errors.Is(err, errRangeNotHonored) {
+					return err
 				}
-				return c.downloadParallel(attrs.Size, attrs.ModTime, attrs.ETag, cleanedURL, attrs.Metadata, fetchChunk)
+				logrus.WithError(err).Infoln("GoCloud backend did not honor a chunk range read, using sequential download")
 			}
 		} else {
 			logrus.Infoln("GoCloud backend does not support range reads, using sequential download")

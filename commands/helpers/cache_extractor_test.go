@@ -20,14 +20,18 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/container"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gocloud.dev/blob"
+	"gocloud.dev/blob/azureblob"
 	"gocloud.dev/blob/fileblob"
+	"gocloud.dev/blob/s3blob"
 
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
+	"gitlab.com/gitlab-org/gitlab-runner/log/test"
 )
 
 const (
@@ -982,6 +986,287 @@ func TestCacheExtractorGoCloudParallelTransfer(t *testing.T) {
 	data, err := os.ReadFile(cacheExtractorMetadata)
 	require.NoError(t, err)
 	assert.JSONEq(t, `{"blank":"","foo":"some foo"}`, string(data))
+}
+
+// goCloudRangeDrivers points a GoCloud cache URL of each driver whose chunk responses the parallel
+// download checks at a stand-in for its endpoint, and returns the URL mux to open it with.
+var goCloudRangeDrivers = map[string]func(t *testing.T, endpoint string) (string, *blob.URLMux){
+	"s3": func(t *testing.T, endpoint string) (string, *blob.URLMux) {
+		t.Setenv("AWS_ACCESS_KEY_ID", "test")
+		t.Setenv("AWS_SECRET_ACCESS_KEY", "test")
+		q := url.Values{}
+		q.Set("endpoint", endpoint)
+		q.Set("region", "us-east-1")
+		q.Set("use_path_style", "true")
+		q.Set("disable_https", "true")
+		mux := new(blob.URLMux)
+		mux.RegisterBucket(s3blob.Scheme, &s3blob.URLOpener{})
+		return "s3://bucket/" + cacheExtractorArchive + "?" + q.Encode(), mux
+	},
+	"azblob": func(t *testing.T, endpoint string) (string, *blob.URLMux) {
+		u, err := url.Parse(endpoint)
+		require.NoError(t, err)
+		mux := new(blob.URLMux)
+		mux.RegisterBucket(azureblob.Scheme, &azureblob.URLOpener{
+			MakeClient: func(svcURL azureblob.ServiceURL, containerName azureblob.ContainerName) (*container.Client, error) {
+				containerURL, err := url.JoinPath(string(svcURL), string(containerName))
+				if err != nil {
+					return nil, err
+				}
+				return container.NewClientWithNoCredential(containerURL, nil)
+			},
+			ServiceURLOptions: azureblob.ServiceURLOptions{AccountName: "account", StorageDomain: u.Host, Protocol: "http"},
+		})
+		return "azblob://container/" + cacheExtractorArchive, mux
+	},
+}
+
+// writeGoCloudRange answers with a 206 that holds bytes start-end of payload.
+func writeGoCloudRange(w http.ResponseWriter, payload []byte, start, end int64) {
+	w.Header().Set("Content-Range", fmt.Sprintf("bytes %d-%d/%d", start, end, len(payload)))
+	w.Header().Set("Content-Length", strconv.FormatInt(end-start+1, 10))
+	w.WriteHeader(http.StatusPartialContent)
+	_, _ = w.Write(payload[start : end+1])
+}
+
+// TestCacheExtractorGoCloudParallelTransferChecksChunkRange covers the parallel GoCloud download from
+// a stand-in for an S3 and an Azure endpoint. The s3blob and azureblob drivers return the body of any
+// 2xx answer, so the extractor reads each chunk's HTTP response. The first chunk is answered as
+// requested and every chunk after it by the case. A chunk answered with 200 and the whole object makes
+// the extractor download the object with a single reader. A 206 for another range, or one without
+// Content-Range, fails the download with a retryable error, with no GET without Range and no archive.
+func TestCacheExtractorGoCloudParallelTransferChecksChunkRange(t *testing.T) {
+	responses := map[string]struct {
+		respond        func(w http.ResponseWriter, payload []byte, start, end int64)
+		wantErr        bool
+		wantSequential int64
+	}{
+		"206 as requested": {
+			respond: writeGoCloudRange,
+		},
+		"200 with the whole object": {
+			respond: func(w http.ResponseWriter, payload []byte, _, _ int64) {
+				w.Header().Set("Content-Length", strconv.Itoa(len(payload)))
+				_, _ = w.Write(payload)
+			},
+			wantSequential: 1,
+		},
+		"206 for another range": {
+			respond: func(w http.ResponseWriter, payload []byte, start, end int64) {
+				writeGoCloudRange(w, payload, 0, end-start)
+			},
+			wantErr: true,
+		},
+		"206 without Content-Range": {
+			respond: func(w http.ResponseWriter, payload []byte, start, end int64) {
+				w.Header().Set("Content-Length", strconv.FormatInt(end-start+1, 10))
+				w.WriteHeader(http.StatusPartialContent)
+				_, _ = w.Write(payload[:end-start+1])
+			},
+			wantErr: true,
+		},
+	}
+
+	for driver, open := range goCloudRangeDrivers {
+		for name, tc := range responses {
+			t.Run(driver+"/"+name, func(t *testing.T) {
+				t.Setenv(featureflags.UseParallelCacheTransfer, "true")
+				cdTempDir(t)
+
+				payload := parallelTestZipBytes(t)
+				require.Greater(t, len(payload), 32, "payload should span multiple parallel chunks")
+
+				lm := time.Date(2020, 5, 1, 12, 0, 0, 0, time.UTC).Format(http.TimeFormat)
+				var sequential atomic.Int64
+				ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					w.Header().Set("Last-Modified", lm)
+					w.Header().Set("x-ms-creation-time", lm)
+					w.Header().Set("ETag", `"0123456789abcdef0123456789abcdef"`)
+					w.Header().Set("Content-Type", "application/zip")
+					// The Azure SDK sends the range in x-ms-range.
+					rangeHeader := r.Header.Get("Range")
+					if rangeHeader == "" {
+						rangeHeader = r.Header.Get("x-ms-range")
+					}
+					start, end, ok := parseBytesRangeHeader(rangeHeader)
+					switch {
+					case r.Method == http.MethodHead:
+						w.Header().Set("Content-Length", strconv.Itoa(len(payload)))
+					case !ok:
+						sequential.Add(1)
+						w.Header().Set("Content-Length", strconv.Itoa(len(payload)))
+						_, _ = w.Write(payload)
+					case start > 0:
+						tc.respond(w, payload, start, end)
+					default:
+						writeGoCloudRange(w, payload, start, end)
+					}
+				}))
+				t.Cleanup(ts.Close)
+
+				gocloudURL, mux := open(t, ts.URL)
+				cmd := CacheExtractorCommand{
+					File:               cacheExtractorArchive,
+					GoCloudURL:         gocloudURL,
+					mux:                mux,
+					ChunkSize:          7,
+					Concurrency:        4,
+					TransferBufferSize: defaultCacheTransferBufferSize,
+				}
+
+				err := cmd.handleGoCloudURL()
+				assert.Equal(t, tc.wantSequential, sequential.Load(), "GETs without Range")
+				if tc.wantErr {
+					require.ErrorAs(t, err, new(retryableError), "a chunk outside its range should fail with a retryable error")
+					assert.ErrorContains(t, err, "range request failed: 206 Partial Content")
+					assert.NoFileExists(t, cacheExtractorArchive)
+					return
+				}
+				require.NoError(t, err)
+				got, err := os.ReadFile(cacheExtractorArchive)
+				require.NoError(t, err)
+				assert.Equal(t, payload, got)
+			})
+		}
+	}
+}
+
+// TestCheckChunkRange covers the rule both parallel chunk fetchers apply to the answer for a chunk:
+// only a 206 whose Content-Range is the requested range is accepted, and only a 200 is marked with
+// errRangeNotHonored, which makes the caller download the object with a single request.
+func TestCheckChunkRange(t *testing.T) {
+	const offset, length = 7, 7 // bytes 7-13
+
+	tests := map[string]struct {
+		code         int
+		contentRange string
+		wantErr      string
+		wantFallback bool
+	}{
+		"206 as requested": {
+			code:         http.StatusPartialContent,
+			contentRange: "bytes 7-13/50",
+		},
+		"206 as requested with an unknown total": {
+			code:         http.StatusPartialContent,
+			contentRange: "bytes 7-13/*",
+		},
+		"200 with the whole object": {
+			code:         http.StatusOK,
+			wantErr:      "range request failed: 200 OK: range not honored",
+			wantFallback: true,
+		},
+		"200 with the requested Content-Range": {
+			code:         http.StatusOK,
+			contentRange: "bytes 7-13/50",
+			wantErr:      "range request failed: 200 OK: range not honored",
+			wantFallback: true,
+		},
+		"206 for another range": {
+			code:         http.StatusPartialContent,
+			contentRange: "bytes 0-6/50",
+			wantErr:      "range request failed: 206 Partial Content",
+		},
+		"206 for a longer range from the same offset": {
+			code:         http.StatusPartialContent,
+			contentRange: "bytes 7-130/500",
+			wantErr:      "range request failed: 206 Partial Content",
+		},
+		"206 without Content-Range": {
+			code:    http.StatusPartialContent,
+			wantErr: "range request failed: 206 Partial Content",
+		},
+		"416": {
+			code:         http.StatusRequestedRangeNotSatisfiable,
+			contentRange: "bytes */50",
+			wantErr:      "range request failed: 416 Requested Range Not Satisfiable",
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			status := fmt.Sprintf("%d %s", tc.code, http.StatusText(tc.code))
+
+			err := checkChunkRange(tc.code, status, tc.contentRange, offset, length)
+			if tc.wantErr == "" {
+				assert.NoError(t, err)
+				return
+			}
+			require.EqualError(t, err, tc.wantErr)
+			if tc.wantFallback {
+				assert.ErrorIs(t, err, errRangeNotHonored)
+			} else {
+				assert.NotErrorIs(t, err, errRangeNotHonored)
+			}
+		})
+	}
+}
+
+// TestGoCloudChunkStatusLogsUnreadableResponse covers the debug line of goCloudChunkStatus. An Azure
+// chunk read without the context that captures its response stands for a transport that does not
+// provide it: ok is false, so the chunk would be written without the range check, and the line says
+// so. A chunk of fileblob, a driver that is not checked, gives ok false without the line.
+func TestGoCloudChunkStatusLogsUnreadableResponse(t *testing.T) {
+	const notChecked = "GoCloud chunk response could not be read, chunk range not checked"
+
+	level := logrus.GetLevel()
+	logrus.SetLevel(logrus.DebugLevel)
+	t.Cleanup(func() { logrus.SetLevel(level) })
+
+	payload := []byte("0123456789abcdefghijklmnopqrstuvwxyz")
+	// notCheckedEntries calls goCloudChunkStatus on r with no captured response, and returns ok
+	// and the entries it logged with the line of an unchecked chunk.
+	notCheckedEntries := func(t *testing.T, r *blob.Reader) (bool, []*logrus.Entry) {
+		hook, removeHook := test.NewHook()
+		t.Cleanup(removeHook)
+
+		_, _, _, ok := goCloudChunkStatus(r, nil)
+
+		var entries []*logrus.Entry
+		for _, entry := range hook.AllEntries() {
+			if entry.Message == notChecked {
+				entries = append(entries, entry)
+			}
+		}
+		return ok, entries
+	}
+
+	t.Run("azblob without the captured response", func(t *testing.T) {
+		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			w.Header().Set("Last-Modified", time.Date(2020, 5, 1, 12, 0, 0, 0, time.UTC).Format(http.TimeFormat))
+			writeGoCloudRange(w, payload, 7, 13)
+		}))
+		t.Cleanup(ts.Close)
+
+		gocloudURL, mux := goCloudRangeDrivers["azblob"](t, ts.URL)
+		b, err := mux.OpenBucket(t.Context(), gocloudURL)
+		require.NoError(t, err)
+		t.Cleanup(func() { _ = b.Close() })
+		// goCloudRangeFetchChunk reads with policy.WithCaptureResponse in the context; this read does not.
+		r, err := b.NewRangeReader(t.Context(), cacheExtractorArchive, 7, 7, nil)
+		require.NoError(t, err)
+		t.Cleanup(func() { _ = r.Close() })
+
+		ok, entries := notCheckedEntries(t, r)
+		assert.False(t, ok)
+		require.Len(t, entries, 1)
+		assert.Equal(t, logrus.DebugLevel, entries[0].Level)
+	})
+
+	t.Run("fileblob", func(t *testing.T) {
+		dir := t.TempDir()
+		require.NoError(t, os.WriteFile(path.Join(dir, cacheExtractorArchive), payload, 0o600))
+		b, err := fileblob.OpenBucket(dir, nil)
+		require.NoError(t, err)
+		t.Cleanup(func() { _ = b.Close() })
+		r, err := b.NewRangeReader(t.Context(), cacheExtractorArchive, 7, 7, nil)
+		require.NoError(t, err)
+		t.Cleanup(func() { _ = r.Close() })
+
+		ok, entries := notCheckedEntries(t, r)
+		assert.False(t, ok)
+		assert.Empty(t, entries)
+	})
 }
 
 func TestGoCloudURLSchemeAssumesRangeSupport(t *testing.T) {
