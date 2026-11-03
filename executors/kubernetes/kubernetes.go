@@ -21,6 +21,7 @@ import (
 	"text/tabwriter"
 	"time"
 
+	"github.com/distribution/reference"
 	"github.com/docker/cli/cli/config/types"
 	jsonpatch "github.com/evanphx/json-patch"
 	"github.com/hashicorp/golang-lru/v2/expirable"
@@ -60,9 +61,10 @@ import (
 )
 
 const (
-	buildContainerName          = "build"
-	helperContainerName         = "helper"
-	initPermissionContainerName = "init-permissions"
+	buildContainerName           = "build"
+	helperContainerName          = "helper"
+	initPermissionContainerName  = "init-permissions"
+	uidGIDCollectorContainerName = "init-build-uid-gid-collector"
 
 	detectShellScriptName         = "detect_shell_script"
 	pwshJSONTerminationScriptName = "terminate_with_json_script"
@@ -90,6 +92,11 @@ const (
 	resourceAvailabilityCheckMaxPollInterval = 5 * time.Second
 
 	serviceContainerPrefix = "svc-"
+
+	registryAuthMountPath    = "/etc/gitlab-runner-helper/registry-auth"
+	registryAuthVolumePrefix = "registry-auth-"
+	// Credentials the job can already read, next to .dockercfg in the same secret.
+	jobDockerConfigKey = "job.dockercfg"
 
 	// runnerLabelNamespace is used to build the k8s objects' labels and annotations, and for checking if user-defined
 	// labels and label overwrites are allowed; i.e. labels within this namespace cannot be set or overwritten by
@@ -536,6 +543,10 @@ func (s *executor) prepareConnections(options common.ExecutorPrepareOptions) err
 	}
 
 	s.prepareOptions(options.Build)
+
+	if err := s.validateServiceHealthCheckPorts(); err != nil {
+		return &common.BuildError{Inner: err, FailureReason: common.ConfigurationError}
+	}
 
 	if err := s.prepareServiceOverwrites(s.options.Services); err != nil {
 		return &common.BuildError{
@@ -1527,7 +1538,7 @@ func (s *executor) buildPermissionsInitContainer(os string) (api.Container, erro
 }
 
 func (s *executor) buildUiGidCollector(os string) (api.Container, error) {
-	const containerName = "init-build-uid-gid-collector"
+	const containerName = uidGIDCollectorContainerName
 
 	kubernetesOptions := s.options.Image.ExecutorOptions.Kubernetes.Expand(s.Build.GetAllVariables())
 	securityContext := s.getSecurityContextWithUIDGID(
@@ -2106,6 +2117,10 @@ func (s *executor) getVolumes() []api.Volume {
 		})
 	}
 
+	if len(s.inspectedServices()) > 0 {
+		volumes = append(volumes, s.registryAuthVolumes()...)
+	}
+
 	if s.Build.IsFeatureFlagOn(featureflags.UseLegacyKubernetesExecutionStrategy) {
 		return volumes
 	}
@@ -2124,6 +2139,61 @@ func (s *executor) getVolumes() []api.Volume {
 	}
 
 	return volumes
+}
+
+func (s *executor) inspectedServices() []string {
+	if s.options == nil || !s.Build.IsFeatureFlagOn(featureflags.KubernetesHealthCheckInspectImages) {
+		return nil
+	}
+	_, inspectServices := s.healthCheckTargets()
+	return inspectServices
+}
+
+// Service account pull secrets are not included: their names are not known here.
+func (s *executor) registryAuthSources() []api.SecretVolumeSource {
+	var sources []api.SecretVolumeSource
+	if s.Config.Kubernetes.ImagePullSecretsReadableByJobs {
+		if !s.Config.Kubernetes.UseServiceAccountImagePullSecrets {
+			for _, name := range s.Config.Kubernetes.ImagePullSecrets {
+				sources = append(sources, api.SecretVolumeSource{SecretName: name, Optional: new(true)})
+			}
+		}
+		if s.credentials != nil {
+			sources = append(sources, api.SecretVolumeSource{SecretName: s.credentials.Name})
+		}
+		return sources
+	}
+
+	if s.credentials != nil {
+		sources = append(sources, api.SecretVolumeSource{
+			SecretName: s.credentials.Name,
+			Items:      []api.KeyToPath{{Key: jobDockerConfigKey, Path: api.DockerConfigKey}},
+		})
+	}
+	return sources
+}
+
+func (s *executor) registryAuthVolumes() []api.Volume {
+	var volumes []api.Volume
+	for i, source := range s.registryAuthSources() {
+		volumes = append(volumes, api.Volume{
+			Name:         registryAuthVolumePrefix + strconv.Itoa(i),
+			VolumeSource: api.VolumeSource{Secret: &source},
+		})
+	}
+	return volumes
+}
+
+func (s *executor) registryAuthVolumeMounts() []api.VolumeMount {
+	var mounts []api.VolumeMount
+	for i := range s.registryAuthSources() {
+		mounts = append(mounts, api.VolumeMount{
+			Name:      registryAuthVolumePrefix + strconv.Itoa(i),
+			MountPath: registryAuthMountPath + "/" + strconv.Itoa(i),
+			ReadOnly:  true,
+		})
+	}
+	return mounts
 }
 
 func (s *executor) getVolumesForConfig() []api.Volume {
@@ -2380,11 +2450,19 @@ func (s *executor) setupCredentials(ctx context.Context) error {
 	}
 
 	dockerCfgs := make(map[string]types.AuthConfig)
+	jobDockerCfgs := make(map[string]types.AuthConfig)
 	for _, config := range authConfigs {
 		dockerCfgs[config.AuthConfig.ServerAddress] = config.AuthConfig
+		if config.VisibleToJob() {
+			jobDockerCfgs[config.AuthConfig.ServerAddress] = config.AuthConfig
+		}
 	}
 
 	dockerCfgContent, err := json.Marshal(dockerCfgs)
+	if err != nil {
+		return err
+	}
+	jobDockerCfgContent, err := json.Marshal(jobDockerCfgs)
 	if err != nil {
 		return err
 	}
@@ -2395,6 +2473,9 @@ func (s *executor) setupCredentials(ctx context.Context) error {
 	secret.Type = api.SecretTypeDockercfg
 	secret.Data = map[string][]byte{}
 	secret.Data[api.DockerConfigKey] = dockerCfgContent
+	if s.Build.IsFeatureFlagOn(featureflags.KubernetesHealthCheckInspectImages) {
+		secret.Data[jobDockerConfigKey] = jobDockerCfgContent
+	}
 
 	s.credentials, err = retry.WithValueFn(s, func() (*api.Secret, error) {
 		return s.requestSecretCreation(ctx, &secret, s.configurationOverwrites.namespace)
@@ -2937,10 +3018,13 @@ func (s *executor) createBuildAndHelperContainers() (api.Container, api.Containe
 	)
 
 	var additionalHelperMounts []api.VolumeMount
+	if len(s.inspectedServices()) > 0 {
+		additionalHelperMounts = append(additionalHelperMounts, s.registryAuthVolumeMounts()...)
+	}
 	if s.usesSuspendResume() {
-		additionalHelperMounts = []api.VolumeMount{
-			{Name: suspendPVCVolName, MountPath: s.RootDir(), SubPath: suspendBuildsSubPath},
-		}
+		additionalHelperMounts = append(additionalHelperMounts,
+			api.VolumeMount{Name: suspendPVCVolName, MountPath: s.RootDir(), SubPath: suspendBuildsSubPath},
+		)
 	}
 
 	helperContainer, err := s.buildContainer(containerBuildOpts{
@@ -3718,7 +3802,13 @@ func (s *executor) prepareServiceOverwrites(services map[string]*spec.Image) err
 
 func (s *executor) prepareOptions(build *common.Build) {
 	index := 0
-	usedAliases := make(map[string]struct{})
+	usedAliases := map[string]struct{}{
+		buildContainerName:              {},
+		helperContainerName:             {},
+		initPermissionContainerName:     {},
+		uidGIDCollectorContainerName:    {},
+		stepsBootstrapInitContainerName: {},
+	}
 	s.options = &kubernetesOptions{
 		Image:    build.Image,
 		Services: make(map[string]*spec.Image),
@@ -3957,32 +4047,119 @@ func IsKubernetesPodContainerError(err error) bool {
 
 // Use 'gitlab-runner check-health' to wait until any/all configured services are healthy.
 func (s *executor) waitForServices(ctx context.Context) error {
-	var portArgs strings.Builder
-	for _, name := range s.options.getSortedServiceNames() {
-		service := s.options.Services[name]
-		port := service.Variables.Get("HEALTHCHECK_TCP_PORT")
-		if port == "" {
-			continue
-		}
-		fmt.Fprintf(&portArgs, "--port '%s' ", port)
-	}
-	if portArgs.Len() == 0 {
+	explicitPorts, inspectServices := s.healthCheckTargets()
+	if len(explicitPorts) == 0 && len(inspectServices) == 0 {
 		return nil
 	}
 
-	healthCheckContainer := helperContainerName
-	command := helperBinaryName + " health-check " + portArgs.String()
-
-	var err error
-	if s.Build.IsFeatureFlagOn(featureflags.UseLegacyKubernetesExecutionStrategy) {
-		err = s.setupPodLegacy(ctx)
-	} else {
-		err = s.ensurePodsConfigured(ctx)
-	}
-	if err != nil {
+	if err := s.ensurePodsReady(ctx); err != nil {
 		return err
 	}
 
+	args := []string{helperBinaryName, "health-check"}
+	for _, name := range s.options.getSortedServiceNames() {
+		if port := explicitPorts[name]; port != "" {
+			args = append(args, "--port", port)
+		}
+	}
+	if len(inspectServices) > 0 {
+		// An image can expose a port the service does not listen on.
+		args = append(args,
+			"--service-timeout", (time.Duration(common.DefaultWaitForServicesTimeout) * time.Second).String(),
+			"--registry-auth-dir", registryAuthMountPath,
+		)
+		images := s.serviceImageReferences(ctx, inspectServices)
+		for _, name := range inspectServices {
+			args = append(args, "--image", name+"="+images[name])
+		}
+	}
+
+	return s.runHealthCheck(ctx, args)
+}
+
+// Named ports are left to the dialer.
+func (s *executor) validateServiceHealthCheckPorts() error {
+	for name, service := range s.options.Services {
+		port := service.Variables.Get("HEALTHCHECK_TCP_PORT")
+		if port == "" || strings.Trim(port, "0123456789") != "" {
+			continue
+		}
+		if _, err := strconv.ParseUint(port, 10, 16); err != nil {
+			return fmt.Errorf("invalid HEALTHCHECK_TCP_PORT value %q for service %s: %w", port, name, err)
+		}
+	}
+	return nil
+}
+
+// Configured reference plus the digest the kubelet pulled. The repository in
+// imageID is whichever one the runtime first pulled the content from, and its
+// digest may be unknown to the configured repository, so the tag is kept for
+// the helper to fall back to.
+func (s *executor) serviceImageReferences(ctx context.Context, services []string) map[string]string {
+	refs := map[string]string{}
+	for _, name := range services {
+		refs[name] = s.options.Services[name].Name
+	}
+
+	//nolint:gocritic
+	// kubeAPI: pods, get, FF_KUBERNETES_HEALTH_CHECK_INSPECT_IMAGES=true
+	pod, err := s.kubeClient.CoreV1().Pods(s.pod.Namespace).Get(ctx, s.pod.Name, metav1.GetOptions{})
+	if err != nil {
+		s.BuildLogger.Debugln(fmt.Sprintf("Getting pod for service image digests: %v", err))
+		return refs
+	}
+	for _, status := range pod.Status.ContainerStatuses {
+		configured, ok := refs[status.Name]
+		if !ok {
+			continue
+		}
+		if ref := imageAtPulledDigest(configured, status.ImageID); ref != "" {
+			refs[status.Name] = ref
+		}
+	}
+	return refs
+}
+
+func imageAtPulledDigest(configured, imageID string) string {
+	for _, prefix := range []string{"docker-pullable://", "docker://"} {
+		imageID = strings.TrimPrefix(imageID, prefix)
+	}
+	repo, digest, ok := strings.Cut(imageID, "@")
+	if !ok || repo == "" || !strings.HasPrefix(digest, "sha256:") {
+		return ""
+	}
+	named, err := reference.ParseNormalizedNamed(configured)
+	if err != nil {
+		return ""
+	}
+	if _, ok := named.(reference.Digested); ok {
+		return ""
+	}
+	return reference.TagNameOnly(named).String() + "@" + digest
+}
+
+func (s *executor) healthCheckTargets() (explicitPorts map[string]string, inspectServices []string) {
+	explicitPorts = map[string]string{}
+	for _, name := range s.options.getSortedServiceNames() {
+		port := s.options.Services[name].Variables.Get("HEALTHCHECK_TCP_PORT")
+		switch {
+		case port != "":
+			explicitPorts[name] = port
+		case s.Build.IsFeatureFlagOn(featureflags.KubernetesHealthCheckInspectImages):
+			inspectServices = append(inspectServices, name)
+		}
+	}
+	return explicitPorts, inspectServices
+}
+
+func (s *executor) ensurePodsReady(ctx context.Context) error {
+	if s.Build.IsFeatureFlagOn(featureflags.UseLegacyKubernetesExecutionStrategy) {
+		return s.setupPodLegacy(ctx)
+	}
+	return s.ensurePodsConfigured(ctx)
+}
+
+func (s *executor) runHealthCheck(ctx context.Context, args []string) error {
 	podStatusCh := s.watchPodStatus(ctx, &podContainerStatusChecker{})
 
 	stdout, stderr := s.getExecutorIoWriters()
@@ -3990,7 +4167,7 @@ func (s *executor) waitForServices(ctx context.Context) error {
 	defer stderr.Close()
 
 	select {
-	case err := <-s.runInContainerWithExec(ctx, healthCheckContainer, s.BuildShell.DockerCommand, command, stdout, stderr):
+	case err := <-s.runInContainerWithExec(ctx, helperContainerName, args, "", stdout, stderr):
 		s.BuildLogger.Debugln(fmt.Sprintf("Container helper exited with error: %v", err))
 		// Already classified (for example an OOM kill): return as is.
 		var buildErr *common.BuildError
@@ -4001,15 +4178,16 @@ func (s *executor) waitForServices(ctx context.Context) error {
 		if err != nil && errors.As(err, &exitError) {
 			return &common.BuildError{Inner: err, ExitCode: common.NormalizeExitCode(exitError.ExitStatus())}
 		}
+		if err != nil {
+			s.BuildLogger.Warningln("Health check could not be run, continuing without waiting for services:", err)
+		}
+		return nil
 	case err := <-podStatusCh:
 		s.BuildLogger.Println("Health check aborted due to error: ", err.Error())
 		return err
-
 	case <-ctx.Done():
 		return fmt.Errorf("health check aborted")
 	}
-
-	return nil
 }
 
 func (s *executor) getExecutorIoWriters() (io.WriteCloser, io.WriteCloser) {

@@ -240,7 +240,7 @@ func TestGetConfigForImage(t *testing.T) {
 
 				expectedResult := &RegistryInfo{
 					Path:       "registry2.domain.tld:5005",
-					Source:     configSourceNameUserVariable,
+					Source:     configSourceNameUserVariableHelper,
 					AuthConfig: authConfig,
 				}
 				assert.NoError(t, err)
@@ -248,7 +248,7 @@ func TestGetConfigForImage(t *testing.T) {
 				assert.Empty(t, logger.warningLogs)
 
 				logger.ExpectLogs(t, [][]any{
-					{`Loaded Docker credentials, source = "$DOCKER_AUTH_CONFIG", hostnames = [registry2.domain.tld:5005], error = <nil>`},
+					{`Loaded Docker credentials, source = "$DOCKER_AUTH_CONFIG credential helper", hostnames = [registry2.domain.tld:5005], error = <nil>`},
 				})
 			},
 		},
@@ -261,7 +261,7 @@ func TestGetConfigForImage(t *testing.T) {
 				authConfig.ServerAddress = "registry2.domain.tld:5005/image/name:version"
 				expectedResult := &RegistryInfo{
 					Path:       "registry2.domain.tld:5005/image/name",
-					Source:     configSourceNameUserVariable,
+					Source:     configSourceNameUserVariableHelper,
 					AuthConfig: authConfig,
 				}
 				assert.NoError(t, err)
@@ -269,7 +269,7 @@ func TestGetConfigForImage(t *testing.T) {
 				assert.Empty(t, logger.warningLogs)
 
 				logger.ExpectLogs(t, [][]any{
-					{`Loaded Docker credentials, source = "$DOCKER_AUTH_CONFIG", hostnames = [registry2.domain.tld:5005/image/name], error = <nil>`},
+					{`Loaded Docker credentials, source = "$DOCKER_AUTH_CONFIG credential helper", hostnames = [registry2.domain.tld:5005/image/name], error = <nil>`},
 				})
 			},
 		},
@@ -400,7 +400,7 @@ func TestGetConfigForImage(t *testing.T) {
 				authConfig.ServerAddress = "registry2.domain.tld:5005"
 				expectedResult := &RegistryInfo{
 					Path:       "registry2.domain.tld:5005",
-					Source:     configSourceNameUserVariable,
+					Source:     configSourceNameUserVariableHelper,
 					AuthConfig: authConfig,
 				}
 				assert.NoError(t, err)
@@ -408,7 +408,7 @@ func TestGetConfigForImage(t *testing.T) {
 				assert.Empty(t, logger.warningLogs)
 
 				logger.ExpectLogs(t, [][]any{
-					{`Loaded Docker credentials, source = "$DOCKER_AUTH_CONFIG", hostnames = [registry2.domain.tld:5005], error = <nil>`},
+					{`Loaded Docker credentials, source = "$DOCKER_AUTH_CONFIG credential helper", hostnames = [registry2.domain.tld:5005], error = <nil>`},
 				})
 			},
 		},
@@ -506,7 +506,7 @@ func TestGetConfigForImage(t *testing.T) {
 			checks: func(t *testing.T, result *RegistryInfo, err error, homeDir string, logger *fakeLogger) {
 				expectedResult := &RegistryInfo{
 					Path:   "registry2.domain.tld:5005",
-					Source: configSourceNameUserVariable,
+					Source: configSourceNameUserVariableHelper,
 					AuthConfig: types.AuthConfig{
 						Username:      "pinned_user_1",
 						Password:      "pinned_password_1",
@@ -635,7 +635,7 @@ func TestGetConfigForImage(t *testing.T) {
 			checks: func(t *testing.T, result *RegistryInfo, err error, homeDir string, logger *fakeLogger) {
 				expectedResult := &RegistryInfo{
 					Path:   "registry2.domain.tld:5005",
-					Source: configSourceNameUserVariable,
+					Source: configSourceNameUserVariableHelper,
 					AuthConfig: types.AuthConfig{
 						IdentityToken: "script_token_1",
 						ServerAddress: "registry2.domain.tld:5005",
@@ -1319,5 +1319,17 @@ func (l *fakeLogger) ExpectLogs(t *testing.T, expectedLogs [][]any) {
 
 	for i := 0; i < min(le, la); i++ {
 		assert.Equal(t, expectedLogs[i], l.debugLogs[i], "debug log line %d", i)
+	}
+}
+
+func TestRegistryInfoVisibleToJob(t *testing.T) {
+	tests := map[string]bool{
+		configSourceNameUserVariable:       true,
+		configSourceNameJobPayload:         true,
+		configSourceNameUserVariableHelper: false,
+		"/home/runner/.docker/config.json": false,
+	}
+	for source, want := range tests {
+		assert.Equal(t, want, RegistryInfo{Source: source}.VisibleToJob(), source)
 	}
 }

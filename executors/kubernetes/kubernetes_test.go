@@ -11408,6 +11408,179 @@ func TestIsConflict(t *testing.T) {
 	}
 }
 
+func TestPrepareOptions_ReservedContainerNames(t *testing.T) {
+	e := newTestExecutorWithKubeClient(t, &common.KubernetesConfig{Image: "alpine"})
+	e.Build.Job.Services = spec.Services{
+		{Name: "redis:7", Alias: "helper"},
+		{Name: "postgres:16", Alias: "init-build-uid-gid-collector"},
+		{Name: "memcached", Alias: "init-steps-bootstrap"},
+		{Name: "nginx", Alias: "web"},
+	}
+
+	e.prepareOptions(e.Build)
+
+	assert.ElementsMatch(t, []string{"svc-0", "svc-1", "svc-2", "web"}, e.options.getSortedServiceNames())
+}
+
+func TestHelperRegistryAuthMounts(t *testing.T) {
+	newE := func(t *testing.T, flag bool, services spec.Services) *executor {
+		e := newSuspendableContainerExecutor(t, "alpine")
+		e.Build.Job.SuspendOptions = spec.SuspendOptions{}
+		e.Build.Job.Services = services
+		e.Build.Job.Variables = spec.Variables{{Key: featureflags.KubernetesHealthCheckInspectImages, Value: strconv.FormatBool(flag)}}
+		e.Config.Kubernetes.ImagePullSecrets = []string{"registry-a", "registry-b"}
+		e.credentials = &api.Secret{ObjectMeta: metav1.ObjectMeta{Name: "job-credentials"}}
+		e.prepareOptions(e.Build)
+		return e
+	}
+	secretVolumes := func(e *executor) map[string]api.SecretVolumeSource {
+		out := map[string]api.SecretVolumeSource{}
+		for _, v := range e.getVolumes() {
+			if v.Secret != nil {
+				out[v.Name] = *v.Secret
+			}
+		}
+		return out
+	}
+	helperAuthMounts := func(t *testing.T, e *executor) []api.VolumeMount {
+		_, helper, err := e.createBuildAndHelperContainers()
+		require.NoError(t, err)
+		var mounts []api.VolumeMount
+		for _, m := range helper.VolumeMounts {
+			if strings.HasPrefix(m.Name, registryAuthVolumePrefix) {
+				assert.True(t, m.ReadOnly)
+				mounts = append(mounts, m)
+			}
+		}
+		return mounts
+	}
+
+	t.Run("flag off", func(t *testing.T) {
+		e := newE(t, false, spec.Services{{Name: "redis:7"}})
+		assert.Empty(t, e.inspectedServices())
+		assert.Empty(t, secretVolumes(e))
+		assert.Empty(t, helperAuthMounts(t, e))
+	})
+
+	t.Run("every service has an explicit port", func(t *testing.T) {
+		e := newE(t, true, spec.Services{
+			{Name: "redis:7", Variables: spec.Variables{{Key: "HEALTHCHECK_TCP_PORT", Value: "6379"}}},
+		})
+		assert.Empty(t, e.inspectedServices())
+		assert.Empty(t, secretVolumes(e))
+	})
+
+	t.Run("default mounts only the job's credentials", func(t *testing.T) {
+		e := newE(t, true, spec.Services{{Name: "redis:7"}, {Name: "nginx", Alias: "web"}})
+		assert.Equal(t, []string{"svc-0", "web"}, e.inspectedServices())
+
+		assert.Equal(t, map[string]api.SecretVolumeSource{
+			"registry-auth-0": {
+				SecretName: "job-credentials",
+				Items:      []api.KeyToPath{{Key: jobDockerConfigKey, Path: api.DockerConfigKey}},
+			},
+		}, secretVolumes(e))
+		mounts := helperAuthMounts(t, e)
+		require.Len(t, mounts, 1)
+		assert.Equal(t, registryAuthMountPath+"/0", mounts[0].MountPath)
+	})
+
+	t.Run("no credentials secret", func(t *testing.T) {
+		e := newE(t, true, spec.Services{{Name: "redis:7"}})
+		e.credentials = nil
+		assert.Empty(t, secretVolumes(e))
+		assert.Empty(t, helperAuthMounts(t, e))
+	})
+
+	t.Run("image_pull_secrets_readable_by_jobs mounts the pod's pull secrets", func(t *testing.T) {
+		e := newE(t, true, spec.Services{{Name: "redis:7"}})
+		e.Config.Kubernetes.ImagePullSecretsReadableByJobs = true
+
+		volumes := secretVolumes(e)
+		assert.Equal(t, map[string]string{
+			"registry-auth-0": "registry-a",
+			"registry-auth-1": "registry-b",
+			"registry-auth-2": "job-credentials",
+		}, map[string]string{
+			"registry-auth-0": volumes["registry-auth-0"].SecretName,
+			"registry-auth-1": volumes["registry-auth-1"].SecretName,
+			"registry-auth-2": volumes["registry-auth-2"].SecretName,
+		})
+		assert.Empty(t, volumes["registry-auth-2"].Items, "the full .dockercfg is mounted")
+		assert.Len(t, helperAuthMounts(t, e), 3)
+	})
+
+	t.Run("image_pull_secrets_readable_by_jobs with service account pull secrets", func(t *testing.T) {
+		e := newE(t, true, spec.Services{{Name: "redis:7"}})
+		e.Config.Kubernetes.ImagePullSecretsReadableByJobs = true
+		e.Config.Kubernetes.UseServiceAccountImagePullSecrets = true
+		assert.Equal(t, map[string]api.SecretVolumeSource{
+			"registry-auth-0": {SecretName: "job-credentials"},
+		}, secretVolumes(e), "service account secrets are unknown, the job's full credentials still apply")
+	})
+}
+
+func TestWaitForServicesArgs(t *testing.T) {
+	const digest = "sha256:1ff6c18fbef2045af6b9c16bf034cc421a29027b800e4f9b68ae9b1cb3e9ae07"
+	e := newTestExecutorWithKubeClient(t, &common.KubernetesConfig{Image: "alpine"})
+	e.Build.Job.Services = spec.Services{
+		{Name: "redis:7"},
+		{Name: "postgres:16", Variables: spec.Variables{{Key: "HEALTHCHECK_TCP_PORT", Value: "5432"}}},
+		{Name: "nginx", Alias: "web"},
+		{Name: "registry.example.com/memcached", Alias: "cache"},
+		{Name: "redis@" + digest, Alias: "pinned"},
+	}
+	e.Build.Job.Variables = spec.Variables{{Key: featureflags.KubernetesHealthCheckInspectImages, Value: "true"}}
+	e.prepareOptions(e.Build)
+	e.pod = &api.Pod{
+		ObjectMeta: metav1.ObjectMeta{Name: "pod", Namespace: "test-ns"},
+		Status: api.PodStatus{ContainerStatuses: []api.ContainerStatus{
+			{Name: "svc-0", ImageID: "docker.io/library/redis@" + digest},
+			{Name: "web", ImageID: digest},
+			{Name: "cache", ImageID: "docker.io/library/memcached@" + digest},
+			{Name: "pinned", ImageID: "docker.io/library/redis@" + digest},
+		}},
+	}
+	_, err := e.kubeClient.CoreV1().Pods("test-ns").Create(t.Context(), e.pod, metav1.CreateOptions{})
+	require.NoError(t, err)
+
+	explicitPorts, inspectServices := e.healthCheckTargets()
+	assert.Equal(t, map[string]string{"svc-1": "5432"}, explicitPorts)
+	assert.Equal(t, []string{"cache", "pinned", "svc-0", "web"}, inspectServices)
+
+	assert.Equal(t, map[string]string{
+		"svc-0":  "docker.io/library/redis:7@" + digest,
+		"web":    "nginx",
+		"cache":  "registry.example.com/memcached:latest@" + digest,
+		"pinned": "redis@" + digest,
+	}, e.serviceImageReferences(t.Context(), inspectServices))
+}
+
+func TestValidateServiceHealthCheckPorts(t *testing.T) {
+	tests := map[string]struct {
+		port    string
+		wantErr bool
+	}{
+		"unset":        {port: ""},
+		"valid":        {port: "5432"},
+		"named port":   {port: "http"},
+		"out of range": {port: "70000", wantErr: true},
+	}
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			e := &executor{options: &kubernetesOptions{Services: map[string]*spec.Image{
+				"svc-0": {Name: "postgres", Variables: spec.Variables{{Key: "HEALTHCHECK_TCP_PORT", Value: tt.port}}},
+			}}}
+			err := e.validateServiceHealthCheckPorts()
+			if tt.wantErr {
+				assert.ErrorContains(t, err, "HEALTHCHECK_TCP_PORT")
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
 func TestPodResourcesReference(t *testing.T) {
 	tests := map[string]struct {
 		overwrites *overwrites

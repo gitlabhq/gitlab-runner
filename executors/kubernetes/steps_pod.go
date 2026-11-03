@@ -489,13 +489,20 @@ func (s *executor) stepsVolumes() []api.Volume {
 // deletion rather than conditional surgery.
 func (s *executor) stepsWaitForServices(ctx context.Context) error {
 	var portArgs strings.Builder
+	var withoutPort []string
 	for _, name := range s.options.getSortedServiceNames() {
 		service := s.options.Services[name]
 		port := service.Variables.Get("HEALTHCHECK_TCP_PORT")
 		if port == "" {
+			withoutPort = append(withoutPort, name)
 			continue
 		}
 		fmt.Fprintf(&portArgs, "--port '%s' ", port)
+	}
+	if len(withoutPort) > 0 && s.Build.IsFeatureFlagOn(featureflags.KubernetesHealthCheckInspectImages) {
+		s.BuildLogger.Warningln(fmt.Sprintf(
+			"%s is not supported for native steps jobs; services %v are not waited for without HEALTHCHECK_TCP_PORT",
+			featureflags.KubernetesHealthCheckInspectImages, withoutPort))
 	}
 	if portArgs.Len() == 0 {
 		return nil

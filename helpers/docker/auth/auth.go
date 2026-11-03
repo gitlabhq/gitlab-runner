@@ -29,9 +29,10 @@ import (
 
 const (
 	// DefaultDockerRegistry is the name of the index
-	DefaultDockerRegistry        = "docker.io"
-	configSourceNameUserVariable = "$DOCKER_AUTH_CONFIG"
-	configSourceNameJobPayload   = "job payload (GitLab Registry)"
+	DefaultDockerRegistry              = "docker.io"
+	configSourceNameUserVariable       = "$DOCKER_AUTH_CONFIG"
+	configSourceNameUserVariableHelper = "$DOCKER_AUTH_CONFIG credential helper"
+	configSourceNameJobPayload         = "job payload (GitLab Registry)"
 
 	credHelperAllowlistDocsURL = "https://docs.gitlab.com/runner/configuration/advanced-configuration/#restrict-docker-credential-helpers"
 
@@ -54,6 +55,15 @@ type RegistryInfo struct {
 	Path       string
 	Source     string
 	AuthConfig types.AuthConfig
+}
+
+// VisibleToJob reports whether the job can already read this credential:
+// static entries of DOCKER_AUTH_CONFIG, which is a job variable or a runner
+// environment entry exported into the build container, and the job payload
+// credentials, which are the job's own token. Credentials a credential helper
+// produced on the runner host and the runner host's docker config are not.
+func (ri RegistryInfo) VisibleToJob() bool {
+	return ri.Source == configSourceNameUserVariable || ri.Source == configSourceNameJobPayload
 }
 
 // RegistryInfos is a list of RegistryInfo, with a stable order
@@ -414,21 +424,23 @@ func (r Resolver) AllConfigs(
 		return nil, fmt.Errorf("allowed_docker_credential_helpers: %w", err)
 	}
 
-	resolvers := []func() (string, []types.AuthConfig, error){
-		func() (string, []types.AuthConfig, error) {
+	// Each resolver names its source and may return credentials under more
+	// than one source, which is what the user configuration does.
+	resolvers := []func() (string, []sourcedConfigs, error){
+		func() (string, []sourcedConfigs, error) {
 			return getUserConfiguration(dockerAuthConfig, gate)
 		},
-		func() (string, []types.AuthConfig, error) {
+		func() (string, []sourcedConfigs, error) {
 			return r.getHomeDirConfiguration(username)
 		},
-		func() (string, []types.AuthConfig, error) {
+		func() (string, []sourcedConfigs, error) {
 			return getBuildConfiguration(credentials)
 		},
 	}
 	res := RegistryInfos{}
 
-	for _, r := range resolvers {
-		source, configs, err := r()
+	for _, resolve := range resolvers {
+		source, sourced, err := resolve()
 		if errors.Is(err, errPathTraversal) {
 			return nil, err
 		}
@@ -439,59 +451,68 @@ func (r Resolver) AllConfigs(
 			))
 			continue
 		}
-
-		if len(configs) == 0 {
-			continue
-		}
-
-		hostnames := []string{} // used only for logging
-
-		for _, conf := range configs {
-			registryPath := convertToRegistryPath(conf.ServerAddress)
-			hostnames = append(hostnames, registryPath)
-
-			newRegistryInfo := RegistryInfo{
-				Path:       registryPath,
-				Source:     source,
-				AuthConfig: conf,
-			}
-
-			if err := res.Append(newRegistryInfo); err != nil {
-				logger.Debugln(fmt.Sprintf("Not adding Docker credentials: %s", err.Error()))
-			}
-		}
-
-		// Source can be blank if there is no home dir configuration
-		if source != "" {
-			logger.Debugln(fmt.Sprintf("Loaded Docker credentials, source = %q, hostnames = %v, error = %v", source, hostnames, err))
+		for _, sc := range sourced {
+			res.appendAll(sc.source, sc.configs, logger)
 		}
 	}
 
 	return res, nil
 }
 
-func getUserConfiguration(dockerAuthConfig string, gate credHelperGate) (string, []types.AuthConfig, error) {
-	authConfigs, err := readConfigsFromReader(bytes.NewBufferString(dockerAuthConfig), gate)
+type sourcedConfigs struct {
+	source  string
+	configs []types.AuthConfig
+}
+
+func (res *RegistryInfos) appendAll(source string, configs []types.AuthConfig, logger Logger) {
+	if len(configs) == 0 {
+		return
+	}
+
+	hostnames := []string{} // used only for logging
+
+	for _, conf := range configs {
+		registryPath := convertToRegistryPath(conf.ServerAddress)
+		hostnames = append(hostnames, registryPath)
+
+		newRegistryInfo := RegistryInfo{
+			Path:       registryPath,
+			Source:     source,
+			AuthConfig: conf,
+		}
+
+		if err := res.Append(newRegistryInfo); err != nil {
+			logger.Debugln(fmt.Sprintf("Not adding Docker credentials: %s", err.Error()))
+		}
+	}
+
+	// Source can be blank if there is no home dir configuration
+	if source != "" {
+		logger.Debugln(fmt.Sprintf("Loaded Docker credentials, source = %q, hostnames = %v, error = <nil>", source, hostnames))
+	}
+}
+
+// Credential helper output is its own source, listed first so that it still
+// overrides a static entry for the same registry (Append keeps the first).
+func getUserConfiguration(dockerAuthConfig string, gate credHelperGate) (string, []sourcedConfigs, error) {
+	static, fromHelpers, err := readConfigsSplit(bytes.NewBufferString(dockerAuthConfig), gate)
 	if err != nil {
 		return configSourceNameUserVariable, nil, err
 	}
-	if authConfigs == nil {
-		return "", nil, nil
-	}
 
-	return configSourceNameUserVariable, authConfigs, nil
+	return configSourceNameUserVariable, []sourcedConfigs{
+		{source: configSourceNameUserVariableHelper, configs: withStableOrder(fromHelpers)},
+		{source: configSourceNameUserVariable, configs: withStableOrder(static)},
+	}, nil
 }
 
-func (r Resolver) getHomeDirConfiguration(username string) (string, []types.AuthConfig, error) {
+func (r Resolver) getHomeDirConfiguration(username string) (string, []sourcedConfigs, error) {
 	sourceFile, authConfigs, err := r.readDockerConfigsFromHomeDir(username)
 	if errors.Is(err, errPathTraversal) {
-		return "", nil, err
-	}
-	if authConfigs == nil {
-		return "", nil, nil
+		return sourceFile, nil, err
 	}
 
-	return sourceFile, authConfigs, nil
+	return sourceFile, []sourcedConfigs{{source: sourceFile, configs: authConfigs}}, nil
 }
 
 // EncodeConfig constructs a token from an AuthConfig, suitable for
@@ -509,7 +530,7 @@ func EncodeConfig(authConfig *types.AuthConfig) (string, error) {
 	return base64.URLEncoding.EncodeToString(buf.Bytes()), nil
 }
 
-func getBuildConfiguration(credentials []spec.Credentials) (string, []types.AuthConfig, error) {
+func getBuildConfiguration(credentials []spec.Credentials) (string, []sourcedConfigs, error) {
 	authConfigs := make([]types.AuthConfig, 0, len(credentials))
 
 	for _, credentials := range credentials {
@@ -524,7 +545,7 @@ func getBuildConfiguration(credentials []spec.Credentials) (string, []types.Auth
 		})
 	}
 
-	return configSourceNameJobPayload, authConfigs, nil
+	return configSourceNameJobPayload, []sourcedConfigs{{source: configSourceNameJobPayload, configs: authConfigs}}, nil
 }
 
 // normalizeImageRef takes a raw image reference and normalizes it:
@@ -609,34 +630,50 @@ func (r Resolver) readDockerConfigsFromHomeDir(userName string) (string, []types
 }
 
 func readConfigsFromReader(r io.Reader, gate credHelperGate) ([]types.AuthConfig, error) {
-	config := &configfile.ConfigFile{}
-	if err := config.LoadFromReader(r); err != nil {
+	static, fromHelpers, err := readConfigsSplit(r, gate)
+	if err != nil {
 		return nil, err
 	}
-	if !config.ContainsAuth() {
-		// we can bail out early when there is no auth configured at all
+	if static == nil && fromHelpers == nil {
 		return nil, nil
 	}
 
-	auths := config.GetAuthConfigs()
+	maps.Copy(static, fromHelpers)
+	return withStableOrder(static), nil
+}
+
+// Static entries of the config and the entries its credential store and
+// helpers produce, kept apart because only the former were visible to whoever
+// wrote the config.
+func readConfigsSplit(r io.Reader, gate credHelperGate) (map[string]types.AuthConfig, map[string]types.AuthConfig, error) {
+	config := &configfile.ConfigFile{}
+	if err := config.LoadFromReader(r); err != nil {
+		return nil, nil, err
+	}
+	if !config.ContainsAuth() {
+		return nil, nil, nil
+	}
+
+	static := config.GetAuthConfigs()
+	fromHelpers := map[string]types.AuthConfig{}
 
 	if config.CredentialsStore != "" {
 		authsFromCredentialsStore, err := readConfigsFromCredentialsStore(config, gate)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
-		maps.Copy(auths, authsFromCredentialsStore)
+		maps.Copy(fromHelpers, authsFromCredentialsStore)
 	}
 
 	if config.CredentialHelpers != nil {
 		authsFromCredentialsHelpers, err := readConfigsFromCredentialsHelper(config, gate)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
-		maps.Copy(auths, authsFromCredentialsHelpers)
+		maps.Copy(fromHelpers, authsFromCredentialsHelpers)
 	}
 
-	return withStableOrder(auths), nil
+	return static, fromHelpers, nil
 }
 
 // withStableOrder converts the map of AuthConfigs to a slice of AuthConfigs, ordered by the map's key.
