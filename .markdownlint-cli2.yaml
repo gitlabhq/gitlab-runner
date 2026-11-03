@@ -1,6 +1,4 @@
 ---
-# Base Markdownlint configuration
-# Extended Markdownlint configuration in docs/.markdownlint/
 # See https://github.com/DavidAnson/markdownlint/blob/main/doc/Rules.md for explanations of each rule
 config:
   # First, set the default
