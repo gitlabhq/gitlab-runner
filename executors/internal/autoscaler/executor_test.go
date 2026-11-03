@@ -536,11 +536,6 @@ func TestExecutor_Resume_ValidateEnvKeyRejections(t *testing.T) {
 			envKey:      "99/sys-1/acquisition-key=k",
 			wantSubstr:  "environment key was not issued by this runner",
 		},
-		"wrong system ID": {
-			runnerToken: "test-token-validate-env-key-system",
-			envKey:      "101/other-sys/acquisition-key=k",
-			wantSubstr:  "environment key was not issued by this machine",
-		},
 		"missing acquisition-key": {
 			runnerToken: "test-token-validate-env-key-missing",
 			envKey:      "101/sys-1/x=y",
@@ -560,6 +555,25 @@ func TestExecutor_Resume_ValidateEnvKeyRejections(t *testing.T) {
 			assert.Contains(t, err.Error(), tc.wantSubstr)
 		})
 	}
+}
+
+// A key from another manager of the registration (another system ID) is not
+// refused by validation: it reaches the scaler's Resume.
+func TestExecutor_Resume_AcceptsKeyFromAnotherSystem(t *testing.T) {
+	const (
+		newKey       = "new-key-other-system"
+		suspendedKey = "suspended-key-other-system"
+	)
+	resumeErr := assert.AnError
+
+	e, ts, _, opts := setupResumeTest(t, "test-token-other-system", newKey, suspendedKey)
+	opts.Build.Job.SuspendOptions.RuntimeEnvironmentKey = "101/other-sys/acquisition-key=" + suspendedKey
+
+	ts.EXPECT().HasCapability(mock.Anything).Return(true).Once()
+	ts.EXPECT().Resume(mock.Anything, suspendedKey).Return(nil, resumeErr).Once()
+
+	err := e.Prepare(opts)
+	require.ErrorIs(t, err, resumeErr)
 }
 
 func TestExecutor_Resume_NoSuspendResumeCapability(t *testing.T) {

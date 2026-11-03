@@ -134,7 +134,9 @@ func (m *manager) Cleanup(ctx context.Context) error {
 // Adopt records an existing network as the build's network. If mode is a
 // user-defined network it is inspected to verify it still exists; otherwise
 // the mode is recorded as-is. Used by the suspend/resume flow to attach to a
-// network created by a prior job.
+// network created by a prior job. The network is treated as per-build, and so
+// removed on Cleanup, only if the runner created it for this environment: a
+// shared network_mode network is never torn down by a resumed job.
 func (m *manager) Adopt(ctx context.Context, mode container.NetworkMode) error {
 	// On Windows, IsHost() always returns false and IsUserDefined() does
 	// not exclude "host". In practice, Windows containers cannot use host networking.
@@ -150,6 +152,19 @@ func (m *manager) Adopt(ctx context.Context, mode container.NetworkMode) error {
 	}
 	m.buildNetwork = inspect
 	m.networkMode = mode
-	m.perBuild = true
+	m.perBuild = m.ownsNetwork(inspect.Labels)
 	return nil
+}
+
+// ownsNetwork reports whether the runner created the network for this
+// environment: it carries this runner's ID and, under docker-autoscaler, this
+// environment's acquisition key.
+func (m *manager) ownsNetwork(networkLabels map[string]string) bool {
+	env := m.labeler.EnvLabels()
+	runnerID := env[common.RuntimeEnvironmentRunnerIDLabel]
+	if runnerID == "" || networkLabels[common.RuntimeEnvironmentRunnerIDLabel] != runnerID {
+		return false
+	}
+	key := env[labels.AcquisitionKeyLabel]
+	return key == "" || networkLabels[labels.AcquisitionKeyLabel] == key
 }

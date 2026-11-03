@@ -3914,7 +3914,13 @@ func TestResumeDependencies(t *testing.T) {
 		"1/system-id/build-container-id=build-cid&helper-id=helper-cid&service-ids=svc-a"
 
 	buildInspect := container.InspectResponse{
-		ID:         "build-cid",
+		ID: "build-cid",
+		Config: &container.Config{
+			Labels: map[string]string{
+				common.RuntimeEnvironmentRunnerIDLabel:  "0",
+				common.RuntimeEnvironmentExpiresAtLabel: common.FormatRuntimeEnvironmentExpiry(time.Now().Add(time.Hour)),
+			},
+		},
 		HostConfig: &container.HostConfig{NetworkMode: container.NetworkMode(network.NetworkDefault)},
 		Mounts: []container.MountPoint{
 			{Type: mount.TypeVolume, Name: "vol-x", Source: "/var/lib/docker/volumes/vol-x/_data", Destination: "/builds"},
@@ -3930,13 +3936,15 @@ func TestResumeDependencies(t *testing.T) {
 			},
 		},
 		Config: &container.Config{
+			Labels:       runnerOwnedLabels(),
 			ExposedPorts: network.PortSet{network.MustParsePort("80/tcp"): {}},
 		},
 	}
 
 	c.On("ContainerInspect", mock.Anything, "build-cid").Return(buildInspect, nil).Once()
 	c.On("ContainerInspect", mock.Anything, "helper-cid").Return(container.InspectResponse{
-		ID: "helper-cid",
+		ID:     "helper-cid",
+		Config: &container.Config{Labels: runnerOwnedLabels()},
 	}, nil).Once()
 	c.On("VolumeInspect", mock.Anything, "vol-x").Return(volume.Volume{Name: "vol-x"}, nil).Once()
 	c.On("ContainerInspect", mock.Anything, "svc-a").Return(svcInspect, nil)
@@ -3974,7 +3982,9 @@ func TestResumeDependencies_buildContainerNotFound(t *testing.T) {
 		Return(container.InspectResponse{}, errdefs.ErrNotFound).Once()
 
 	err := e.resumeDependencies()
-	require.EqualError(t, err, "build container missing-cid not found: not found")
+	require.ErrorIs(t, err, common.ErrRuntimeEnvironmentUnavailable)
+	assert.EqualError(t, err, "runtime environment unavailable: build container missing-cid not found: not found")
+	assert.True(t, e.releaseOnCleanup, "a lost environment is released on cleanup")
 }
 
 func TestResumeDependencies_helperNotFound(t *testing.T) {
@@ -3992,6 +4002,7 @@ func TestResumeDependencies_helperNotFound(t *testing.T) {
 
 	buildInspect := container.InspectResponse{
 		ID:         "build-cid",
+		Config:     &container.Config{Labels: runnerOwnedLabels()},
 		HostConfig: &container.HostConfig{NetworkMode: container.NetworkMode(network.NetworkDefault)},
 	}
 	c.On("ContainerInspect", mock.Anything, "build-cid").Return(buildInspect, nil).Once()
@@ -3999,7 +4010,9 @@ func TestResumeDependencies_helperNotFound(t *testing.T) {
 		Return(container.InspectResponse{}, errdefs.ErrNotFound).Once()
 
 	err := e.resumeDependencies()
-	require.EqualError(t, err, "helper container missing-helper not found: not found")
+	require.ErrorIs(t, err, common.ErrRuntimeEnvironmentUnavailable)
+	assert.EqualError(t, err, "runtime environment unavailable: helper container missing-helper not found: not found")
+	assert.True(t, e.releaseOnCleanup, "a lost environment is released on cleanup")
 }
 
 func TestResumeDependencies_serviceNotFound(t *testing.T) {
@@ -4017,17 +4030,21 @@ func TestResumeDependencies_serviceNotFound(t *testing.T) {
 
 	buildInspect := container.InspectResponse{
 		ID:         "build-cid",
+		Config:     &container.Config{Labels: runnerOwnedLabels()},
 		HostConfig: &container.HostConfig{NetworkMode: container.NetworkMode(network.NetworkDefault)},
 	}
 	c.On("ContainerInspect", mock.Anything, "build-cid").Return(buildInspect, nil).Once()
 	c.On("ContainerInspect", mock.Anything, "helper-cid").Return(container.InspectResponse{
-		ID: "helper-cid",
+		ID:     "helper-cid",
+		Config: &container.Config{Labels: runnerOwnedLabels()},
 	}, nil).Once()
 	c.On("ContainerInspect", mock.Anything, "svc-missing").
 		Return(container.InspectResponse{}, errdefs.ErrNotFound).Once()
 
 	err := e.resumeDependencies()
-	require.EqualError(t, err, "service container svc-missing not found: not found")
+	require.ErrorIs(t, err, common.ErrRuntimeEnvironmentUnavailable)
+	assert.EqualError(t, err, "runtime environment unavailable: service container svc-missing not found: not found")
+	assert.True(t, e.releaseOnCleanup, "a lost environment is released on cleanup")
 }
 
 func TestResumeDependencies_serviceStartFails(t *testing.T) {
@@ -4044,16 +4061,24 @@ func TestResumeDependencies_serviceStartFails(t *testing.T) {
 		"1/system-id/build-container-id=build-cid&helper-id=helper-cid&service-ids=svc-broken"
 
 	buildInspect := container.InspectResponse{
-		ID:         "build-cid",
+		ID: "build-cid",
+		Config: &container.Config{
+			Labels: map[string]string{
+				common.RuntimeEnvironmentRunnerIDLabel:  "0",
+				common.RuntimeEnvironmentExpiresAtLabel: common.FormatRuntimeEnvironmentExpiry(time.Now().Add(time.Hour)),
+			},
+		},
 		HostConfig: &container.HostConfig{NetworkMode: container.NetworkMode(network.NetworkDefault)},
 	}
 	c.On("ContainerInspect", mock.Anything, "build-cid").Return(buildInspect, nil).Once()
 	c.On("ContainerInspect", mock.Anything, "helper-cid").Return(container.InspectResponse{
-		ID: "helper-cid",
+		ID:     "helper-cid",
+		Config: &container.Config{Labels: runnerOwnedLabels()},
 	}, nil).Once()
 	c.On("ContainerInspect", mock.Anything, "svc-broken").
 		Return(container.InspectResponse{
-			ID: "svc-broken",
+			ID:     "svc-broken",
+			Config: &container.Config{Labels: runnerOwnedLabels()},
 		}, nil).Once()
 	c.On("ContainerStart", mock.Anything, "svc-broken", client.ContainerStartOptions{}).
 		Return(errors.New("daemon error: cannot start")).Once()
@@ -4832,4 +4857,263 @@ func TestPrepare_StampsExpiry(t *testing.T) {
 
 		assert.Equal(t, start.Add(ttl).UTC(), e.expiresAt)
 	})
+}
+
+func TestResumeDependencies_ServiceTransientError_NoRelease(t *testing.T) {
+	c := docker.NewMockClient(t)
+	e := newTestExecutor(t, c)
+
+	e.Build.Variables = append(e.Build.Variables,
+		spec.Variable{Key: featureflags.SuspendableEnvironments, Value: "true"},
+	)
+	e.Build.Job.SuspendOptions.RuntimeEnvironmentKey =
+		"1/system-id/build-container-id=build-cid&helper-id=helper-cid&service-ids=svc-transient"
+
+	buildInspect := container.InspectResponse{
+		ID: "build-cid",
+		Config: &container.Config{
+			Labels: map[string]string{
+				common.RuntimeEnvironmentRunnerIDLabel:  "0",
+				common.RuntimeEnvironmentExpiresAtLabel: common.FormatRuntimeEnvironmentExpiry(time.Now().Add(time.Hour)),
+			},
+		},
+		HostConfig: &container.HostConfig{NetworkMode: container.NetworkMode(network.NetworkDefault)},
+	}
+	c.On("ContainerInspect", mock.Anything, "build-cid").Return(buildInspect, nil).Once()
+	c.On("ContainerInspect", mock.Anything, "helper-cid").Return(container.InspectResponse{
+		ID:     "helper-cid",
+		Config: &container.Config{Labels: runnerOwnedLabels()},
+	}, nil).Once()
+
+	transientErr := errors.New("daemon timeout")
+	c.On("ContainerInspect", mock.Anything, "svc-transient").
+		Return(container.InspectResponse{}, transientErr).Once()
+
+	err := e.resumeDependencies()
+	require.Error(t, err)
+	require.ErrorIs(t, err, transientErr)
+	assert.False(t, e.releaseOnCleanup,
+		"transient service inspect error must not set releaseOnCleanup")
+}
+
+func TestResumeDependencies_ExpiredEnv_NotDoubleWrapped(t *testing.T) {
+	c := docker.NewMockClient(t)
+	e := newTestExecutor(t, c)
+	now := time.Now()
+
+	e.Build.Variables = append(e.Build.Variables,
+		spec.Variable{Key: featureflags.SuspendableEnvironments, Value: "true"},
+	)
+	e.Build.Job.SuspendOptions.RuntimeEnvironmentKey =
+		"1/system-id/build-container-id=build-cid&helper-id=helper-cid&service-ids="
+
+	// Expired a minute ago, although the configured TTL is the maximum: the
+	// stamp decides, not the current TTL.
+	e.Config.RuntimeEnvironmentTTL = new(common.MaxRuntimeEnvironmentTTL)
+	oldStamp := common.FormatRuntimeEnvironmentExpiry(now.Add(-time.Minute))
+	buildInspect := container.InspectResponse{
+		ID: "build-cid",
+		Config: &container.Config{
+			Labels: map[string]string{
+				common.RuntimeEnvironmentRunnerIDLabel:  "0",
+				common.RuntimeEnvironmentExpiresAtLabel: oldStamp,
+			},
+		},
+		HostConfig: &container.HostConfig{NetworkMode: container.NetworkMode(network.NetworkDefault)},
+	}
+	c.On("ContainerInspect", mock.Anything, "build-cid").Return(buildInspect, nil).Once()
+	c.On("ContainerInspect", mock.Anything, "helper-cid").Return(container.InspectResponse{
+		ID:     "helper-cid",
+		Config: &container.Config{Labels: runnerOwnedLabels()},
+	}, nil).Once()
+
+	err := e.resumeDependencies()
+	require.Error(t, err)
+	require.ErrorIs(t, err, common.ErrRuntimeEnvironmentUnavailable)
+	require.ErrorIs(t, err, common.ErrRuntimeEnvironmentExpired)
+	assert.Equal(t, 1, strings.Count(err.Error(), "runtime environment unavailable"),
+		"error should mention 'runtime environment unavailable' exactly once")
+	assert.True(t, e.releaseOnCleanup, "expired env must set releaseOnCleanup")
+}
+
+// The expiry stamped when the environment was created decides, whatever TTL
+// the resuming manager has, and objects created on resume carry that stamp.
+func TestVerifyEnvironmentExpiry_HonorsStampOverCurrentTTL(t *testing.T) {
+	now := time.Now()
+
+	tests := map[string]struct {
+		expiresAt  time.Time
+		currentTTL time.Duration
+		wantErr    bool
+	}{
+		"stamped under a longer TTL, resumed under a shorter one": {
+			// Created 2h ago under a 72h TTL; the resuming manager has 1h.
+			expiresAt:  now.Add(70 * time.Hour),
+			currentTTL: time.Hour,
+		},
+		"stamped under a shorter TTL, resumed under a longer one": {
+			// Created 2h ago under a 1h TTL; the resuming manager has 72h.
+			expiresAt:  now.Add(-time.Hour),
+			currentTTL: 72 * time.Hour,
+			wantErr:    true,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			e := newTestExecutor(t, docker.NewMockClient(t))
+			setRunnerFF(&e.Config)
+			e.Config.RuntimeEnvironmentTTL = &tc.currentTTL
+			e.Build.ExecutorData = fakeAcquisitionKeyer{key: "acq-key"}
+			// a resume: only suspending or resuming jobs get environment labels
+			e.Build.Job.SuspendOptions.RuntimeEnvironmentKey = "7/sys/acquisition-key=acq-key"
+			// Prepare stamped a fresh expiry before resume read the label.
+			e.expiresAt = e.Config.RuntimeEnvironmentExpiresAt(now)
+
+			stamp := common.FormatRuntimeEnvironmentExpiry(tc.expiresAt)
+			buildInspect := container.InspectResponse{
+				Config: &container.Config{Labels: map[string]string{
+					common.RuntimeEnvironmentExpiresAtLabel: stamp,
+				}},
+			}
+
+			err := e.verifyEnvironmentExpiry(buildInspect, "build-cid")
+			if tc.wantErr {
+				require.ErrorIs(t, err, common.ErrRuntimeEnvironmentExpired)
+				return
+			}
+			require.NoError(t, err)
+
+			require.NoError(t, e.createLabeler())
+			assert.Equal(t, stamp, e.prepareContainerLabels(nil)[common.RuntimeEnvironmentExpiresAtLabel],
+				"containers created on resume must carry the original stamp")
+		})
+	}
+}
+
+func TestVerifyEnvironmentExpiry_BadStamp_EnvUnavailable(t *testing.T) {
+	for name, containerLabels := range map[string]map[string]string{
+		"missing": {},
+		"invalid": {common.RuntimeEnvironmentExpiresAtLabel: "not-a-number"},
+	} {
+		t.Run(name, func(t *testing.T) {
+			e := newTestExecutor(t, docker.NewMockClient(t))
+			err := e.verifyEnvironmentExpiry(container.InspectResponse{
+				Config: &container.Config{Labels: containerLabels},
+			}, "build-cid")
+			require.ErrorIs(t, err, common.ErrRuntimeEnvironmentUnavailable)
+		})
+	}
+}
+
+// runnerOwnedLabels are the labels this runner stamps on the containers it
+// creates; the test executors run as runner ID 0.
+func runnerOwnedLabels() map[string]string {
+	return map[string]string{common.RuntimeEnvironmentRunnerIDLabel: "0"}
+}
+
+func TestVerifyContainerOwnership_WithoutAcquisitionKey(t *testing.T) {
+	tests := map[string]struct {
+		labels  map[string]string
+		wantErr string
+	}{
+		"created by this runner": {
+			labels: map[string]string{common.RuntimeEnvironmentRunnerIDLabel: "42"},
+		},
+		"no runner ID": {
+			labels:  map[string]string{},
+			wantErr: "runner ID mismatch",
+		},
+		"created by another runner": {
+			labels:  map[string]string{common.RuntimeEnvironmentRunnerIDLabel: "7"},
+			wantErr: "runner ID mismatch",
+		},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			e := &executor{}
+			e.Config.ID = 42
+
+			err := e.verifyContainerOwnership(container.InspectResponse{
+				ID:     "cid",
+				Config: &container.Config{Labels: tt.labels},
+			}, "", "build container")
+
+			if tt.wantErr == "" {
+				require.NoError(t, err)
+				return
+			}
+			require.ErrorIs(t, err, common.ErrRuntimeEnvironmentUnavailable)
+			assert.ErrorContains(t, err, tt.wantErr)
+		})
+	}
+}
+
+// A container with no config has no labels to check, so it can't be adopted.
+func TestVerifyEnvironment_NilConfig(t *testing.T) {
+	e := newTestExecutor(t, docker.NewMockClient(t))
+	noConfig := container.InspectResponse{ID: "cid"}
+
+	require.ErrorIs(t, e.verifyContainerOwnership(noConfig, "acq-key", "build container"),
+		common.ErrRuntimeEnvironmentUnavailable)
+	require.ErrorIs(t, e.verifyContainerOwnership(noConfig, "", "build container"),
+		common.ErrRuntimeEnvironmentUnavailable)
+	require.ErrorIs(t, e.verifyEnvironmentExpiry(noConfig, "cid"),
+		common.ErrRuntimeEnvironmentUnavailable)
+}
+
+func TestResumeDependencies_ForeignAcquisitionKey(t *testing.T) {
+	const myKey, foreignKey = "my-key", "foreign-key"
+
+	tests := map[string]struct {
+		keys     map[string]string // container ID -> acquisition key label
+		wantRole string
+	}{
+		"build container": {
+			keys:     map[string]string{"build-cid": foreignKey},
+			wantRole: "build container",
+		},
+		"helper container": {
+			keys:     map[string]string{"build-cid": myKey, "helper-cid": foreignKey},
+			wantRole: "helper container",
+		},
+		"service container": {
+			keys:     map[string]string{"build-cid": myKey, "helper-cid": myKey, "svc-a": foreignKey},
+			wantRole: "service container",
+		},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			c := docker.NewMockClient(t)
+			e := newTestExecutor(t, c)
+			e.Build.ExecutorData = fakeAcquisitionKeyer{key: myKey}
+			e.Build.Variables = append(e.Build.Variables,
+				spec.Variable{Key: featureflags.SuspendableEnvironments, Value: "true"},
+			)
+			e.Build.Job.SuspendOptions.RuntimeEnvironmentKey =
+				"1/system-id/build-container-id=build-cid&helper-id=helper-cid&service-ids=svc-a"
+
+			for id, key := range tt.keys {
+				inspect := container.InspectResponse{
+					ID:     id,
+					Config: &container.Config{Labels: map[string]string{labels.AcquisitionKeyLabel: key}},
+				}
+				if id == "build-cid" {
+					inspect.HostConfig = &container.HostConfig{NetworkMode: container.NetworkMode(network.NetworkDefault)}
+				}
+				c.On("ContainerInspect", mock.Anything, id).Return(inspect, nil).Once()
+			}
+
+			err := e.resumeDependencies()
+			require.ErrorIs(t, err, common.ErrRuntimeEnvironmentUnavailable)
+			assert.ErrorContains(t, err, tt.wantRole+" ")
+			assert.ErrorContains(t, err, "acquisition key mismatch")
+			var buildErr *common.BuildError
+			require.ErrorAs(t, err, &buildErr)
+			assert.Equal(t, common.RuntimeEnvironmentUnavailable, buildErr.FailureReason)
+			assert.True(t, e.releaseOnCleanup)
+		})
+	}
 }
