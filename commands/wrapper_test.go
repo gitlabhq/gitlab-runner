@@ -11,10 +11,16 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestRunnerWrapperCommand_createListener(t *testing.T) {
-	testSocketPath := filepath.Join(t.TempDir(), "test.sock")
+	// Not t.TempDir(): its path includes the test name, which on macOS pushes
+	// the socket path past the 104-byte sun_path limit.
+	testSocketDir, err := os.MkdirTemp("", "wrap-*")
+	require.NoError(t, err)
+	t.Cleanup(func() { os.RemoveAll(testSocketDir) })
+	testSocketPath := filepath.Join(testSocketDir, "test.sock")
 
 	skipOnWindows := func(t *testing.T) {
 		if runtime.GOOS == "windows" {
@@ -112,7 +118,7 @@ func TestRunnerWrapperCommand_createListener(t *testing.T) {
 				}
 			}(l)
 
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			assert.Equal(t, tc.expectedNetwork, l.Addr().Network())
 			assert.Equal(t, tc.expectedAddress, l.Addr().String())
 		})
