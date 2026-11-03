@@ -90,3 +90,34 @@ func TestWriter_WriteAt_underlyingFile(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "hello", string(got))
 }
+
+func TestWriter_Truncate_underlyingFile(t *testing.T) {
+	f, err := os.CreateTemp(t.TempDir(), "meter-truncate")
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = f.Close() })
+
+	m := NewWriter(f, 50*time.Millisecond, func(uint64, time.Duration, bool) {})
+	t.Cleanup(func() { _ = m.Close() })
+
+	tr, ok := m.(interface{ Truncate(int64) error })
+	require.True(t, ok, "the meter should let a caller truncate the file it writes")
+
+	wa, ok := m.(io.WriterAt)
+	require.True(t, ok)
+	_, err = wa.WriteAt([]byte("hello world"), 0)
+	require.NoError(t, err)
+	require.NoError(t, tr.Truncate(5))
+
+	got, err := os.ReadFile(f.Name())
+	require.NoError(t, err)
+	assert.Equal(t, "hello", string(got))
+}
+
+func TestWriter_Truncate_unsupported(t *testing.T) {
+	m := NewWriter(&nopWriteCloser{w: new(bytes.Buffer)}, 50*time.Millisecond, func(uint64, time.Duration, bool) {})
+	t.Cleanup(func() { _ = m.Close() })
+
+	tr, ok := m.(interface{ Truncate(int64) error })
+	require.True(t, ok, "the meter should let a caller truncate the file it writes")
+	assert.ErrorContains(t, tr.Truncate(0), "does not implement Truncate")
+}

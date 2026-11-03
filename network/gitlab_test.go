@@ -26,6 +26,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
+	"gitlab.com/gitlab-org/gitlab-runner/commands/helpers/meter"
 	. "gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
@@ -3257,7 +3258,9 @@ func tryArtifactParallelDownloadFrom(t *testing.T, serverURL string, size int, d
 	require.NoError(t, err)
 	cli.ensureTLSConfig()
 
-	return c.tryArtifactParallelDownload(t.Context(), credentials, serverURL+"/artifacts.zip", int64(size), log, dest)
+	done, err := c.tryArtifactParallelDownload(t.Context(), credentials, serverURL+"/artifacts.zip", int64(size), log, dest)
+	require.NoError(t, err)
+	return done
 }
 
 // TestTryArtifactParallelDownload covers an object store that answers every chunk Range GET with a
@@ -3333,6 +3336,10 @@ func TestTryArtifactParallelDownloadRejectsChunkOutsideRange(t *testing.T) {
 
 			require.Positive(t, outsideRange.Load(), "the server should have answered a chunk outside its range")
 			assert.False(t, ok, "a chunk response outside the requested range must fail the parallel download")
+
+			info, err := dest.Stat()
+			require.NoError(t, err)
+			assert.Zero(t, info.Size(), "the failed parallel download should leave the file empty for the single download stream")
 		})
 	}
 }
@@ -3389,6 +3396,114 @@ func TestDownloadArtifactsParallelFallsBackOnChunkOutsideRange(t *testing.T) {
 	got, err := os.ReadFile(path)
 	require.NoError(t, err)
 	assert.True(t, bytes.Equal(payload, got), "the file differs from the object (%d bytes, want %d)", len(got), len(payload))
+}
+
+// serveArtifactFailingMiddleChunk serves a direct download of an object of three parallel chunks
+// whose middle chunk Range GET is answered with 503, so the parallel attempt fails after writing
+// the other two. The chunk Range GETs, which leave out the bytes=0-0 probe, are counted in chunks.
+// A GET without Range is answered with body, counted in fullGets.
+func serveArtifactFailingMiddleChunk(t *testing.T, body []byte, chunks, fullGets *atomic.Int64) *httptest.Server {
+	t.Helper()
+
+	payload := artifactRangePayload(2*artifactParallelChunkSize + 1024)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/api/v4/jobs/10/artifacts" {
+			http.Redirect(w, r, "http://"+r.Host+"/artifacts.zip", http.StatusFound)
+			return
+		}
+
+		if rangeHeader := r.Header.Get("Range"); rangeHeader != "" && rangeHeader != "bytes=0-0" {
+			chunks.Add(1)
+		}
+		start, end, ok := parseArtifactRange(r)
+		switch {
+		case r.Header.Get("Range") == "":
+			fullGets.Add(1)
+			_, _ = w.Write(body)
+		case !ok:
+			http.Error(w, "invalid Range", http.StatusBadRequest)
+		case start == artifactParallelChunkSize:
+			http.Error(w, "unavailable", http.StatusServiceUnavailable)
+		default:
+			writeArtifactRange(w, payload, start, end)
+		}
+	}))
+	t.Cleanup(server.Close)
+	return server
+}
+
+// TestDownloadArtifactsParallelFallbackStartsFromEmptyFile covers a direct download whose parallel
+// attempt fails on the middle chunk of three after writing the other two, and whose single GET
+// then answers with a shorter object, as it does when the object was replaced in between. The
+// single download stream writes from the start of the same file, so the file must hold its body
+// and nothing the failed attempt wrote after it. artifacts-downloader passes the file itself, or
+// the transfer meter around it when TRANSFER_METER_FREQUENCY is set, and both must take the
+// parallel path.
+func TestDownloadArtifactsParallelFallbackStartsFromEmptyFile(t *testing.T) {
+	tests := map[string]func(f *os.File) io.WriteCloser{
+		"file": func(f *os.File) io.WriteCloser { return f },
+		"transfer meter around the file": func(f *os.File) io.WriteCloser {
+			return meter.NewWriter(f, time.Second, func(uint64, time.Duration, bool) {})
+		},
+	}
+
+	for name, destFor := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Setenv(featureflags.UseParallelArtifactTransfer, "true")
+
+			body := []byte("the object as the single download stream gets it")
+			var chunks, fullGets atomic.Int64
+			server := serveArtifactFailingMiddleChunk(t, body, &chunks, &fullGets)
+
+			path := filepath.Join(t.TempDir(), "artifacts.zip")
+			f, err := os.Create(path)
+			require.NoError(t, err)
+			dest := destFor(f)
+			defer dest.Close()
+
+			directDownload := true
+			state := NewGitLabClient().DownloadArtifacts(JobCredentials{ID: 10, URL: server.URL, Token: "token"}, dest, &directDownload)
+
+			require.Equal(t, DownloadSucceeded, state)
+			assert.Positive(t, chunks.Load(), "DownloadArtifacts should have tried the parallel download")
+			assert.Equal(t, int64(1), fullGets.Load(), "DownloadArtifacts should fall back to one GET without Range")
+
+			got, err := os.ReadFile(path)
+			require.NoError(t, err)
+			assert.True(t, bytes.Equal(body, got), "the file differs from the body of the single download stream (%d bytes, want %d)", len(got), len(body))
+		})
+	}
+}
+
+// untruncatableFile is an artifacts file whose Truncate fails.
+type untruncatableFile struct {
+	*os.File
+}
+
+func (untruncatableFile) Truncate(int64) error {
+	return assert.AnError
+}
+
+// TestDownloadArtifactsParallelFailsWhenFileCannotBeEmptied covers the same failed parallel attempt
+// with a file that cannot be truncated. The single download stream would leave what the attempt
+// wrote after its body, so DownloadArtifacts fails instead and makes no GET without Range; the
+// caller retries with a new file.
+func TestDownloadArtifactsParallelFailsWhenFileCannotBeEmptied(t *testing.T) {
+	t.Setenv(featureflags.UseParallelArtifactTransfer, "true")
+
+	var chunks, fullGets atomic.Int64
+	server := serveArtifactFailingMiddleChunk(t, []byte("short"), &chunks, &fullGets)
+
+	f, err := os.Create(filepath.Join(t.TempDir(), "artifacts.zip"))
+	require.NoError(t, err)
+	defer f.Close()
+
+	directDownload := true
+	state := NewGitLabClient().DownloadArtifacts(JobCredentials{ID: 10, URL: server.URL, Token: "token"}, untruncatableFile{f}, &directDownload)
+
+	assert.Equal(t, DownloadFailed, state)
+	assert.Positive(t, chunks.Load(), "DownloadArtifacts should have tried the parallel download")
+	assert.Zero(t, fullGets.Load(), "DownloadArtifacts should not write a single download stream over the failed attempt")
 }
 
 func TestRunnerVersion(t *testing.T) {

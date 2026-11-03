@@ -1205,9 +1205,19 @@ func handleUploadRedirectionState(
 	return common.UploadRedirected, location
 }
 
+// artifactChunkFile is what a parallel artifact download writes to: each chunk at its offset with
+// WriteAt, and Truncate(0) to empty it again when the attempt fails.
+type artifactChunkFile interface {
+	io.WriterAt
+	Truncate(size int64) error
+}
+
 // tryArtifactParallelDownload attempts parallel range GETs to locationURL (e.g. S3 after 302).
 // Call only when FF_USE_PARALLEL_ARTIFACT_TRANSFER is enabled (see DownloadArtifacts).
-// On success writes via io.WriterAt at each chunk offset (bounded memory). Returns false if dest does not implement io.WriterAt.
+// On success writes via io.WriterAt at each chunk offset (bounded memory) and returns true.
+// It returns false and no error when the caller should use a single download stream instead, for
+// example when dest does not implement artifactChunkFile. A failed attempt empties dest for that
+// stream first. When it cannot, the error says so, and the caller must not write the stream into dest.
 // locationURL may be a presigned URL (auth in query string); it is used as-is for HEAD and all GETs (including Range), which is correct.
 func (n *GitLabClient) tryArtifactParallelDownload(
 	ctx context.Context,
@@ -1216,16 +1226,16 @@ func (n *GitLabClient) tryArtifactParallelDownload(
 	contentLength int64,
 	log logrus.FieldLogger,
 	dest io.WriteCloser,
-) bool {
+) (bool, error) {
 	cli, err := n.getClient(config)
 	if err != nil {
-		return false
+		return false, nil
 	}
 	// Caller has already verified Range support (e.g. via GET Range bytes=0-0) and provided contentLength.
 	chunkSize := int64(artifactParallelChunkSize)
 	if contentLength <= chunkSize {
 		log.Infoln("Artifact download: file size <=", artifactParallelChunkSize/(1024*1024), "MiB (chunk size), using single download stream")
-		return false
+		return false, nil
 	}
 	fetchChunk := func(offset, length int64) (io.ReadCloser, error) {
 		rangeHeaders := http.Header{"Range": []string{fmt.Sprintf("bytes=%d-%d", offset, offset+length-1)}}
@@ -1243,10 +1253,10 @@ func (n *GitLabClient) tryArtifactParallelDownload(
 		return resp.Body, nil
 	}
 
-	destAt, ok := dest.(io.WriterAt)
+	destAt, ok := dest.(artifactChunkFile)
 	if !ok {
-		log.Infoln("Artifact download: parallel download requires io.WriterAt destination, using single download stream")
-		return false
+		log.Infoln("Artifact download: parallel download requires a destination with WriteAt and Truncate, using single download stream")
+		return false, nil
 	}
 
 	cleanedURL := url_helpers.CleanURL(locationURL)
@@ -1254,11 +1264,17 @@ func (n *GitLabClient) tryArtifactParallelDownload(
 
 	err = transfer.ParallelRangeDownload(contentLength, chunkSize, artifactParallelConcurrency, destAt, fetchChunk)
 	if err != nil {
+		// The chunks written before the failure stay in dest. WriteAt does not move the write
+		// offset, so the single download stream writes from the start of dest and would leave
+		// every byte after the end of its body as the failed attempt wrote it.
+		if truncErr := destAt.Truncate(0); truncErr != nil {
+			return false, fmt.Errorf("parallel download failed: %w; truncating artifacts file for single download stream: %w", err, truncErr)
+		}
 		log.WithError(err).Infoln("Artifact download: parallel failed, using single download stream")
-		return false
+		return false, nil
 	}
 	log.Println("Downloading artifacts from coordinator...", "ok")
-	return true
+	return true, nil
 }
 
 // artifactDownloadStateFromResponse returns the DownloadState for 403/401/404 responses, or (0, false) if not handled. Caller must close res.
@@ -1368,7 +1384,12 @@ func (n *GitLabClient) DownloadArtifacts(
 					// Drain probe body before Close so the connection can be reused (see transfer.RangeProbeBodyMaxDiscard).
 					_, _ = io.Copy(io.Discard, io.LimitReader(probeResp.Body, transfer.RangeProbeBodyMaxDiscard))
 					_ = probeResp.Body.Close()
-					if n.tryArtifactParallelDownload(ctx, &config, location, contentLength, log, artifactsFile) {
+					done, err := n.tryArtifactParallelDownload(ctx, &config, location, contentLength, log, artifactsFile)
+					if err != nil {
+						log.WithError(err).Errorln("Downloading artifacts from coordinator...", "error")
+						return common.DownloadFailed
+					}
+					if done {
 						return common.DownloadSucceeded
 					}
 					log.Infoln("Artifact download: using single download stream")
