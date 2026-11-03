@@ -1212,7 +1212,7 @@ func TestResumeServices(t *testing.T) {
 	c.On("ContainerInspect", mock.Anything, "svc-a").Return(svcInspect, nil)
 	c.On("ContainerStart", mock.Anything, "svc-a", client.ContainerStartOptions{}).Return(nil).Once()
 
-	require.NoError(t, e.resumeServices([]string{"svc-a"}))
+	require.NoError(t, e.resumeServices([]container.InspectResponse{svcInspect}))
 
 	require.Len(t, e.services, 1)
 	assert.Equal(t, "svc-a", e.services[0].ID)
@@ -1222,29 +1222,14 @@ func TestResumeServices(t *testing.T) {
 	assert.Contains(t, e.temporary, "svc-a")
 }
 
-func TestResumeServices_serviceNotFound(t *testing.T) {
-	c := docker.NewMockClient(t)
-	e := newTestExecutor(t, c)
-
-	c.On("ContainerInspect", mock.Anything, "missing-svc").
-		Return(container.InspectResponse{}, errors.New("not found")).Once()
-
-	err := e.resumeServices([]string{"missing-svc"})
-	require.EqualError(t, err, "service container missing-svc not found: not found")
-}
-
 func TestResumeServices_startFails(t *testing.T) {
 	c := docker.NewMockClient(t)
 	e := newTestExecutor(t, c)
 
-	c.On("ContainerInspect", mock.Anything, "svc-broken").
-		Return(container.InspectResponse{
-			ID: "svc-broken",
-		}, nil).Once()
 	c.On("ContainerStart", mock.Anything, "svc-broken", client.ContainerStartOptions{}).
 		Return(errors.New("daemon error")).Once()
 
-	err := e.resumeServices([]string{"svc-broken"})
+	err := e.resumeServices([]container.InspectResponse{{ID: "svc-broken"}})
 	require.EqualError(t, err, "service container svc-broken failed to start: daemon error")
 }
 

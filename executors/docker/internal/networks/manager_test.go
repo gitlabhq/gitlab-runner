@@ -406,20 +406,74 @@ func TestAdopt_nonPerBuildNetwork(t *testing.T) {
 	c.AssertNotCalled(t, "NetworkInspect", mock.Anything, mock.Anything)
 }
 
-func TestAdopt_perBuildNetwork(t *testing.T) {
+func TestAdopt_userDefinedNetwork(t *testing.T) {
 	const networkName = "runner-test-toke-0-0-0"
 	const networkID = "net-abc"
+	const runnerID = common.RuntimeEnvironmentRunnerIDLabel
 
-	m := newDefaultManager(t)
-	c := addClient(t, m)
+	tests := []struct {
+		name          string
+		envKey        string
+		noRunnerID    bool
+		networkLabels map[string]string
+		wantPerBuild  bool
+	}{
+		{
+			name:          "network created by this runner is per-build",
+			networkLabels: map[string]string{runnerID: "7"},
+			wantPerBuild:  true,
+		},
+		{
+			name:         "shared network_mode network is not per-build",
+			wantPerBuild: false,
+		},
+		{
+			name:          "network created by another runner is not per-build",
+			networkLabels: map[string]string{runnerID: "8"},
+			wantPerBuild:  false,
+		},
+		{
+			name:          "network created for this environment is per-build",
+			envKey:        "acq-1",
+			networkLabels: map[string]string{runnerID: "7", labels.AcquisitionKeyLabel: "acq-1"},
+			wantPerBuild:  true,
+		},
+		{
+			// without its own runner ID, an unlabeled network would otherwise match
+			name:         "runner without an ID claims no network",
+			noRunnerID:   true,
+			wantPerBuild: false,
+		},
+		{
+			name:          "network created for another environment is not per-build",
+			envKey:        "acq-1",
+			networkLabels: map[string]string{runnerID: "7", labels.AcquisitionKeyLabel: "acq-2"},
+			wantPerBuild:  false,
+		},
+	}
 
-	c.On("NetworkInspect", mock.Anything, networkName).
-		Return(network.Inspect{Network: network.Network{ID: networkID, Name: networkName}}, nil).Once()
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := newDefaultManager(t)
+			env := map[string]string{runnerID: "7"}
+			if tt.noRunnerID {
+				delete(env, runnerID)
+			}
+			if tt.envKey != "" {
+				env[labels.AcquisitionKeyLabel] = tt.envKey
+			}
+			m.labeler = labels.NewLabeler(m.build, env)
+			c := addClient(t, m)
 
-	require.NoError(t, m.Adopt(t.Context(), container.NetworkMode(networkName)))
-	assert.Equal(t, container.NetworkMode(networkName), m.networkMode)
-	assert.Equal(t, networkID, m.buildNetwork.ID)
-	assert.True(t, m.perBuild)
+			c.On("NetworkInspect", mock.Anything, networkName).
+				Return(network.Inspect{Network: network.Network{ID: networkID, Name: networkName, Labels: tt.networkLabels}}, nil).Once()
+
+			require.NoError(t, m.Adopt(t.Context(), container.NetworkMode(networkName)))
+			assert.Equal(t, container.NetworkMode(networkName), m.networkMode)
+			assert.Equal(t, networkID, m.buildNetwork.ID)
+			assert.Equal(t, tt.wantPerBuild, m.perBuild)
+		})
+	}
 }
 
 func TestAdopt_networkMissing(t *testing.T) {

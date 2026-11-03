@@ -103,12 +103,10 @@ func (e *executor) getServicesDefinitions() (spec.Services, error) {
 	return serviceDefinitions, nil
 }
 
-func (e *executor) resumeServices(serviceIDs []string) error {
-	for _, svcID := range serviceIDs {
-		svcInspect, err := e.dockerConn.ContainerInspect(e.Context, svcID)
-		if err != nil {
-			return fmt.Errorf("service container %s not found: %w", svcID, err)
-		}
+// resumeServices starts the service containers verified by
+// inspectServiceContainers and records them for cleanup.
+func (e *executor) resumeServices(inspects []container.InspectResponse) error {
+	for _, svcInspect := range inspects {
 		if err := e.dockerConn.ContainerStart(e.Context, svcInspect.ID, client.ContainerStartOptions{}); err != nil {
 			return fmt.Errorf("service container %s failed to start: %w", svcInspect.ID, err)
 		}
@@ -124,7 +122,7 @@ func (e *executor) resumeServices(serviceIDs []string) error {
 		})
 	}
 
-	if len(serviceIDs) > 0 {
+	if len(inspects) > 0 {
 		e.waitForServices()
 	}
 

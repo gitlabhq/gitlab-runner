@@ -85,7 +85,7 @@ func (e *executor) Prepare(options common.ExecutorPrepareOptions) (err error) {
 }
 
 func (e *executor) prepareResume(ctx context.Context, scaler taskscaler.Taskscaler, options common.ExecutorPrepareOptions, acqRef *acquisitionRef, envKey string) error {
-	acqKey, executorFields, err := validateEnvKey(envKey, options.Config.ID, options.Config.GetSystemID())
+	acqKey, executorFields, err := validateEnvKey(envKey, options.Config.ID)
 	if err != nil {
 		return err
 	}
@@ -186,7 +186,10 @@ func (e *executor) TerminalConnect() (terminal.Conn, error) {
 	return nil, errors.New("executor does not have terminal")
 }
 
-func validateEnvKey(envKey string, runnerID int64, systemID string) (string, url.Values, error) {
+// validateEnvKey accepts a key issued by any manager of this runner's
+// registration. It does not check the system ID: that changes when a manager
+// moves to another machine, and the runner ID is what scopes an environment.
+func validateEnvKey(envKey string, runnerID int64) (string, url.Values, error) {
 	key, err := common.ParseRuntimeEnvironmentKey(envKey)
 	if err != nil {
 		return "", nil, err
@@ -194,9 +197,6 @@ func validateEnvKey(envKey string, runnerID int64, systemID string) (string, url
 
 	if key.RunnerID != runnerID {
 		return "", nil, errors.New("environment key was not issued by this runner")
-	}
-	if key.SystemID != systemID {
-		return "", nil, errors.New("environment key was not issued by this machine")
 	}
 
 	data, executorFields, err := parseEnvKeyFields(key.Fields)

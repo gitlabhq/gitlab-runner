@@ -103,6 +103,7 @@ type executor struct {
 	temporary        []string // IDs of containers that should be removed
 	buildContainerID string
 	suspended        bool // When true, Cleanup preserves containers/volumes/network on the VM
+	releaseOnCleanup bool // When true, Cleanup runs label-based release instead of normal teardown
 
 	// expiresAt is stamped on every docker object so resume checks the expiry
 	// set when the environment was created, whatever TTL the checking manager has.
@@ -1600,26 +1601,83 @@ func (e *executor) createDependencies() error {
 func (e *executor) resumeDependencies() error {
 	envKey, err := common.ParseRuntimeEnvironmentKey(e.Build.RuntimeEnvironmentKey())
 	if err != nil {
-		return err
+		e.releaseOnCleanup = true
+		return common.NewRuntimeEnvironmentUnavailableError(fmt.Errorf("parse runtime environment key: %w", err))
 	}
 	fields, err := parseEnvKeyFields(envKey.Fields)
 	if err != nil {
-		return err
+		e.releaseOnCleanup = true
+		return common.NewRuntimeEnvironmentUnavailableError(fmt.Errorf("parse environment key fields: %w", err))
 	}
+
+	// Verify every container before adopting or starting anything.
+	acqKey := acquisitionKey(e.Build)
 
 	buildInspect, err := e.dockerConn.ContainerInspect(e.Context, fields.buildContainerID)
 	if err != nil {
-		return fmt.Errorf("build container %s not found: %w", fields.buildContainerID, err)
+		if docker.IsErrNotFound(err) {
+			e.releaseOnCleanup = true
+			return common.NewRuntimeEnvironmentUnavailableError(
+				fmt.Errorf("build container %s not found: %w", fields.buildContainerID, err))
+		}
+		return fmt.Errorf("build container %s inspect: %w", fields.buildContainerID, err)
 	}
-	e.buildContainerID = buildInspect.ID
-	e.buildContainer = &buildInspect
+
+	if err := e.verifyContainerOwnership(buildInspect, acqKey, "build container"); err != nil {
+		e.releaseOnCleanup = true
+		return err
+	}
 
 	helperInspect, err := e.dockerConn.ContainerInspect(e.Context, fields.helperContainerID)
 	if err != nil {
-		return fmt.Errorf("helper container %s not found: %w", fields.helperContainerID, err)
+		if docker.IsErrNotFound(err) {
+			e.releaseOnCleanup = true
+			return common.NewRuntimeEnvironmentUnavailableError(
+				fmt.Errorf("helper container %s not found: %w", fields.helperContainerID, err))
+		}
+		return fmt.Errorf("helper container %s inspect: %w", fields.helperContainerID, err)
 	}
+	if err := e.verifyContainerOwnership(helperInspect, acqKey, "helper container"); err != nil {
+		e.releaseOnCleanup = true
+		return err
+	}
+
+	serviceInspects, err := e.inspectServiceContainers(fields.serviceContainerIDs, acqKey)
+	if err != nil {
+		// A transient daemon error must not destroy a healthy environment.
+		if errors.Is(err, common.ErrRuntimeEnvironmentUnavailable) {
+			e.releaseOnCleanup = true
+		}
+		return err
+	}
+
+	if err := e.verifyEnvironmentExpiry(buildInspect, fields.buildContainerID); err != nil {
+		e.releaseOnCleanup = true
+		return err
+	}
+
+	e.buildContainerID = buildInspect.ID
+	e.buildContainer = &buildInspect
 	e.helperContainer = &helperInspect
 
+	if err := e.resumeSetupChain(buildInspect, fields, serviceInspects); err != nil {
+		return err
+	}
+
+	// Register containers for cleanup only after all steps succeed.
+	// On failure, the environment stays intact on the VM for retry.
+	e.temporary = append(e.temporary, buildInspect.ID, fields.helperContainerID)
+
+	return nil
+}
+
+// resumeSetupChain adopts the suspended environment's network, volumes and
+// services.
+func (e *executor) resumeSetupChain(
+	buildInspect container.InspectResponse,
+	fields envKeyFields,
+	serviceInspects []container.InspectResponse,
+) error {
 	if err := e.createLabeler(); err != nil {
 		return err
 	}
@@ -1650,15 +1708,72 @@ func (e *executor) resumeDependencies() error {
 		return err
 	}
 
-	if err := e.resumeServices(fields.serviceContainerIDs); err != nil {
-		return err
+	return e.resumeServices(serviceInspects)
+}
+
+// verifyContainerOwnership checks the acquisition key label, or the runner ID
+// label when there is no acquisition key.
+func (e *executor) verifyContainerOwnership(inspect container.InspectResponse, acqKey, role string) error {
+	if inspect.Config == nil {
+		return common.NewRuntimeEnvironmentUnavailableError(
+			fmt.Errorf("%s %s has no config (label missing)", role, inspect.ID))
 	}
-
-	// Register containers for cleanup only after all steps succeed.
-	// On failure, the environment stays intact on the VM for retry.
-	e.temporary = append(e.temporary, buildInspect.ID, fields.helperContainerID)
-
+	if acqKey == "" {
+		got, want := inspect.Config.Labels[common.RuntimeEnvironmentRunnerIDLabel], strconv.FormatInt(e.Config.ID, 10)
+		if got != want {
+			return common.NewRuntimeEnvironmentUnavailableError(
+				fmt.Errorf("%s %s runner ID mismatch: got %q, want %q", role, inspect.ID, got, want))
+		}
+		return nil
+	}
+	got := inspect.Config.Labels[labels.AcquisitionKeyLabel]
+	if got != acqKey {
+		return common.NewRuntimeEnvironmentUnavailableError(
+			fmt.Errorf("%s %s acquisition key mismatch: got %q, want %q",
+				role, inspect.ID, got, acqKey))
+	}
 	return nil
+}
+
+func (e *executor) inspectServiceContainers(serviceIDs []string, acqKey string) ([]container.InspectResponse, error) {
+	inspects := make([]container.InspectResponse, 0, len(serviceIDs))
+	for _, svcID := range serviceIDs {
+		svcInspect, err := e.dockerConn.ContainerInspect(e.Context, svcID)
+		if err != nil {
+			if docker.IsErrNotFound(err) {
+				return nil, common.NewRuntimeEnvironmentUnavailableError(
+					fmt.Errorf("service container %s not found: %w", svcID, err))
+			}
+			return nil, fmt.Errorf("service container %s inspect: %w", svcID, err)
+		}
+		if err := e.verifyContainerOwnership(svcInspect, acqKey, "service container"); err != nil {
+			return nil, err
+		}
+		inspects = append(inspects, svcInspect)
+	}
+	return inspects, nil
+}
+
+// verifyEnvironmentExpiry checks the expiry stamped on the build container,
+// not the runner's current TTL.
+func (e *executor) verifyEnvironmentExpiry(buildInspect container.InspectResponse, containerID string) error {
+	if buildInspect.Config == nil {
+		return common.NewRuntimeEnvironmentUnavailableError(
+			fmt.Errorf("build container %s has no config", containerID))
+	}
+	stamp, ok := buildInspect.Config.Labels[common.RuntimeEnvironmentExpiresAtLabel]
+	if !ok || stamp == "" {
+		return common.NewRuntimeEnvironmentUnavailableError(
+			fmt.Errorf("build container %s missing expiry stamp", containerID))
+	}
+	expiresAt, err := common.ParseRuntimeEnvironmentExpiry(stamp)
+	if err != nil {
+		return common.NewRuntimeEnvironmentUnavailableError(
+			fmt.Errorf("build container %s invalid expiry stamp: %w", containerID, err))
+	}
+	// Keep the original expiry so objects created on resume carry it forward.
+	e.expiresAt = expiresAt
+	return common.CheckRuntimeEnvironmentExpiry(expiresAt, time.Now())
 }
 
 func (e *executor) createVolumes() error {
