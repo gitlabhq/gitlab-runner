@@ -12,7 +12,6 @@ import (
 
 	"github.com/moby/moby/api/types/container"
 	"github.com/moby/moby/client"
-	"github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
@@ -29,6 +28,7 @@ import (
 const (
 	buildContainerType      = "build"
 	predefinedContainerType = "predefined"
+	userProbeContainerType  = "user-probe"
 )
 
 type commandExecutor struct {
@@ -306,66 +306,50 @@ func (s *commandExecutor) changeFilesOwnership() error {
 	}
 
 	dockerExec := exec.NewDocker(s.Context, s.dockerConn, s.waiter, s.Build.Log())
-	inspect := user.NewInspect(s.dockerConn)
-	imageSHA := s.buildContainer.Image
 	imageName := s.Build.Image.Name
 
-	log := s.Build.Log().WithFields(logrus.Fields{
-		"imageSHA":  imageSHA,
-		"imageName": imageName,
-	})
-	log.Debug("Checking if image runs with root user")
+	log := s.Build.Log().WithField("imageName", imageName)
+	log.Debug("Creating temporary container to detect effective user")
 
-	usesRoot, err := inspect.IsRoot(s.Context, imageSHA)
+	probeContainer, err := s.createContainer(
+		userProbeContainerType,
+		s.Build.Image,
+		[]string{},
+		newUserProbeContainerConfigurator(&s.executor, s.Build.Image),
+	)
 	if err != nil {
-		return fmt.Errorf("checking if image %q runs as root: %w", imageName, err)
+		return fmt.Errorf("creating user probe container for image %q: %w", imageName, err)
 	}
 
-	if usesRoot {
-		log.Debug("Image uses root user")
-		return nil
-	}
+	stdout := new(bytes.Buffer)
+	stderr := new(bytes.Buffer)
 
-	log.Debug("Image doesn't use root user")
-
-	uid, gid, err := getUIDandGID(s.Context, log, inspect, s.buildContainer.ID, imageSHA)
+	err = dockerExec.Exec(s.Context, probeContainer.ID, exec.IOStreams{
+		Stdin:  strings.NewReader(""),
+		Stdout: limitwriter.New(stdout, 1024),
+		Stderr: limitwriter.New(stderr, 1024),
+	}, nil)
 	if err != nil {
-		return err
+		return fmt.Errorf(
+			"detecting user for image %q: %w (stderr: %s)",
+			imageName,
+			err,
+			strings.TrimSpace(stderr.String()),
+		)
 	}
+
+	uid, gid, err := user.ParseUIDGID(stdout.String())
+	if err != nil {
+		return fmt.Errorf("parsing user information for image %q: %w", imageName, err)
+	}
+
+	log.Debugf("Detected container UID=%d GID=%d", uid, gid)
 
 	if uid == 0 {
 		return nil
 	}
 
 	return s.executeChown(dockerExec, uid, gid)
-}
-
-func getUIDandGID(
-	ctx context.Context,
-	log logrus.FieldLogger,
-	inspect user.Inspect,
-	buildContainerID string,
-	imageSHA string,
-) (int, int, error) {
-	containerLog := log.WithField("container", buildContainerID)
-	containerLog.Debug("Getting the UID of the container")
-
-	uid, err := inspect.UID(ctx, buildContainerID)
-	if err != nil {
-		return 0, 0, fmt.Errorf("checking %q image UID: %w", imageSHA, err)
-	}
-
-	containerLog.Debugf("Container UID=%d", uid)
-	containerLog.Debug("Getting the GID of the container")
-
-	gid, err := inspect.GID(ctx, buildContainerID)
-	if err != nil {
-		return 0, 0, fmt.Errorf("checking %q image GID: %w", imageSHA, err)
-	}
-
-	containerLog.Debugf("Container GID=%d", gid)
-
-	return uid, gid, err
 }
 
 func (s *commandExecutor) executeChown(dockerExec exec.Docker, uid int, gid int) error {

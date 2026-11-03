@@ -71,6 +71,12 @@ func (d *defaultDocker) Exec(ctx context.Context, containerID string, streams IO
 	}
 	defer hijacked.Close()
 
+	// Docker's hijacked connection is not automatically tied to the context.
+	stop := context.AfterFunc(ctx, func() {
+		hijacked.Close()
+	})
+	defer stop()
+
 	d.logger.Debugln("Starting container", containerID, "...")
 	err = d.c.ContainerStart(ctx, containerID, client.ContainerStartOptions{})
 	if err != nil {

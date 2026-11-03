@@ -13,6 +13,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/moby/moby/api/pkg/stdcopy"
 	"github.com/moby/moby/client"
@@ -107,11 +108,40 @@ func TestDefaultDocker_Exec(t *testing.T) {
 			input:         input(t, io.EOF),
 			cancelContext: true,
 			setupDockerClient: func(t *testing.T, clientMock *docker.MockClient, expectedCtx context.Context) {
+				conn := newMockConn(t)
+				closeCalled := make(chan struct{})
+				var closeOnce sync.Once
+
+				conn.On("Close").
+					Run(func(args mock.Arguments) {
+						closeOnce.Do(func() { close(closeCalled) })
+					}).
+					Return(nil).
+					Maybe()
+
 				reader := newMockReader(t)
 				reader.On("Read", mock.Anything).
-					Return(0, nil).Maybe()
+					Return(0, nil).
+					Maybe()
 
-				mockWorkingClient(t, clientMock, reader, expectedCtx)
+				hijacked := client.HijackedResponse{
+					Conn:   conn,
+					Reader: bufio.NewReader(reader),
+				}
+
+				clientMock.On("ContainerAttach", expectedCtx, id, attachOptions()).
+					Return(hijacked, nil).
+					Once()
+				clientMock.On("ContainerStart", expectedCtx, id, client.ContainerStartOptions{}).
+					Run(func(args mock.Arguments) {
+						select {
+						case <-closeCalled:
+						case <-time.After(2 * time.Second):
+							t.Error("hijacked connection was not closed after context cancellation")
+						}
+					}).
+					Return(nil).
+					Once()
 			},
 			setupKillWaiter: func(t *testing.T, waiterMock *wait.MockKillWaiter, expectedCtx context.Context) {
 				waiterMock.On("StopKillWait", expectedCtx, id, mock.Anything, mock.AnythingOfType("wait.GracefulExitFunc")).Return(nil).Once()
