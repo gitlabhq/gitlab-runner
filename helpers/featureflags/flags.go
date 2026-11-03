@@ -61,6 +61,7 @@ const (
 	UseNativeContainerStop               string = "FF_USE_NATIVE_CONTAINER_STOP"
 	MachineOptionsExpandEnv              string = "FF_MACHINE_OPTIONS_EXPAND_ENV"
 	DockerMachineJSONOutput              string = "FF_DOCKER_MACHINE_JSON_OUTPUT"
+	KubernetesHealthCheckInspectImages   string = "FF_KUBERNETES_HEALTH_CHECK_INSPECT_IMAGES"
 )
 
 type FeatureFlag struct {
@@ -520,6 +521,17 @@ var flags = []FeatureFlag{
 			"`0.16.2-gitlab.55` or later). The runner logs Docker Machine's fields as structured fields under " +
 			"`docker_machine` and records creation timings for each phase in " +
 			"`gitlab_runner_autoscaling_machine_creation_phase_duration_seconds`.",
+	},
+	{
+		Name:         KubernetesHealthCheckInspectImages,
+		DefaultValue: false,
+		Deprecated:   false,
+		Description: "When enabled, the Kubernetes executor waits for a service without `HEALTHCHECK_TCP_PORT` " +
+			"until one of the TCP ports exposed by its image accepts a connection, like the Docker executor. " +
+			"The helper container reads the exposed ports from the registry on every job, which counts as a pull " +
+			"on Docker Hub. It authenticates with the job's own credentials. Private images that need " +
+			"`image_pull_secrets` also need `image_pull_secrets_readable_by_jobs`. The wait ends after 30 seconds " +
+			"with a warning. The helper image must be the same version as the runner. Not supported for native steps jobs.",
 	},
 }
 

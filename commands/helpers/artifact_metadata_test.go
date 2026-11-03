@@ -67,12 +67,13 @@ func TestGenerateMetadataToFile(t *testing.T) {
 	sha.Write([]byte("testdata"))
 	checksum := sha.Sum(nil)
 
-	// First format the time to RFC3339 and then parse it to get the correct precision
-	startedAtRFC3339 := time.Now().Format(time.RFC3339)
+	// Format and re-parse to drop sub-second precision. UTC because protojson
+	// writes timestamps in UTC, and the output is asserted to contain these.
+	startedAtRFC3339 := time.Now().UTC().Format(time.RFC3339)
 	startedAt, err := time.Parse(time.RFC3339, startedAtRFC3339)
 	require.NoError(t, err)
 
-	endedAtRFC3339 := time.Now().Add(time.Minute).Format(time.RFC3339)
+	endedAtRFC3339 := time.Now().UTC().Add(time.Minute).Format(time.RFC3339)
 	endedAt, err := time.Parse(time.RFC3339, endedAtRFC3339)
 	require.NoError(t, err)
 

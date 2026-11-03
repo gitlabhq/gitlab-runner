@@ -187,9 +187,6 @@ func TestHealthCheckCommand_WaitAll(t *testing.T) {
 				unusedPort++
 			}
 
-			// The cli package provides an extra value at end of the args array
-			ports = append(ports, "[unused value]")
-
 			ctx, cancelFn := context.WithTimeout(context.Background(), 4*time.Second)
 			defer cancelFn()
 			done := make(chan struct{})
