@@ -4,7 +4,7 @@ go 1.26.10
 
 require (
 	cloud.google.com/go/compute/metadata v0.10.0
-	cloud.google.com/go/iam v1.13.0
+	cloud.google.com/go/iam v1.15.0
 	cloud.google.com/go/secretmanager v1.21.0
 	cloud.google.com/go/storage v1.68.0
 	dario.cat/mergo v1.0.2
@@ -38,7 +38,7 @@ require (
 	github.com/golang/mock v1.6.0
 	github.com/google/go-containerregistry v0.22.1
 	github.com/google/uuid v1.6.0
-	github.com/googleapis/gax-go/v2 v2.24.1
+	github.com/googleapis/gax-go/v2 v2.26.2
 	github.com/gorhill/cronexpr v0.0.0-20180427100037-88b0669f7d75
 	github.com/gorilla/websocket v1.5.4-0.20250319132907-e064f32e3674
 	github.com/hashicorp/go-hclog v1.6.3
