@@ -1018,6 +1018,7 @@ func (c *userProbeContainerConfigurator) ContainerConfig(
 	config.User = configuredUser
 	config.Entrypoint = []string{"id"}
 	config.Cmd = []string{}
+	config.Env = nil
 
 	return config, nil
 }
@@ -1061,7 +1062,7 @@ func (e *executor) createContainer(
 
 	var platform *v1.Platform
 	// predefined/helper container always uses native platform
-	if containerType == buildContainerType {
+	if containerType == buildContainerType || containerType == userProbeContainerType {
 		dockerOptions := imageDefinition.ExecutorOptions.Docker.Expand(e.Build.GetAllVariables())
 		platform = e.platformForImage(image, dockerOptions)
 	}

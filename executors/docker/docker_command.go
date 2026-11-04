@@ -305,6 +305,14 @@ func (s *commandExecutor) changeFilesOwnership() error {
 		return nil
 	}
 
+	if cfg := s.buildContainer.Config; cfg != nil {
+		user, _, _ := strings.Cut(cfg.User, ":")
+		if user == "" || user == "root" || user == "0" {
+			s.Build.Log().Debug("Build container runs as root; skipping ownership change")
+			return nil
+		}
+	}
+
 	dockerExec := exec.NewDocker(s.Context, s.dockerConn, s.waiter, s.Build.Log())
 	imageName := s.Build.Image.Name
 

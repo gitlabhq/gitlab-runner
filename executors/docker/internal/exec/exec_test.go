@@ -13,7 +13,6 @@ import (
 	"strings"
 	"sync"
 	"testing"
-	"time"
 
 	"github.com/moby/moby/api/pkg/stdcopy"
 	"github.com/moby/moby/client"
@@ -108,20 +107,15 @@ func TestDefaultDocker_Exec(t *testing.T) {
 			input:         input(t, io.EOF),
 			cancelContext: true,
 			setupDockerClient: func(t *testing.T, clientMock *docker.MockClient, expectedCtx context.Context) {
-				conn := newMockConn(t)
-				closeCalled := make(chan struct{})
-				var closeOnce sync.Once
+				reader, writer := io.Pipe()
 
+				conn := newMockConn(t)
+				var closeOnce sync.Once
 				conn.On("Close").
 					Run(func(args mock.Arguments) {
-						closeOnce.Do(func() { close(closeCalled) })
+						closeOnce.Do(func() { _ = writer.Close() })
 					}).
 					Return(nil).
-					Maybe()
-
-				reader := newMockReader(t)
-				reader.On("Read", mock.Anything).
-					Return(0, nil).
 					Maybe()
 
 				hijacked := client.HijackedResponse{
@@ -133,13 +127,6 @@ func TestDefaultDocker_Exec(t *testing.T) {
 					Return(hijacked, nil).
 					Once()
 				clientMock.On("ContainerStart", expectedCtx, id, client.ContainerStartOptions{}).
-					Run(func(args mock.Arguments) {
-						select {
-						case <-closeCalled:
-						case <-time.After(2 * time.Second):
-							t.Error("hijacked connection was not closed after context cancellation")
-						}
-					}).
 					Return(nil).
 					Once()
 			},

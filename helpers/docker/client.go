@@ -64,7 +64,6 @@ type Client interface {
 	ContainerLogs(ctx context.Context, container string, options client.ContainerLogsOptions) (io.ReadCloser, error)
 	ContainerExecCreate(ctx context.Context, container string, config client.ExecCreateOptions) (container.ExecCreateResponse, error)
 	ContainerExecAttach(ctx context.Context, execID string, config client.ExecAttachOptions) (client.HijackedResponse, error)
-	ContainerExecInspect(ctx context.Context, execID string) (client.ExecInspectResult, error)
 
 	NetworkCreate(
 		ctx context.Context,

@@ -2786,6 +2786,75 @@ func TestExpandingVolumeDestination(t *testing.T) {
 	assert.ElementsMatch(t, expectedBinds, executor.volumesManager.Binds())
 }
 
+func TestUserProbeContainerConfiguratorContainerConfig(t *testing.T) {
+	tests := map[string]struct {
+		runnerUser   string
+		jobUser      spec.StringOrInt64
+		allowedUsers []string
+		wantUser     string
+		wantErr      bool
+	}{
+		"runner user takes precedence": {
+			runnerUser: "1000:1000",
+			jobUser:    "2000:2000",
+			wantUser:   "1000:1000",
+		},
+		"job user is used when runner user is empty": {
+			jobUser:  "2000:2000",
+			wantUser: "2000:2000",
+		},
+		"empty user is allowed": {
+			wantUser: "",
+		},
+		"disallowed runner user returns error": {
+			runnerUser:   "1000:1000",
+			allowedUsers: []string{"2000:2000"},
+			wantErr:      true,
+		},
+		"disallowed job user returns error": {
+			jobUser:      "2000:2000",
+			allowedUsers: []string{"1000:1000"},
+			wantErr:      true,
+		},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			dockerConfig := &common.DockerConfig{
+				User:         tt.runnerUser,
+				AllowedUsers: tt.allowedUsers,
+			}
+
+			_, e := createExecutorForTestDockerConfiguration(t, dockerConfig, nil)
+
+			imageConfig := spec.Image{
+				Name: "alpine",
+				ExecutorOptions: spec.ImageExecutorOptions{
+					Docker: spec.ImageDockerOptions{
+						User: tt.jobUser,
+					},
+				},
+			}
+
+			configurator := newUserProbeContainerConfigurator(e, imageConfig)
+			config, err := configurator.ContainerConfig(&image.InspectResponse{ID: "123"})
+
+			if tt.wantErr {
+				require.Error(t, err)
+				assert.Nil(t, config)
+				return
+			}
+
+			require.NoError(t, err)
+			require.NotNil(t, config)
+			assert.Equal(t, tt.wantUser, config.User)
+			assert.Equal(t, []string{"id"}, config.Entrypoint)
+			assert.Empty(t, config.Cmd)
+			assert.Nil(t, config.Env)
+		})
+	}
+}
+
 func TestDockerImageWithUser(t *testing.T) {
 	tests := map[string]struct {
 		jobUser          spec.StringOrInt64
