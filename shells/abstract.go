@@ -1573,8 +1573,21 @@ func (b *AbstractShell) writeSubmoduleUpdateCmd(w ShellWriter, build *common.Bui
 	}
 	cleanCommand := append([]string{"git", "clean"}, cleanFlags...)
 
-	w.Command("git", append(foreachArgs, cleanCommand...)...)
+	// With GIT_STRATEGY=fetch, the submodules can still be checked out at the commits of a previous job. If such a
+	// commit has a nested gitlink without a matching .gitmodules entry, `git submodule foreach` fails before
+	// `git submodule update` gets the chance to move the submodule to the expected commit. In that case, we deinit the
+	// submodules. Their git dirs in .git/modules are kept, so the update below re-creates the working trees from them.
+	// `git submodule foreach` ignores GIT_SUBMODULE_PATHS, so the stale submodule can be outside of those paths. We
+	// therefore deinit all submodules, not only the ones in GIT_SUBMODULE_PATHS.
+	// See: https://gitlab.com/gitlab-org/gitlab-runner/-/issues/38871
+	w.IfCmdWithOutput("git", append(foreachArgs, cleanCommand...)...)
 	w.Command("git", append(foreachArgs, "git", "reset", "--hard")...)
+	w.Else()
+	w.Warningf("Cleaning submodules failed. Deinitializing them...")
+	w.Command("git", "submodule", "deinit", "--force", "--all")
+	w.Command("git", "submodule", "init")
+	w.Command("git", syncArgs...)
+	w.EndIf()
 
 	// Some submodule operations need creds configured, but don't pick up config from the main repo. For those, we
 	// explicitly "include.path" the externalized git config. For the "include.path" value, we use an env var, thus we
