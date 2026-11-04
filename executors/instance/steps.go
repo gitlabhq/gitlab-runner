@@ -130,6 +130,9 @@ func (e *executor) Connect(ctx context.Context) (func() (io.ReadWriteCloser, err
 	case socket, ok := <-readyCh:
 		if !ok {
 			_ = serveStop.Close()
+			if err := ctx.Err(); err != nil {
+				return nil, err
+			}
 			return nil, fmt.Errorf("step-runner ready channel closed")
 		}
 		// step-runner picks the socket name inside the mktemp directory and
