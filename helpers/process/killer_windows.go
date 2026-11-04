@@ -113,10 +113,11 @@ func taskTerminate(logger Logger, pid int, useWindowsLegacyProcessStrategy bool)
 var consoleMu sync.Mutex
 
 // terminateViaConsole reports an error only when the control event could not be
-// delivered. Restoring the runner's own console state runs after delivery, so a
-// failure there says nothing about whether the target process was signaled. The
-// caller force-kills on error, so folding the restore failures into the return
-// value would kill a process that is already shutting down gracefully.
+// delivered. Restoring the runner's own console state runs after delivery, or
+// after a takeover that failed partway, so a failure there says nothing about
+// whether the target process was signaled. The caller force-kills on error, so
+// folding the restore failures into the return value would kill a process that
+// is already shutting down gracefully.
 func terminateViaConsole(logger Logger, api consoleAPI, pid int, useWindowsLegacyProcessStrategy bool) error {
 	if !useWindowsLegacyProcessStrategy {
 		runnerHasConsole, err := sendCtrlBreak(api, pid)
@@ -149,29 +150,39 @@ func terminateViaConsole(logger Logger, api consoleAPI, pid int, useWindowsLegac
 	if err := api.freeConsole("detach the runner process from its console"); err != nil {
 		return err
 	}
+
+	// The runner has left its console. Put it back on every way out from here,
+	// undoing only the steps that succeeded. This defer is registered after the
+	// Unlock above, so it runs first and the restore holds consoleMu.
+	var onTargetConsole, ctrlHandlerDisabled bool
+	defer func() {
+		var errs []error
+		if onTargetConsole {
+			errs = append(errs, api.freeConsole("detach the runner process from the console of the terminated process"))
+		}
+		errs = append(errs, api.attachConsole(
+			"attach the runner process to the console of its parent process", uintptr(math.MaxUint32)))
+		if ctrlHandlerDisabled {
+			errs = append(errs, api.setConsoleCtrlHandler(
+				"restore Ctrl-C event handler for runner process", uintptr(unsafe.Pointer(nil)), uintptr(0)))
+		}
+		warnRestoreFailures(logger, errs...)
+	}()
+
 	if err := api.attachConsole(
 		"attach to the console of the process being terminated", uintptr(pid)); err != nil {
 		return err
 	}
+	onTargetConsole = true
+
 	if err := api.setConsoleCtrlHandler(
 		"disable Ctrl-C event handler for runner process", uintptr(unsafe.Pointer(nil)), uintptr(1)); err != nil {
 		return err
 	}
+	ctrlHandlerDisabled = true
 
-	deliveryErr := api.generateConsoleCtrlEvent(
+	return api.generateConsoleCtrlEvent(
 		"send Ctrl-C event to process being terminated", uintptr(windows.CTRL_C_EVENT), uintptr(pid))
-
-	// Restore the console and the Ctrl-C handler even when delivery failed.
-	warnRestoreFailures(
-		logger,
-		api.freeConsole("detach the runner process from the console of the terminated process"),
-		api.attachConsole(
-			"attach the runner process to the console of its parent process", uintptr(math.MaxUint32)),
-		api.setConsoleCtrlHandler(
-			"restore Ctrl-C event handler for runner process", uintptr(unsafe.Pointer(nil)), uintptr(0)),
-	)
-
-	return deliveryErr
 }
 
 // sendCtrlBreak raises the event through whatever console the runner holds, and
