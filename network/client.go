@@ -158,9 +158,10 @@ func (n *client) addTLSCA(tlsConfig *tls.Config) {
 
 	data, err := os.ReadFile(file)
 	if err != nil {
-		if !os.IsNotExist(err) {
-			logrus.Errorln("Failed to load", n.caFile, err)
-		}
+		// A missing file is an error too: discoverCertificates only sets the
+		// path when the file exists, so reaching here means the user configured
+		// a file that cannot be read.
+		logrus.WithError(err).WithField("file", file).Error("Failed to load TLS CA certificate file")
 		return
 	}
 
@@ -190,9 +191,10 @@ func (n *client) addTLSAuth(tlsConfig *tls.Config) {
 	// load TLS client keypair
 	certificate, err := tls.LoadX509KeyPair(n.certFile, n.keyFile)
 	if err != nil {
-		if !os.IsNotExist(err) {
-			logrus.Errorln("Failed to load", n.certFile, n.keyFile, err)
-		}
+		logrus.WithError(err).WithFields(logrus.Fields{
+			"file":     n.certFile,
+			"key_file": n.keyFile,
+		}).Error("Failed to load TLS client certificate and key pair")
 		return
 	}
 

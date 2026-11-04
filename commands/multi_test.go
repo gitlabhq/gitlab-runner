@@ -17,6 +17,7 @@ import (
 	"testing/synctest"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/testutil"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
@@ -1212,6 +1213,42 @@ func TestRunCommand_resetOneRunnerToken(t *testing.T) {
 				assert.Equal(t, time.Date(2022, 1, 9, 0, 0, 0, 0, time.UTC), runner.TokenExpiresAt)
 			},
 		},
+		"one expiring runner with automatic rotation disabled": {
+			runners: []common.RunnerCredentials{
+				{
+					ID:              1,
+					Token:           "token1",
+					TokenObtainedAt: time.Date(2022, 1, 1, 0, 0, 0, 0, time.UTC),
+					TokenExpiresAt:  time.Date(2022, 1, 9, 0, 0, 0, 0, time.UTC),
+				},
+			},
+			testProcedure: func(t *testing.T, d *resetRunnerTokenTestController) {
+				runner := d.runCommand.configfile.Config().Runners[0]
+				runner.FeatureFlags = map[string]bool{featureflags.DisableAutomaticTokenRotation: true}
+
+				hook, cleanup := test.NewHook()
+				defer cleanup()
+
+				d.pushToWaitGroup(func() {
+					assert.False(t, d.runCommand.resetOneRunnerToken())
+					d.assertResetTokenNotCalled(t)
+					d.assertConfigSaveNotCalled(t)
+				})
+				d.handleRunAtCall(t, time.Date(2022, 1, 7, 0, 0, 0, 0, time.UTC))
+				d.wait()
+
+				var warning *logrus.Entry
+				for _, entry := range hook.AllEntries() {
+					if entry.Level == logrus.WarnLevel {
+						warning = entry
+					}
+				}
+				require.NotNil(t, warning, "expected a warning about the expiring token")
+				assert.Equal(t, "Automatic token rotation is disabled; the runner token is about to expire", warning.Message)
+				assert.Equal(t, runner.ShortDescription(), warning.Data["runner"])
+				assert.Equal(t, runner.GetSystemID(), warning.Data["system_id"])
+			},
+		},
 	}
 
 	for name, tc := range testCases {
@@ -2381,4 +2418,68 @@ func TestRunCommand_beginShutdownOfExecutorProviders(t *testing.T) {
 	}
 
 	cmd.beginShutdownOfExecutorProviders()
+}
+
+// TestRunCommand_updateWorkers_ZeroConcurrent covers the fatal line emitted when `concurrent` is
+// below 1. The message must be the explanation, not the return values of fmt.Printf.
+func TestRunCommand_updateWorkers_ZeroConcurrent(t *testing.T) {
+	hook, cleanup := test.NewHook()
+	defer cleanup()
+
+	origOut := logrus.StandardLogger().Out
+	origExit := logrus.StandardLogger().ExitFunc
+	logrus.SetOutput(io.Discard)
+	exitCode := -1
+	logrus.StandardLogger().ExitFunc = func(code int) { exitCode = code }
+	t.Cleanup(func() {
+		logrus.SetOutput(origOut)
+		logrus.StandardLogger().ExitFunc = origExit
+	})
+
+	cmd := RunCommand{
+		buildsHelper:      newBuildsHelper(),
+		configfile:        configfile.New("", configfile.WithExistingConfig(&common.Config{Concurrent: 0})),
+		runnerWorkerSlots: prometheus.NewGauge(prometheus.GaugeOpts{Name: "test_worker_slots"}),
+	}
+
+	workerIndex := 0
+	assert.Nil(t, cmd.updateWorkers(&workerIndex, make(chan int), make(chan bool)))
+	assert.Equal(t, 1, exitCode)
+
+	entry := hook.LastEntry()
+	require.NotNil(t, entry)
+	assert.Equal(t, logrus.FatalLevel, entry.Level)
+	assert.Contains(t, entry.Message, "'concurrent = 0' means that no jobs will be processed")
+	assert.EqualValues(t, 0, entry.Data["max_builds"])
+}
+
+// TestRunCommand_checkConfig_LogsLoadError covers a config file that changed on disk but cannot
+// be loaded. The failure must be logged with the error as a field, not appended to the message.
+func TestRunCommand_checkConfig_LogsLoadError(t *testing.T) {
+	hook, cleanup := test.NewHook()
+	defer cleanup()
+
+	origOut := logrus.StandardLogger().Out
+	logrus.SetOutput(io.Discard)
+	t.Cleanup(func() { logrus.SetOutput(origOut) })
+
+	cfgPath := filepath.Join(t.TempDir(), "config.toml")
+	require.NoError(t, os.WriteFile(cfgPath, []byte("concurrent = [not toml"), 0o600))
+
+	cmd := RunCommand{
+		ConfigFile:   cfgPath,
+		healthHelper: newHealthHelper(),
+		buildsHelper: newBuildsHelper(),
+		configfile:   configfile.New(cfgPath, configfile.WithExistingConfig(&common.Config{})),
+	}
+
+	require.Error(t, cmd.checkConfig())
+
+	entry := hook.LastEntry()
+	require.NotNil(t, entry)
+	assert.Equal(t, logrus.ErrorLevel, entry.Level)
+	assert.Equal(t, "Failed to load config", entry.Message)
+	loggedErr, ok := entry.Data[logrus.ErrorKey].(error)
+	require.True(t, ok, "load error must be an error field, not message text: %v", entry.Data)
+	assert.Error(t, loggedErr)
 }

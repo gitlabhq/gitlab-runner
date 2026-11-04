@@ -304,10 +304,11 @@ See [an example of a user issue](https://gitlab.com/gitlab-org/gitlab-runner/-/i
 It's possible to configure the time zone in which `[[docker.machine.autoscaling]]` periods
 are described. This feature should work on most Unix systems out of the box. However, on some
 Unix systems and most non-Unix systems (like Windows, where GitLab Runner binaries are available),
-the runner might crash at start with an error:
+the runner might crash at start with an error like the following. The runner pads
+the message before its fields, so the real log line has more spaces before `error=`:
 
 ```plaintext
-Failed to load config Invalid OffPeakPeriods value: open /usr/local/go/lib/time/zoneinfo.zip: no such file or directory
+FATAL: Service run failed  error=loading configuration for <runner-name> runner: compiling docker machine autoscaling periods: invalid time periods [* * 10-17 * * mon-fri *], caused by: open /usr/local/go/lib/time/zoneinfo.zip: no such file or directory
 ```
 
 The error is caused by the `time` package in Go. Go uses the IANA Time Zone database to load

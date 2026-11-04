@@ -869,10 +869,10 @@ func (n *GitLabClient) PatchTrace(
 		},
 	)
 	if err != nil {
-		baseLog.WithFields(logrus.Fields{
+		baseLog.WithError(err).WithFields(logrus.Fields{
 			"sent-log":            contentRange,
 			correlationIDLogField: correlationID,
-		}).Errorln("Appending trace to coordinator...", "error", err.Error())
+		}).Errorln("Appending trace to coordinator...", "error")
 		return common.NewPatchTraceResult(startOffset, common.PatchFailed, 0)
 	}
 
@@ -1302,6 +1302,13 @@ func (n *GitLabClient) DownloadArtifacts(
 		query.Set("download_mode", "direct")
 		uri := fmt.Sprintf("jobs/%d/artifacts?%s", config.ID, query.Encode())
 		headers, correlationID := addCorrelationID(JobTokenHeader(config.Token))
+		// jobLog carries only the job fields. Each request below derives its
+		// own logger from it, so fields describing one response (correlation
+		// ID, status code) never leak onto lines about a different request.
+		jobLog := log
+		// Attach the correlation ID before the request is made so that a
+		// transport error can still be matched against server-side logs.
+		log = jobLog.WithField(correlationIDLogField, correlationID)
 		cli, err := n.getClient(&config)
 		if err != nil {
 			log.WithError(err).Errorln("Downloading artifacts from coordinator...", "error")
@@ -1376,13 +1383,20 @@ func (n *GitLabClient) DownloadArtifacts(
 			}
 		fallback:
 			// Fall back to normal GET (follow redirect) and stream.
-			headers2, _ := addCorrelationID(JobTokenHeader(config.Token))
+			// The fallback is a new request with its own correlation ID; every
+			// line logged from here on must describe it, not the no-redirect GET.
+			headers2, correlationID2 := addCorrelationID(JobTokenHeader(config.Token))
+			log = jobLog.WithField(correlationIDLogField, correlationID2)
 			res2, err := n.doRaw(ctx, &config, http.MethodGet, uri, nil, "", headers2)
 			if err != nil {
 				log.WithError(err).Errorln("Downloading artifacts from coordinator...", "error")
 				return common.DownloadFailed
 			}
 			defer closeResponseBody(res2, true)
+			log = log.WithFields(logrus.Fields{
+				correlationIDLogField: getCorrelationID(res2, correlationID2),
+				fields.HTTPStatusCode: res2.StatusCode,
+			})
 			if res2.StatusCode == http.StatusOK {
 				return n.downloadArtifactFile(log, artifactsFile, res2)
 			}
@@ -1422,7 +1436,7 @@ func (n *GitLabClient) DownloadArtifacts(
 		}
 	}
 	if err != nil {
-		log.Errorln("Downloading artifacts from coordinator...", "error", err.Error())
+		log.WithError(err).Errorln("Downloading artifacts from coordinator...", "error")
 		return common.DownloadFailed
 	}
 	defer closeResponseBody(res, true)
