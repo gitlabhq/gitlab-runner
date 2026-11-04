@@ -27,7 +27,7 @@ require (
 	github.com/creack/pty v1.1.24
 	github.com/denisbrodbeck/machineid v1.0.1
 	github.com/distribution/reference v0.6.0
-	github.com/docker/cli v29.8.1+incompatible
+	github.com/docker/cli v29.9.2+incompatible
 	github.com/docker/docker-credential-helpers v0.9.12
 	github.com/docker/go-connections v0.8.2
 	github.com/docker/go-units v0.5.0
@@ -77,7 +77,7 @@ require (
 	github.com/urfave/cli v1.22.17
 	gitlab.com/ajwalker/phrasestream v0.0.0-20250306164532-3b0af7cb1452
 	gitlab.com/gitlab-org/fleeting/fleeting v0.0.0-20260923033724-d721fe1a7bb8
-	gitlab.com/gitlab-org/fleeting/fleeting-artifact v0.0.0-20260911011821-1b7c6957ad1d
+	gitlab.com/gitlab-org/fleeting/fleeting-artifact v0.0.0-20261028004323-4b6f2931bc9b
 	gitlab.com/gitlab-org/fleeting/fleeting/metrics/prometheus v0.0.0-20260915191451-6ed75a33d303
 	gitlab.com/gitlab-org/fleeting/nesting v0.5.0
 	gitlab.com/gitlab-org/fleeting/taskscaler v0.0.0-20261023025524-7db01026e442
@@ -275,11 +275,11 @@ require (
 	go.yaml.in/yaml/v2 v2.4.4 // indirect
 	go.yaml.in/yaml/v4 v4.0.0-rc.2 // indirect
 	golang.org/x/exp v0.0.0-20260813180055-c1d0aacb2297 // indirect
-	golang.org/x/mod v0.41.0 // indirect
+	golang.org/x/mod v0.42.0 // indirect
 	golang.org/x/net v0.60.0 // indirect
 	golang.org/x/term v0.46.0 // indirect
 	golang.org/x/time v0.16.0 // indirect
-	golang.org/x/tools v0.49.0 // indirect
+	golang.org/x/tools v0.51.0 // indirect
 	golang.org/x/xerrors v0.0.0-20240903120638-7835f813f4da // indirect
 	google.golang.org/genproto v0.0.0-20260715232425-e75dac1f907d // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20260819154853-08b0e4226688 // indirect
