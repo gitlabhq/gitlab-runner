@@ -2050,15 +2050,18 @@ func TestAbstractShell_writeSubmoduleUpdateCmd(t *testing.T) {
 						return append(args, tc.ExpectedGitForEachFlags...)
 					}
 
-					expectSubmoduleCleanCommand := func() {
+					expectedSubmoduleCleanArgsFn := func() []any {
 						args := append(expectedGitForEachArgsFn(), "git", "clean")
 						for _, f := range tc.ExpectedGitCleanFlags {
 							args = append(args, f)
 						}
-						mockWriter.EXPECT().Command("git", args...).Once()
+						return args
 					}
-					expectSubmoduleSyncCommand := func() {
-						mockWriter.EXPECT().Command("git", append([]any{"submodule", "sync"}, tc.ExpectedGitForEachFlags...)...).Once()
+					expectSubmoduleCleanCommand := func() {
+						mockWriter.EXPECT().Command("git", expectedSubmoduleCleanArgsFn()...).Once()
+					}
+					expectSubmoduleSyncCommand := func() *mock.Call {
+						return mockWriter.EXPECT().Command("git", append([]any{"submodule", "sync"}, tc.ExpectedGitForEachFlags...)...).Once()
 					}
 					withExplicitSubmoduleCreds := func() []any {
 						extConfPath := "some-ext.conf"
@@ -2070,8 +2073,18 @@ func TestAbstractShell_writeSubmoduleUpdateCmd(t *testing.T) {
 					mockWriter.EXPECT().Command("git", "submodule", "init").Once()
 					expectSubmoduleSyncCommand()
 
-					expectSubmoduleCleanCommand()
-					mockWriter.EXPECT().Command("git", slices.Concat(expectedGitForEachArgsFn(), []any{"git", "reset", "--hard"})...).Once()
+					mock.InOrder(
+						mockWriter.EXPECT().IfCmdWithOutput("git", expectedSubmoduleCleanArgsFn()...).Once(),
+						// if branch ...
+						mockWriter.EXPECT().Command("git", slices.Concat(expectedGitForEachArgsFn(), []any{"git", "reset", "--hard"})...).Once(),
+						mockWriter.EXPECT().Else().Once(),
+						// else branch ...
+						mockWriter.EXPECT().Warningf("Cleaning submodules failed. Deinitializing them...").Once(),
+						mockWriter.EXPECT().Command("git", "submodule", "deinit", "--force", "--all").Once(),
+						mockWriter.EXPECT().Command("git", "submodule", "init").Once(),
+						expectSubmoduleSyncCommand(),
+						mockWriter.EXPECT().EndIf().Once(),
+					)
 
 					mockWriter.EXPECT().IfCmdWithOutputArgExpand("git", slices.Concat(withExplicitSubmoduleCreds(), []any{"submodule", "update", "--init"}, tc.ExpectedGitUpdateFlags)...).Once()
 					{ //nolint:gocritic
@@ -3286,7 +3299,21 @@ func TestAbstractShell_writeSubmoduleUpdateCmdPath(t *testing.T) {
 
 					mockWriter.EXPECT().Noticef("Updating/initializing submodules...").Once()
 					mockWriter.EXPECT().Command("git", "submodule", "init").Once()
-					mockWriter.EXPECT().Command("git", submoduleCommand(test.paths, "submodule", "sync")...).Times(3)
+					mockWriter.EXPECT().Command("git", submoduleCommand(test.paths, "submodule", "sync")...).Once()
+
+					mock.InOrder(
+						mockWriter.EXPECT().IfCmdWithOutput("git", "submodule", "foreach", "git", "clean", "-ffdx").Once(),
+						mockWriter.EXPECT().Command("git", "submodule", "foreach", "git", "reset", "--hard").Once(),
+						mockWriter.EXPECT().Else().Once(),
+						mockWriter.EXPECT().Warningf("Cleaning submodules failed. Deinitializing them...").Once(),
+						// all submodules are deinitialized, regardless of GIT_SUBMODULE_PATHS
+						mockWriter.EXPECT().Command("git", "submodule", "deinit", "--force", "--all").Once(),
+						mockWriter.EXPECT().Command("git", "submodule", "init").Once(),
+						mockWriter.EXPECT().Command("git", submoduleCommand(test.paths, "submodule", "sync")...).Once(),
+						mockWriter.EXPECT().EndIf().Once(),
+					)
+
+					mockWriter.EXPECT().Command("git", submoduleCommand(test.paths, "submodule", "sync")...).Twice()
 
 					mockWriter.EXPECT().IfCmdWithOutputArgExpand("git", withExplicitSubmoduleCreds(submoduleCommand(test.paths, "submodule", "update", "--init"))...).Once()
 
@@ -3300,10 +3327,8 @@ func TestAbstractShell_writeSubmoduleUpdateCmdPath(t *testing.T) {
 
 					mockWriter.EXPECT().EndIf().Once()
 
-					cleanCmd := mockWriter.EXPECT().Command("git", "submodule", "foreach", "git", "clean", "-ffdx").Once()
-					mockWriter.EXPECT().Command("git", "submodule", "foreach", "git", "reset", "--hard").Run(func(command string, arguments ...string) {
-						cleanCmd.Once()
-					}).Twice()
+					mockWriter.EXPECT().Command("git", "submodule", "foreach", "git", "clean", "-ffdx").Once()
+					mockWriter.EXPECT().Command("git", "submodule", "foreach", "git", "reset", "--hard").Once()
 
 					mockWriter.EXPECT().Noticef("Configuring submodules to use parent git credentials...").Once()
 					mockWriter.EXPECT().EnvVariableKey("GLR_EXT_GIT_CONFIG_PATH").Return("$GLR_EXT_GIT_CONFIG_PATH").Once()

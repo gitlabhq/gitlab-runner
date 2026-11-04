@@ -1378,6 +1378,95 @@ func TestBuildWithGitFetchSubmoduleStrategyRecursive(t *testing.T) {
 	})
 }
 
+// A previous job can leave a submodule at a commit whose index has a nested gitlink without a .gitmodules entry. The
+// next job with GIT_STRATEGY=fetch must still update the submodules.
+// See: https://gitlab.com/gitlab-org/gitlab-runner/-/issues/38871
+func TestBuildWithGitFetchSubmoduleStrategyRecursiveStaleSubmodule(t *testing.T) {
+	runGit := func(t *testing.T, dir string, args ...string) string {
+		t.Helper()
+
+		cmd := exec.Command("git", append([]string{"-c", "protocol.file.allow=always"}, args...)...)
+		cmd.Dir = dir
+		out, err := cmd.CombinedOutput()
+		require.NoError(t, err, string(out))
+
+		return strings.TrimSpace(string(out))
+	}
+
+	newRepo := func(t *testing.T) string {
+		dir := tempDir(t)
+		runGit(t, dir, "init", "-q", "-b", "main")
+		runGit(t, dir, "config", "user.email", "test@example.com")
+		runGit(t, dir, "config", "user.name", "Test")
+
+		return dir
+	}
+
+	leaf := newRepo(t)
+	runGit(t, leaf, "commit", "-q", "--allow-empty", "-m", "leaf")
+
+	// mid@M1 has the nested leaf submodule. mid@M2 keeps the leaf gitlink, but has no .gitmodules entry for it.
+	mid := newRepo(t)
+	runGit(t, mid, "submodule", "add", fileURL(leaf), "leaf")
+	runGit(t, mid, "commit", "-q", "-m", "M1")
+	m1 := runGit(t, mid, "rev-parse", "HEAD")
+	runGit(t, mid, "config", "--file", ".gitmodules", "--remove-section", "submodule.leaf")
+	runGit(t, mid, "add", ".gitmodules")
+	runGit(t, mid, "commit", "-q", "-m", "M2")
+
+	top := newRepo(t)
+	runGit(t, top, "submodule", "add", fileURL(mid), "mid")
+	runGit(t, top, "commit", "-q", "-m", "mid at M2")
+	staleSHA := runGit(t, top, "rev-parse", "HEAD")
+	runGit(t, filepath.Join(top, "mid"), "checkout", "-q", m1)
+	runGit(t, top, "add", "mid")
+	runGit(t, top, "commit", "-q", "-m", "mid at M1")
+	fixedSHA := runGit(t, top, "rev-parse", "HEAD")
+
+	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
+		jobResponse, err := common.GetRemoteBuildResponse(`echo "Hello World"`)
+		require.NoError(t, err)
+		build := newBuild(t, jobResponse, shell)
+
+		build.GitInfo = spec.GitInfo{
+			RepoURL:  fileURL(top),
+			Ref:      "main",
+			RefType:  spec.RefTypeBranch,
+			Refspecs: []string{"+refs/heads/main:refs/remotes/origin/main"},
+		}
+
+		// Only local repositories are used, so the redirects to a test git server are not needed. git blocks local
+		// repositories as submodule sources unless protocol.file.allow is set.
+		build.Variables = slices.DeleteFunc(build.Variables, func(v spec.Variable) bool {
+			return strings.HasPrefix(v.Key, "GIT_CONFIG_")
+		})
+		build.Variables = append(
+			build.Variables,
+			spec.Variable{Key: "GIT_STRATEGY", Value: "fetch"},
+			spec.Variable{Key: "GIT_SUBMODULE_STRATEGY", Value: "recursive"},
+			spec.Variable{Key: "GIT_CONFIG_COUNT", Value: "1"},
+			spec.Variable{Key: "GIT_CONFIG_KEY_0", Value: "protocol.file.allow"},
+			spec.Variable{Key: "GIT_CONFIG_VALUE_0", Value: "always"},
+		)
+
+		// This commit is inconsistent itself, so the job fails in `git submodule update`. It leaves mid checked out at
+		// M2, with the leaf gitlink in its index.
+		build.GitInfo.Sha = staleSHA
+		out, err := buildtest.RunBuildReturningOutput(t, build)
+		require.Error(t, err, out)
+		assert.Contains(t, out, "No url found for submodule path 'mid/leaf'")
+
+		build.GitInfo.Sha = fixedSHA
+		out, err = buildtest.RunBuildReturningOutput(t, build)
+		require.NoError(t, err, out)
+		assert.Contains(t, out, "Cleaning submodules failed. Deinitializing them...")
+		assert.Equal(t, m1, runGit(t, filepath.Join(build.FullProjectDir(), "mid"), "rev-parse", "HEAD"))
+
+		_, err = os.Stat(filepath.Join(build.FullProjectDir(), "mid", "leaf", ".git"))
+		assert.NoError(t, err, "The submodule's submodule should have been initialized")
+	})
+}
+
 func TestBuildGitCloneStrategyCleanup(t *testing.T) {
 	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
 		successfulBuild, err := common.GetSuccessfulBuild()
