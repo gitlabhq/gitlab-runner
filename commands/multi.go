@@ -228,8 +228,11 @@ func (mr *RunCommand) Start(_ service.Service) error {
 	mr.reloadSignal = make(chan os.Signal, 1)
 	mr.configReloaded = make(chan int, 1)
 	mr.runFinished = make(chan bool, 1)
-	mr.stopSignals = make(chan os.Signal)
+	mr.stopSignals = make(chan os.Signal, 1)
 	mr.abortRun, mr.abortRunCancel = context.WithCancel(context.Background())
+
+	signal.Notify(mr.stopSignals, syscall.SIGQUIT, syscall.SIGTERM, os.Interrupt)
+	signal.Notify(mr.reloadSignal, syscall.SIGHUP)
 
 	mr.log().Info("Starting multi-runner from ", mr.ConfigFile, "...")
 
@@ -738,9 +741,6 @@ func (mr *RunCommand) run() {
 
 	runners := make(chan *common.RunnerConfig)
 	go mr.feedRunners(runners)
-
-	signal.Notify(mr.stopSignals, syscall.SIGQUIT, syscall.SIGTERM, os.Interrupt)
-	signal.Notify(mr.reloadSignal, syscall.SIGHUP)
 
 	// Boot-verify gates /health/ready. On failure, drain providers, record the
 	// error for a non-zero exit, then cancel abortRun so runWait returns and
