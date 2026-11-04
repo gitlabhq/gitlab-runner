@@ -4089,18 +4089,40 @@ func TestResumeDependencies_serviceStartFails(t *testing.T) {
 
 func TestDisconnectNetwork(t *testing.T) {
 	tests := map[string]struct {
+		osType            string
 		containerID       string
 		networkContainers map[string]network.EndpointResource
 		expectDisconnect  bool
 	}{
-		"match by container ID": {
+		// Matching a container by ID is Windows-only: on Linux it would
+		// force-disconnect already-exited containers and trip
+		// https://github.com/containers/podman/issues/30106.
+		"match by container ID on windows": {
+			osType:      osTypeWindows,
 			containerID: "abc123",
 			networkContainers: map[string]network.EndpointResource{
 				"abc123": {Name: "my-container"},
 			},
 			expectDisconnect: true,
 		},
-		"match by container name": {
+		"match by container ID on linux is skipped": {
+			osType:      osTypeLinux,
+			containerID: "abc123",
+			networkContainers: map[string]network.EndpointResource{
+				"abc123": {Name: "my-container"},
+			},
+			expectDisconnect: false,
+		},
+		"match by container name on linux": {
+			osType:      osTypeLinux,
+			containerID: "my-container",
+			networkContainers: map[string]network.EndpointResource{
+				"abc123": {Name: "my-container"},
+			},
+			expectDisconnect: true,
+		},
+		"match by container name on windows": {
+			osType:      osTypeWindows,
 			containerID: "my-container",
 			networkContainers: map[string]network.EndpointResource{
 				"abc123": {Name: "my-container"},
@@ -4108,6 +4130,7 @@ func TestDisconnectNetwork(t *testing.T) {
 			expectDisconnect: true,
 		},
 		"no match": {
+			osType:      osTypeLinux,
 			containerID: "xyz789",
 			networkContainers: map[string]network.EndpointResource{
 				"abc123": {Name: "my-container"},
@@ -4121,6 +4144,7 @@ func TestDisconnectNetwork(t *testing.T) {
 			c := docker.NewMockClient(t)
 			e := executorWithMockClient(c)
 			require.NoError(t, e.dockerConnector.Connect(t.Context(), common.ExecutorPrepareOptions{}, e))
+			e.info.OSType = tc.osType
 			e.BuildLogger = buildlogger.New(nil, logrus.WithFields(logrus.Fields{}), buildlogger.Options{})
 
 			netList := []network.Summary{
@@ -4161,6 +4185,8 @@ func TestDisconnectNetwork_DisconnectError(t *testing.T) {
 	c := docker.NewMockClient(t)
 	e := executorWithMockClient(c)
 	require.NoError(t, e.dockerConnector.Connect(t.Context(), common.ExecutorPrepareOptions{}, e))
+	// Match by container ID only happens on Windows.
+	e.info.OSType = osTypeWindows
 	e.BuildLogger = buildlogger.New(nil, logrus.WithFields(logrus.Fields{}), buildlogger.Options{})
 
 	netList := []network.Summary{
