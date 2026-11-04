@@ -107,7 +107,7 @@ require (
 	google.golang.org/protobuf v1.36.12
 	k8s.io/api v0.37.2
 	k8s.io/apimachinery v0.37.2
-	k8s.io/client-go v0.37.1
+	k8s.io/client-go v0.37.2
 	mvdan.cc/sh/v3 v3.14.1
 	sigs.k8s.io/yaml v1.6.0
 )
