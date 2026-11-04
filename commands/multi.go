@@ -370,11 +370,10 @@ func (mr *RunCommand) resetOneRunnerToken() bool {
 		// When the FF is enabled, the token is not reset, however, a message is logged to warn the user
 		// that his token is about to expire
 		if runner.IsFeatureFlagOn(featureflags.DisableAutomaticTokenRotation) {
-			mr.log().Warningln(fmt.Printf(
-				"Automatic token rotation is disabled for runner: %s-%s. Your token is about to expire",
-				runner.ShortDescription(),
-				runner.GetSystemID(),
-			))
+			mr.log().WithFields(logrus.Fields{
+				"runner":    runner.ShortDescription(),
+				"system_id": runner.GetSystemID(),
+			}).Warningln("Automatic token rotation is disabled; the runner token is about to expire")
 			return false
 		}
 
@@ -1593,10 +1592,10 @@ func (mr *RunCommand) updateWorkers(workerIndex *int, startWorker chan int, stop
 	concurrentLimit := config.Concurrent
 
 	if concurrentLimit < 1 {
-		mr.log().Fatalln(fmt.Printf(
+		mr.log().Fatalf(
 			"Current configuration 'concurrent = %d' means that no jobs will be processed, see https://docs.gitlab.com/runner/configuration/advanced-configuration/#the-global-section",
 			concurrentLimit,
-		))
+		)
 	}
 
 	for mr.currentWorkers > concurrentLimit {
@@ -1641,13 +1640,13 @@ func (mr *RunCommand) updateConfig() os.Signal {
 	case <-time.After(mr.reloadConfigInterval):
 		err := mr.checkConfig()
 		if err != nil {
-			mr.log().Errorln("Failed to load config", err)
+			mr.log().WithError(err).Errorln("Failed to load config")
 		}
 
 	case <-mr.reloadSignal:
 		err := mr.reloadConfig()
 		if err != nil {
-			mr.log().Errorln("Failed to load config", err)
+			mr.log().WithError(err).Errorln("Failed to load config")
 		}
 
 	case signaled := <-mr.runInterruptSignal:
@@ -1670,7 +1669,7 @@ func (mr *RunCommand) checkConfig() (err error) {
 
 	err = mr.reloadConfig()
 	if err != nil {
-		mr.log().Errorln("Failed to load config", err)
+		mr.log().WithError(err).Errorln("Failed to load config")
 		// don't reload the same file
 		config.ModTime = info.ModTime()
 		return

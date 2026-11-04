@@ -16,6 +16,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -25,11 +26,13 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	"gitlab.com/gitlab-org/labkit/v2/fields"
 
 	"gitlab.com/gitlab-org/gitlab-runner/commands/helpers/meter"
 	. "gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
+	logtest "gitlab.com/gitlab-org/gitlab-runner/log/test"
 )
 
 const (
@@ -2120,6 +2123,10 @@ func TestPatchTraceCantConnect(t *testing.T) {
 	assert.EqualValues(t, 1, entry.Data["job"])
 	assert.Equal(t, fmt.Sprintf("0-%d", len(patchTraceContent)-1), entry.Data["sent-log"])
 	assert.NotEmpty(t, entry.Data[correlationIDLogField])
+	assert.Equal(t, "Appending trace to coordinator... error", entry.Message)
+	loggedErr, ok := entry.Data[logrus.ErrorKey].(error)
+	require.True(t, ok, "transport error must be an error field, not message text: %v", entry.Data)
+	assert.Error(t, loggedErr)
 }
 
 func TestPatchTraceUpdatedTrace(t *testing.T) {
@@ -3955,4 +3962,172 @@ func TestGitLabClient_GetClient_HTTP2(t *testing.T) {
 	assert.False(t, cDefault.Client.Transport.(*http.Transport).ForceAttemptHTTP2)
 	assert.False(t, cDisabled.Client.Transport.(*http.Transport).ForceAttemptHTTP2)
 	assert.True(t, cEnabled.Client.Transport.(*http.Transport).ForceAttemptHTTP2)
+}
+
+// TestDownloadArtifactsDirectCantConnect covers the direct-download path when the no-redirect GET
+// cannot reach GitLab. The error line must carry the correlation ID that was sent on the request,
+// so the failure can be matched against server-side logs.
+func TestDownloadArtifactsDirectCantConnect(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
+	server.Close()
+
+	hook, cleanup := logtest.NewHook()
+	defer cleanup()
+
+	directDownload := true
+	state := NewGitLabClient().DownloadArtifacts(
+		JobCredentials{ID: 10, URL: server.URL, Token: "token"},
+		&nopWriteCloser{w: &bytes.Buffer{}},
+		&directDownload,
+	)
+	require.Equal(t, DownloadFailed, state)
+
+	entry := hook.LastEntry()
+	require.NotNil(t, entry)
+	assert.Equal(t, logrus.ErrorLevel, entry.Level)
+	assert.EqualValues(t, 10, entry.Data["id"])
+	assert.Error(t, entry.Data[logrus.ErrorKey].(error))
+	assert.NotEmpty(t, entry.Data[correlationIDLogField], "transport error logged without correlation_id: %v", entry.Data)
+}
+
+// TestDownloadArtifactsCantConnect covers the standard (non-direct) download path when GitLab
+// cannot be reached. The transport error must be an `error` field on a constant message, matching
+// the direct-download branch, so a JSON log query on `error` finds both.
+func TestDownloadArtifactsCantConnect(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
+	server.Close()
+
+	hook, cleanup := logtest.NewHook()
+	defer cleanup()
+
+	state := NewGitLabClient().DownloadArtifacts(
+		JobCredentials{ID: 10, URL: server.URL, Token: "token"},
+		&nopWriteCloser{w: &bytes.Buffer{}},
+		nil,
+	)
+	require.Equal(t, DownloadFailed, state)
+
+	entry := hook.LastEntry()
+	require.NotNil(t, entry)
+	assert.Equal(t, logrus.ErrorLevel, entry.Level)
+	assert.EqualValues(t, 10, entry.Data["id"])
+	assert.NotEmpty(t, entry.Data[correlationIDLogField])
+	assert.Equal(t, "Downloading artifacts from coordinator... error", entry.Message)
+	loggedErr, ok := entry.Data[logrus.ErrorKey].(error)
+	require.True(t, ok, "transport error must be an error field, not message text: %v", entry.Data)
+	assert.Error(t, loggedErr)
+}
+
+// TestDownloadArtifactsFallbackLogsOwnCorrelationID covers the direct-download path when the
+// no-redirect GET answers 302 and the fallback GET is then made with a fresh correlation ID.
+// Lines logged for the fallback response must carry that fresh ID and status, not the ones from
+// the earlier no-redirect request, or support ends up searching server logs for the wrong request.
+func TestDownloadArtifactsFallbackLogsOwnCorrelationID(t *testing.T) {
+	var mu sync.Mutex
+	var apiRequestIDs []string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/api/v4/jobs/10/artifacts":
+			mu.Lock()
+			apiRequestIDs = append(apiRequestIDs, r.Header.Get(correlationIDHeader))
+			mu.Unlock()
+			http.Redirect(w, r, "http://"+r.Host+"/artifacts.zip", http.StatusFound)
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer server.Close()
+
+	hook, cleanup := logtest.NewHook()
+	defer cleanup()
+
+	directDownload := true
+	state := NewGitLabClient().DownloadArtifacts(
+		JobCredentials{ID: 10, URL: server.URL, Token: "token"},
+		&nopWriteCloser{w: &bytes.Buffer{}},
+		&directDownload,
+	)
+	require.Equal(t, DownloadNotFound, state)
+
+	mu.Lock()
+	defer mu.Unlock()
+	require.Len(t, apiRequestIDs, 2, "expected the no-redirect GET and one fallback GET")
+	require.NotEmpty(t, apiRequestIDs[1])
+	require.NotEqual(t, apiRequestIDs[0], apiRequestIDs[1])
+
+	entry := hook.LastEntry()
+	require.NotNil(t, entry)
+	assert.Equal(t, logrus.ErrorLevel, entry.Level)
+	assert.Equal(t, apiRequestIDs[1], entry.Data[correlationIDLogField], "log line carries the no-redirect request's correlation ID instead of the fallback's")
+	assert.EqualValues(t, http.StatusNotFound, entry.Data[fields.HTTPStatusCode], "log line carries the no-redirect response's status instead of the fallback's")
+}
+
+// TestDownloadArtifactsFallbackCantConnect covers the direct-download path when the no-redirect
+// GET answers 302 but the fallback GET then fails at the transport level. The error line must
+// carry the fallback's correlation ID and no status code: the only status seen so far is the 302
+// from the no-redirect request, and reporting it would describe the wrong request.
+func TestDownloadArtifactsFallbackCantConnect(t *testing.T) {
+	const apiPath = "/api/v4/jobs/10/artifacts"
+
+	var mu sync.Mutex
+	var apiRequestIDs []string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Record only the API requests. With FF_USE_PARALLEL_ARTIFACT_TRANSFER on,
+		// DownloadArtifacts also sends a Range probe to the redirect target. That
+		// request carries no correlation header, so counting it would shift the
+		// indexes asserted below and hand the 302 to the wrong request.
+		first := false
+		if r.URL.Path == apiPath {
+			mu.Lock()
+			apiRequestIDs = append(apiRequestIDs, r.Header.Get(correlationIDHeader))
+			first = len(apiRequestIDs) == 1
+			mu.Unlock()
+		}
+
+		if first {
+			http.Redirect(w, r, "http://"+r.Host+"/artifacts.zip", http.StatusFound)
+			return
+		}
+		// Drop the connection without writing a response so the client sees
+		// a transport error. net/http may retry once on a reused connection;
+		// every attempt is dropped the same way.
+		conn, _, err := w.(http.Hijacker).Hijack()
+		// Runs in the handler goroutine: FailNow here would end only the handler,
+		// not the test, so assert and return.
+		if !assert.NoError(t, err) {
+			return
+		}
+		_ = conn.Close()
+	}))
+	defer server.Close()
+
+	hook, cleanup := logtest.NewHook()
+	defer cleanup()
+
+	directDownload := true
+	state := NewGitLabClient().DownloadArtifacts(
+		JobCredentials{ID: 10, URL: server.URL, Token: "token"},
+		&nopWriteCloser{w: &bytes.Buffer{}},
+		&directDownload,
+	)
+	require.Equal(t, DownloadFailed, state)
+
+	mu.Lock()
+	defer mu.Unlock()
+	require.GreaterOrEqual(t, len(apiRequestIDs), 2, "expected the no-redirect GET and at least one fallback GET")
+	fallbackID := apiRequestIDs[1]
+	require.NotEmpty(t, fallbackID)
+	require.NotEqual(t, apiRequestIDs[0], fallbackID)
+	for _, id := range apiRequestIDs[2:] {
+		require.Equal(t, fallbackID, id, "transport retries must reuse the fallback's correlation ID")
+	}
+
+	entry := hook.LastEntry()
+	require.NotNil(t, entry)
+	assert.Equal(t, logrus.ErrorLevel, entry.Level)
+	assert.Equal(t, "Downloading artifacts from coordinator... error", entry.Message)
+	assert.Error(t, entry.Data[logrus.ErrorKey].(error))
+	assert.Equal(t, fallbackID, entry.Data[correlationIDLogField], "log line carries the no-redirect request's correlation ID instead of the fallback's")
+	_, hasStatus := entry.Data[fields.HTTPStatusCode]
+	assert.False(t, hasStatus, "transport error line carries a status code from the no-redirect response: %v", entry.Data)
 }

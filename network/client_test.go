@@ -32,6 +32,7 @@ import (
 
 	. "gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/certificate"
+	"gitlab.com/gitlab-org/gitlab-runner/log/test"
 )
 
 func clientHandler(w http.ResponseWriter, r *http.Request) {
@@ -1298,6 +1299,56 @@ func TestClient_HTTP2Negotiation(t *testing.T) {
 			)
 			assert.Equal(t, http.StatusOK, statusCode, statusText)
 			assert.Equal(t, tc.expectedProto, receivedProto)
+		})
+	}
+}
+
+func TestClientMissingTLSFilesAreLogged(t *testing.T) {
+	tests := map[string]struct {
+		credentials  RunnerCredentials
+		expectedFile string
+	}{
+		"configured CA file does not exist": {
+			credentials: RunnerCredentials{
+				URL:       "https://gitlab.example.com",
+				TLSCAFile: filepath.Join(t.TempDir(), "missing-ca.crt"),
+			},
+			expectedFile: "missing-ca.crt",
+		},
+		"configured client certificate does not exist": {
+			credentials: RunnerCredentials{
+				URL:         "https://gitlab.example.com",
+				TLSCertFile: filepath.Join(t.TempDir(), "missing.auth.crt"),
+				TLSKeyFile:  filepath.Join(t.TempDir(), "missing.auth.key"),
+			},
+			expectedFile: "missing.auth.crt",
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			hook, cleanup := test.NewHook()
+			defer cleanup()
+
+			c, err := newClient(&tc.credentials, NewAPIRequestsCollector())
+			require.NoError(t, err)
+
+			c.createTransport()
+
+			var found bool
+			for _, entry := range hook.AllEntries() {
+				if entry.Level != logrus.ErrorLevel {
+					continue
+				}
+				if !strings.Contains(fmt.Sprint(entry.Data["file"]), tc.expectedFile) {
+					continue
+				}
+
+				found = true
+				assert.ErrorIs(t, entry.Data[logrus.ErrorKey].(error), os.ErrNotExist)
+			}
+
+			assert.True(t, found, "expected an error log entry naming %q, got: %v", tc.expectedFile, hook.AllEntries())
 		})
 	}
 }
