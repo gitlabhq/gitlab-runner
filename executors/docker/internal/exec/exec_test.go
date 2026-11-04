@@ -107,28 +107,11 @@ func TestDefaultDocker_Exec(t *testing.T) {
 			input:         input(t, io.EOF),
 			cancelContext: true,
 			setupDockerClient: func(t *testing.T, clientMock *docker.MockClient, expectedCtx context.Context) {
-				reader, writer := io.Pipe()
+				reader := newMockReader(t)
+				reader.On("Read", mock.Anything).
+					Return(0, nil).Maybe()
 
-				conn := newMockConn(t)
-				var closeOnce sync.Once
-				conn.On("Close").
-					Run(func(args mock.Arguments) {
-						closeOnce.Do(func() { _ = writer.Close() })
-					}).
-					Return(nil).
-					Maybe()
-
-				hijacked := client.HijackedResponse{
-					Conn:   conn,
-					Reader: bufio.NewReader(reader),
-				}
-
-				clientMock.On("ContainerAttach", expectedCtx, id, attachOptions()).
-					Return(hijacked, nil).
-					Once()
-				clientMock.On("ContainerStart", expectedCtx, id, client.ContainerStartOptions{}).
-					Return(nil).
-					Once()
+				mockWorkingClient(t, clientMock, reader, expectedCtx)
 			},
 			setupKillWaiter: func(t *testing.T, waiterMock *wait.MockKillWaiter, expectedCtx context.Context) {
 				waiterMock.On("StopKillWait", expectedCtx, id, mock.Anything, mock.AnythingOfType("wait.GracefulExitFunc")).Return(nil).Once()
