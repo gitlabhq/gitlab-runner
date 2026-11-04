@@ -228,16 +228,26 @@ func countIdleMachines(p *machineProvider) (count int) {
 	return
 }
 
+// machineAssertTimeout is how long assertIdleMachines/assertTotalMachines wait for the
+// provider's asynchronous machine creation/removal to settle. Mock Create signals before
+// the machine is registered as idle, so a very short window makes the tests flaky.
+const machineAssertTimeout = 5 * time.Second
+
 func assertIdleMachines(t *testing.T, p *machineProvider, expected int, msgAndArgs ...any) {
 	var idle int
-	for range 10 {
+	deadline := time.Now().Add(machineAssertTimeout)
+	for {
 		idle = countIdleMachines(p)
 
 		if expected == idle {
 			return
 		}
 
-		time.Sleep(50 * time.Microsecond)
+		if time.Now().After(deadline) {
+			break
+		}
+
+		time.Sleep(time.Millisecond)
 	}
 
 	result := fmt.Sprintf("should have %d idle, but has %d", expected, idle)
@@ -258,14 +268,19 @@ func countTotalMachines(p *machineProvider) (count int) {
 
 func assertTotalMachines(t *testing.T, p *machineProvider, expected int, msgAndArgs ...any) {
 	var total int
-	for range 10 {
+	deadline := time.Now().Add(machineAssertTimeout)
+	for {
 		total = countTotalMachines(p)
 
 		if expected == total {
 			return
 		}
 
-		time.Sleep(50 * time.Microsecond)
+		if time.Now().After(deadline) {
+			break
+		}
+
+		time.Sleep(time.Millisecond)
 	}
 
 	result := fmt.Sprintf("should have %d total, but has %d", expected, total)
