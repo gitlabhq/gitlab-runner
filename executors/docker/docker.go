@@ -1289,6 +1289,32 @@ func (e *executor) removeContainer(ctx context.Context, id string) error {
 	return nil
 }
 
+// shouldDisconnectContainer reports whether the container identified by id
+// (either a container ID or a container name) should be explicitly
+// disconnected from a network it is plugged into.
+//
+// Matching by container ID is Windows-only. The HNS backend does not release
+// endpoints on container removal, so every container (which callers identify
+// by ID) must be force-disconnected first (see
+// https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6872 and
+// https://gitlab.com/gitlab-org/gitlab-runner/-/issues/39382).
+//
+// On Linux the ID match is intentionally skipped. ContainerRemove with Force
+// already tears networking down, and force-disconnecting a container that has
+// exited but is not yet cleaned up triggers a Podman/netavark bug that drops
+// the network from Podman's store without a teardown, orphaning the bridge,
+// its route and its nftables chain
+// (https://github.com/containers/podman/issues/30106). With
+// FF_NETWORK_PER_BUILD this leaks one bridge per affected job. The name match
+// is kept on all platforms: it only matches the name-based callers that remove
+// a stale, same-named container, preserving the pre-19.2.0 behavior.
+func (e *executor) shouldDisconnectContainer(id, containerID, pluggedName string) bool {
+	if id == pluggedName {
+		return true
+	}
+	return e.info.OSType == osTypeWindows && id == containerID
+}
+
 func (e *executor) disconnectNetwork(ctx context.Context, id string) {
 	e.BuildLogger.Debugln("Disconnecting container", id, "from networks")
 
@@ -1307,7 +1333,7 @@ func (e *executor) disconnectNetwork(ctx context.Context, id string) {
 		}
 
 		for containerID, pluggedContainer := range inspected.Containers {
-			if id == containerID || id == pluggedContainer.Name {
+			if e.shouldDisconnectContainer(id, containerID, pluggedContainer.Name) {
 				// Docker container names include a leading "/", strip it for cleaner logs
 				containerName := strings.TrimPrefix(pluggedContainer.Name, "/")
 				err = e.dockerConn.NetworkDisconnect(ctx, netSummary.ID, id, true)
