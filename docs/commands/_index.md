@@ -128,6 +128,12 @@ For example, to force a reload of a runner's configuration file, run:
 sudo kill -SIGHUP <main_runner_pid>
 ```
 
+To force a reload when using `systemd` on Linux, as an alternative run:
+
+```shell
+sudo systemctl reload gitlab-runner.service
+```
+
 For [graceful shutdowns](#gitlab-runner-stop-doesnt-shut-down-gracefully):
 
 ```shell
@@ -483,6 +489,10 @@ allows you to drop privileges of builds run with the **shell** executor.
 | `--working-directory` | the current directory                             | Specify the root directory where all data is stored when builds are run with the **shell** executor |
 | `--user`              | `root`                                            | Specify the user that executes the builds |
 | `--password`          | none                                              | Specify the password for the user that executes the builds |
+
+> [!note]
+> The command `install` generates necessary configuration files, which are automatically updated on package upgrades.
+> Manual binary installs on the other hand require a manual `gitlab-runner uninstall && gitlab-runner install`.
 
 ### `gitlab-runner uninstall`
 

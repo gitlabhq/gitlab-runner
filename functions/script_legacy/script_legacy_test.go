@@ -23,6 +23,13 @@ func TestScriptLegacyIntegration(t *testing.T) {
 		t.Skip("script_legacy is not supported on Windows")
 	}
 
+	// The debug_trace assertions below expect bash's default xtrace prefix
+	// ("+ "). The generated script inherits the test process environment, so
+	// a PS4 exported by the developer's shell would change that prefix. Pin
+	// it to the default; overriding PS4 deliberately (e.g. via `variables:`)
+	// remains supported in production.
+	t.Setenv("PS4", "+ ")
+
 	t.Run("basic script execution with array syntax", func(t *testing.T) {
 		stepYml := `
 spec:
