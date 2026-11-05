@@ -150,6 +150,47 @@ func TestExec(t *testing.T) {
 	}
 }
 
+func TestRunInContainerWithExecResendsScriptOnRetry(t *testing.T) {
+	version, codec := testVersionAndCodec()
+	fakeClient := fake.CreateHTTPClient(func(req *http.Request) (*http.Response, error) {
+		return &http.Response{StatusCode: http.StatusOK, Body: objBody(codec, execPod()), Header: map[string][]string{
+			common.ContentType: {"application/json"},
+		}}, nil
+	})
+
+	const script = "echo stage > /scripts/get_sources\n"
+
+	var attempts []string
+	ex := NewMockRemoteExecutor(t)
+	ex.EXPECT().Execute(mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+		RunAndReturn(func(_ context.Context, _ string, _ *url.URL, _ *restclient.Config, stdin io.Reader, _, _ io.Writer, _ bool) error {
+			b, err := io.ReadAll(stdin)
+			if err != nil {
+				return err
+			}
+
+			attempts = append(attempts, string(b))
+			if len(attempts) == 1 {
+				return fmt.Errorf("read: connection reset by peer")
+			}
+			return nil
+		}).Times(2)
+
+	e := newExecutor()
+	e.pod = execPod()
+	e.kubeClient = testKubernetesClient(version, fakeClient)
+	e.remoteExecutor = ex
+
+	err := <-e.runInContainerWithExec(t.Context(), "bar", []string{"sh"}, script, nopWriteCloser{}, nopWriteCloser{})
+	require.NoError(t, err)
+	assert.Equal(t, []string{script, script}, attempts)
+}
+
+type nopWriteCloser struct{}
+
+func (nopWriteCloser) Write(p []byte) (int, error) { return len(p), nil }
+func (nopWriteCloser) Close() error                { return nil }
+
 func execPod() *api.Pod {
 	return execPodWithPhase(api.PodRunning)
 }

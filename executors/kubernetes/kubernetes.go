@@ -472,6 +472,8 @@ type executor struct {
 
 	newLogProcessor func() logProcessor
 
+	remoteExecutor RemoteExecutor
+
 	remoteProcessTerminated chan shells.StageCommandStatus
 
 	requireSharedBuildsDir *bool
@@ -3725,18 +3727,21 @@ func (s *executor) runInContainerWithExec(
 			Namespace:     s.pod.Namespace,
 			ContainerName: name,
 			Command:       command,
-			In:            strings.NewReader(script),
 			Out:           stdout,
 			Err:           stderr,
 			Stdin:         true,
 			Config:        s.kubeConfig,
 			KubeClient:    s.kubeClient,
-			Executor:      &DefaultRemoteExecutor{},
+			Executor:      s.remoteExecutor,
 
 			Context: ctx,
 		}
 
-		errCh <- s.classifyOOMKilledError(ctx, name, retry.WithFn(s, exec.Run).Run())
+		errCh <- s.classifyOOMKilledError(ctx, name, retry.WithFn(s, func() error {
+			// A failed attempt may have consumed the reader, so each attempt sends the whole script.
+			exec.In = strings.NewReader(script)
+			return exec.Run()
+		}).Run())
 	}()
 
 	return errCh
@@ -4210,6 +4215,7 @@ func newExecutor() *executor {
 			return kubernetes.NewForConfig(config)
 		},
 		getKubeConfig:        getKubeClientConfig,
+		remoteExecutor:       &DefaultRemoteExecutor{},
 		windowsKernelVersion: os_helpers.LocalKernelVersion,
 	}
 
