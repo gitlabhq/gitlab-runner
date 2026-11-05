@@ -300,3 +300,53 @@ stable gitlab release:
         - name: "other release artifacts"
           url: "$S3/index.html"
           filepath: "/index.html"
+
+# One Slack message per pipeline when any pulp job fails. Covers main, vX.Y.Z-rcN tags and
+# N-N-stable on the canonical project, and vX.Y.Z tags on both projects. Excludes feature/* and
+# security fork N-N-stable. Needs PULP_ALERT_SLACK_WEBHOOK_URL.
+notify pulp failure:
+  stage: postrelease
+  extends:
+    - .kubernetes runner
+    - .no_cache_and_dependencies
+  image: alpine:latest
+  interruptible: false
+  variables:
+    GIT_STRATEGY: none
+  needs:
+    - job: unstable pulp
+      optional: true
+      artifacts: false
+    - job: stable pulp
+      optional: true
+      artifacts: false
+  rules:
+    - if: !reference [.if-runner-default-branch, if]
+      changes: !reference [.code-backstage-patterns]
+      when: on_failure
+    - if: !reference [.if-runner-stable-release-ref, if]
+      changes: !reference [.code-backstage-patterns]
+      when: on_failure
+    - if: !reference [.if-runner-bleeding-edge-release-ref, if]
+      changes: !reference [.code-backstage-patterns]
+      when: on_failure
+    - if: !reference [.if-runner-stable-ref, if]
+      changes: !reference [.code-backstage-patterns]
+      when: on_failure
+    - if: !reference [.if-security-runner-release-ref, if]
+      changes: !reference [.code-backstage-patterns]
+      when: on_failure
+  before_script:
+    - apk add --no-cache curl jq
+  script:
+    - |
+      if [ -z "${PULP_ALERT_SLACK_WEBHOOK_URL:-}" ]; then
+        echo "PULP_ALERT_SLACK_WEBHOOK_URL is not set, cannot send the notification"
+        exit 1
+      fi
+    - |
+      text=":warning: A pulp release job failed on \`${CI_COMMIT_REF_NAME}\`. Runner packages are not being published. Failed jobs: ${CI_PIPELINE_URL}/failures"
+      jq -n --arg text "$text" '{text: $text}' |
+        curl --fail --silent --show-error --max-time 30 --retry 3 \
+          -H "Content-Type: application/json" \
+          --data @- "$PULP_ALERT_SLACK_WEBHOOK_URL"
