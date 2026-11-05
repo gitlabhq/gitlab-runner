@@ -279,6 +279,32 @@ func TestConnect_contextCancelledBeforeReady(t *testing.T) {
 	}
 }
 
+func TestConnect_contextCancelledBeforeSelect(t *testing.T) {
+	// Cancel during the version probe so that, when Connect reaches its select,
+	// readyCh is closed and ctx.Done() is ready at the same time.
+	for range 200 {
+		ctx, cancel := context.WithCancel(t.Context())
+		block := make(chan struct{})
+
+		client := executors.NewMockClient(t)
+		client.EXPECT().Run(mock.Anything, mock.Anything).RunAndReturn(
+			func(_ context.Context, opts executors.RunOptions) error {
+				if strings.Contains(opts.Command, "--version") {
+					_, _ = io.WriteString(opts.Stdout, versionOutput(common.AppVersion.Version))
+					cancel()
+					return nil
+				}
+				<-block
+				return nil
+			}).Maybe()
+
+		_, err := newTestStepsExecutor(1, client).Connect(ctx)
+		close(block)
+		cancel()
+		require.ErrorIs(t, err, context.Canceled)
+	}
+}
+
 func TestConnect_missingSocketPath(t *testing.T) {
 	client := executors.NewMockClient(t)
 	client.EXPECT().Run(mock.Anything, mock.Anything).RunAndReturn(
