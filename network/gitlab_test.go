@@ -381,7 +381,11 @@ func (s *logHook) Fire(entry *logrus.Entry) error {
 
 func mockUnregisterRunnerHandler(tb testing.TB, w http.ResponseWriter, r *http.Request) {
 	tb.Helper()
-	require.NotEmpty(tb, r.Header.Get(correlationIDHeader))
+	// This handler runs in the server goroutine, so it only ever asserts: a
+	// require here would end the goroutine without writing a response, and the
+	// client would report the resulting EOF as a failed unregistration, which
+	// is what most of the cases below expect anyway.
+	assert.NotEmpty(tb, r.Header.Get(correlationIDHeader))
 	if r.URL.Path != "/api/v4/runners" {
 		w.WriteHeader(http.StatusNotFound)
 		return
@@ -393,15 +397,19 @@ func mockUnregisterRunnerHandler(tb testing.TB, w http.ResponseWriter, r *http.R
 	}
 
 	body, err := io.ReadAll(r.Body)
-	assert.NoError(tb, err)
+	if !assert.NoError(tb, err) {
+		return
+	}
 
 	var req map[string]any
-	err = json.Unmarshal(body, &req)
-	assert.NoError(tb, err)
+	if !assert.NoError(tb, json.Unmarshal(body, &req)) {
+		return
+	}
 
-	token := req["token"].(string)
-	require.NotEmpty(tb, r.Header.Get(RunnerToken), "runner-token header is required")
-	require.Equal(tb, token, r.Header.Get("runner-token"), "token in header and body must match")
+	// An empty runner token is omitted from both the body and the header, so
+	// read it without asserting its type.
+	token, _ := req["token"].(string)
+	assert.Equal(tb, token, r.Header.Get(RunnerToken), "token in header and body must match")
 
 	switch token {
 	case validGlrtToken, validToken:
