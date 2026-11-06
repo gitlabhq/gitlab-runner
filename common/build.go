@@ -569,6 +569,7 @@ func (b *Build) executeStepStage(ctx context.Context, connector steps.Connector,
 	section := helpers.BuildSection{
 		Name:        string(buildStage),
 		SkipMetrics: !b.Job.Features.TraceSections,
+		Collapsed:   b.shouldCollapseBuildSection(buildStage),
 		Run: func() error {
 			msg := fmt.Sprintf(
 				"%s%s%s",
@@ -738,6 +739,7 @@ func (b *Build) executeStage(ctx context.Context, buildStage BuildStage, executo
 	section := helpers.BuildSection{
 		Name:        string(buildStage),
 		SkipMetrics: !b.Job.Features.TraceSections,
+		Collapsed:   b.shouldCollapseBuildSection(buildStage),
 		Run: func() error {
 			msg := fmt.Sprintf(
 				"%s%s%s",
@@ -1785,6 +1787,7 @@ func (b *Build) executeResolveSecretsStage(trace JobTrace) error {
 	section := helpers.BuildSection{
 		Name:        string(BuildStageResolveSecrets),
 		SkipMetrics: !b.Job.Features.TraceSections,
+		Collapsed:   b.shouldCollapseBuildSection(BuildStageResolveSecrets),
 		Run: func() error {
 			logger := b.getNewLogger(trace, b.Log(), false)
 			defer logger.Close()
@@ -1819,6 +1822,7 @@ func (b *Build) executeBuildSection(options ExecutorPrepareOptions, provider Exe
 	section := helpers.BuildSection{
 		Name:        string(BuildStagePrepareExecutor),
 		SkipMetrics: !b.Job.Features.TraceSections,
+		Collapsed:   b.shouldCollapseBuildSection(BuildStagePrepareExecutor),
 		Run: func() error {
 			msg := fmt.Sprintf(
 				"%sPreparing the %q executor%s",
@@ -2409,6 +2413,15 @@ func NewBuild(
 func (b *Build) IsFeatureFlagOn(name string) bool {
 	val, ok := b.Settings().FeatureFlags[name]
 	return ok && val
+}
+
+func (b *Build) shouldCollapseBuildSection(stage BuildStage) bool {
+	if !b.IsFeatureFlagOn(featureflags.CollapseBuildSections) {
+		return false
+	}
+
+	// User-defined step stages, the concrete whole-job section and after_script should remain visible.
+	return stage != BuildStageAfterScript && stage != "concrete" && !strings.HasPrefix(string(stage), "step_")
 }
 
 // getFeatureFlagInfo returns the status of feature flags that differ
