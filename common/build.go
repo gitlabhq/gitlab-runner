@@ -2046,16 +2046,16 @@ func (b *Build) getResolvedFeatureFlags() spec.Variables {
 	return variables
 }
 
-// getNonFeatureFlagJobVariables gets job variables, excluding feature flags to prevent double inclusion
-// and to maintain the precedence of TOML-configured feature flags over job variables.
-func (b *Build) getNonFeatureFlagJobVariables() spec.Variables {
+// withoutFeatureFlags returns variables without the ones named after a feature flag, to prevent
+// double inclusion and to maintain the precedence of TOML-configured feature flags over them.
+func withoutFeatureFlags(variables spec.Variables) spec.Variables {
 	featureFlagNames := make(map[string]bool)
 	for _, ff := range featureflags.GetAll() {
 		featureFlagNames[ff.Name] = true
 	}
 
-	filtered := make(spec.Variables, 0, len(b.Variables))
-	for _, variable := range b.Variables {
+	filtered := make(spec.Variables, 0, len(variables))
+	for _, variable := range variables {
 		if !featureFlagNames[variable.Key] {
 			filtered = append(filtered, variable)
 		}
@@ -2066,7 +2066,8 @@ func (b *Build) getNonFeatureFlagJobVariables() spec.Variables {
 
 // GetAllVariables() returns final variables with a consistent precedence order:
 // 1. Resolved feature flags (TOML takes precedence over job variables)
-// 2. Base variables that come before job variables
+// 2. Base variables that come before job variables (excluding feature flags set in the runner's
+// environment, which are already part of the resolved values)
 // 3. Job variables (excluding feature flags to prevent overriding resolved values)
 // 4. Base variables that come after job variables
 func (b *Build) GetAllVariables() spec.Variables {
@@ -2081,10 +2082,12 @@ func (b *Build) GetAllVariables() spec.Variables {
 
 	variables := make(spec.Variables, 0)
 
-	// Phase 2: Add resolved feature flags first (maintains original precedence order)
+	// Phase 2: Add resolved feature flags first (maintains original precedence order).
+	// The feature flags are filtered here rather than in getBaseVariablesBeforeJob, because
+	// phase 1 reads the runner's environment through it to resolve them.
 	variables = append(variables, b.getResolvedFeatureFlags()...)
-	variables = append(variables, b.getBaseVariablesBeforeJob()...)
-	variables = append(variables, b.getNonFeatureFlagJobVariables()...)
+	variables = append(variables, withoutFeatureFlags(b.getBaseVariablesBeforeJob())...)
+	variables = append(variables, withoutFeatureFlags(b.Variables)...)
 	variables = append(variables, b.getBaseVariablesAfterJob()...)
 
 	b.allVariables = variables.Expand()

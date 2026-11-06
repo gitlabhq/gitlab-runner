@@ -1588,6 +1588,103 @@ func TestGetAllVariables_FeatureFlagResolution(t *testing.T) {
 	}
 }
 
+// variablesWithKey returns every variable in variables named key, in order.
+func variablesWithKey(variables spec.Variables, key string) spec.Variables {
+	var matching spec.Variables
+	for _, variable := range variables {
+		if variable.Key == key {
+			matching = append(matching, variable)
+		}
+	}
+
+	return matching
+}
+
+func TestGetAllVariables_RunnerEnvironment(t *testing.T) {
+	build := &Build{
+		Runner: &RunnerConfig{
+			RunnerSettings: RunnerSettings{
+				Environment: []string{
+					"RUNNER_ENV_VARIABLE=runner-value",
+					// Named like a feature flag, but no feature flag has this name.
+					"FF_NOT_A_FEATURE_FLAG=true",
+				},
+			},
+		},
+	}
+
+	allVars := build.GetAllVariables()
+
+	tests := map[string]string{
+		"RUNNER_ENV_VARIABLE":   "runner-value",
+		"FF_NOT_A_FEATURE_FLAG": "true",
+	}
+
+	for key, expectedValue := range tests {
+		t.Run(key, func(t *testing.T) {
+			matching := variablesWithKey(allVars, key)
+			require.Len(t, matching, 1, "the runner environment variable should reach the job once")
+			assert.Equal(t, expectedValue, matching[0].Value)
+			assert.True(t, matching[0].Internal)
+		})
+	}
+}
+
+func TestGetAllVariables_FeatureFlagFromRunnerEnvironment(t *testing.T) {
+	testFF := featureflags.NetworkPerBuild
+
+	tests := map[string]struct {
+		runnerFeatureFlags map[string]bool
+		environment        []string
+		jobVariables       spec.Variables
+		expectedFFValue    string
+	}{
+		"runner environment enables the flag": {
+			environment:     []string{testFF + "=true"},
+			expectedFFValue: "true",
+		},
+		"runner environment enables the flag with 1": {
+			environment:     []string{testFF + "=1"},
+			expectedFFValue: "true",
+		},
+		"TOML overrides the runner environment": {
+			runnerFeatureFlags: map[string]bool{testFF: true},
+			environment:        []string{testFF + "=false"},
+			expectedFFValue:    "true",
+		},
+		"job variable overrides the runner environment": {
+			environment:     []string{testFF + "=false"},
+			jobVariables:    spec.Variables{{Key: testFF, Value: "true"}},
+			expectedFFValue: "true",
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			build := &Build{
+				Runner: &RunnerConfig{
+					RunnerSettings: RunnerSettings{
+						FeatureFlags: tc.runnerFeatureFlags,
+						Environment:  tc.environment,
+					},
+				},
+				Job: spec.Job{
+					Variables: tc.jobVariables,
+				},
+			}
+
+			// The job environment carries the feature flag once, with its resolved value:
+			// a container spec does not define it twice, and the job sees the value
+			// IsFeatureFlagOn reports.
+			matching := variablesWithKey(build.GetAllVariables(), testFF)
+			require.Len(t, matching, 1, "the feature flag should be defined once")
+			assert.Equal(t, tc.expectedFFValue, matching[0].Value)
+			assert.Equal(t, strconv.FormatBool(build.IsFeatureFlagOn(testFF)), matching[0].Value,
+				"the job environment should match IsFeatureFlagOn")
+		})
+	}
+}
+
 func TestStartBuild(t *testing.T) {
 	type startBuildArgs struct {
 		rootDir               string

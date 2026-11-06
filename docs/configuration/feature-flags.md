@@ -160,3 +160,16 @@ they don't deal with how the job is executed.
   [runners.feature_flags]
     FF_USE_DIRECT_DOWNLOAD = true
 ```
+
+## Feature flag precedence
+
+For a feature flag that changes how a job runs, GitLab Runner checks these
+places for the value, in this order, and uses the first value found:
+
+1. The `[runners.feature_flags]` section of the runner configuration.
+1. A CI/CD variable, for example one defined in the pipeline configuration.
+1. The `environment` setting of the runner configuration.
+1. The default value of the feature flag.
+
+A feature flag that is only usable in `[runners.feature_flags]` takes its
+value from that section, or its default value.
