@@ -1,3 +1,15 @@
+## v19.5.3 (2026-11-05)
+
+### Bug fixes
+
+- Backport restricting ID-based network disconnect to Windows to 19-5-stable [!7770](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/7770)
+- Fix release page link for the Linux ppc64le binary [!7790](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/7790)
+- Update release page package links to match renamed deb/rpm artifacts [!7786](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/7786)
+
+### Maintenance
+
+- Update base images to fix brotli, xz-libs, docker-machine CVEs [!7783](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/7783)
+
 ## v19.5.2 (2026-10-28)
 
 ### Bug fixes
