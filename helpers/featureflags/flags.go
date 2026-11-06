@@ -19,6 +19,7 @@ const (
 	UsePowershellPathResolver            string = "FF_USE_POWERSHELL_PATH_RESOLVER"
 	UseDynamicTraceForceSendInterval     string = "FF_USE_DYNAMIC_TRACE_FORCE_SEND_INTERVAL"
 	ScriptSections                       string = "FF_SCRIPT_SECTIONS"
+	CollapseBuildSections                string = "FF_COLLAPSE_BUILD_SECTIONS"
 	EnableJobCleanup                     string = "FF_ENABLE_JOB_CLEANUP"
 	KubernetesHonorEntrypoint            string = "FF_KUBERNETES_HONOR_ENTRYPOINT"
 	PosixlyCorrectEscapes                string = "FF_POSIXLY_CORRECT_ESCAPES"
@@ -198,6 +199,14 @@ var flags = []FeatureFlag{
 		Description: "When enabled, multi-line script commands appear as collapsible sections in the job log, " +
 			"while single-line commands are printed directly with a `$` prefix. This is a known issue. " +
 			"For more information, see [issue 39294](https://gitlab.com/gitlab-org/gitlab-runner/-/work_items/39294).",
+	},
+	{
+		Name:         CollapseBuildSections,
+		DefaultValue: false,
+		Description: "When enabled, GitLab Runner collapses its own setup and cleanup sections in job logs by default. " +
+			"The `step_script`, `after_script`, `step_*`, and `concrete` sections stay expanded. " +
+			"With `FF_CONCRETE` enabled, the sections inside the `concrete` section are not collapsed. " +
+			"Failed setup and cleanup sections also stay collapsed.",
 	},
 	{
 		Name:            EnableJobCleanup,

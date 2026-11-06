@@ -1431,6 +1431,147 @@ func TestIsFeatureFlagOn(t *testing.T) {
 	}
 }
 
+func TestShouldCollapseBuildSection(t *testing.T) {
+	tests := map[string]struct {
+		flagOn bool
+		stage  BuildStage
+		want   bool
+	}{
+		"disabled flag preserves existing section state": {
+			stage: BuildStageGetSources,
+		},
+		"enabled flag collapses setup section": {
+			flagOn: true,
+			stage:  BuildStagePrepareExecutor,
+			want:   true,
+		},
+		"enabled flag collapses post-script cleanup section": {
+			flagOn: true,
+			stage:  BuildStageCleanup,
+			want:   true,
+		},
+		"enabled flag leaves main script section visible": {
+			flagOn: true,
+			stage:  BuildStage("step_script"),
+		},
+		"enabled flag leaves native user step visible": {
+			flagOn: true,
+			stage:  BuildStage("step_build"),
+		},
+		"enabled flag leaves concrete whole-job section visible": {
+			flagOn: true,
+			stage:  BuildStage("concrete"),
+		},
+		"enabled flag leaves after script visible": {
+			flagOn: true,
+			stage:  BuildStageAfterScript,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			featureFlags := make(map[string]bool)
+			if tc.flagOn {
+				featureFlags[featureflags.CollapseBuildSections] = true
+			}
+
+			build := &Build{
+				Runner: &RunnerConfig{
+					RunnerSettings: RunnerSettings{
+						FeatureFlags: featureFlags,
+					},
+				},
+			}
+
+			assert.Equal(t, tc.want, build.shouldCollapseBuildSection(tc.stage))
+		})
+	}
+}
+
+func TestBuildSectionCollapseTrace(t *testing.T) {
+	tests := map[string]struct {
+		stage     BuildStage
+		collapsed bool
+		native    bool
+		run       func(*testing.T, *Build, *Trace)
+	}{
+		"prepare executor": {
+			stage:     BuildStagePrepareExecutor,
+			collapsed: true,
+			run: func(t *testing.T, build *Build, _ *Trace) {
+				executor := NewMockExecutor(t)
+				executor.On("Prepare", mock.Anything).Return(nil).Once()
+				provider := NewMockExecutorProvider(t)
+				provider.On("Create").Return(executor).Once()
+				_, err := build.executeBuildSection(ExecutorPrepareOptions{Context: t.Context()}, provider)
+				require.NoError(t, err)
+			},
+		},
+		"resolve secrets": {
+			stage:     BuildStageResolveSecrets,
+			collapsed: true,
+			run: func(t *testing.T, build *Build, trace *Trace) {
+				resolver := NewMockSecretsResolver(t)
+				resolver.On("Resolve", build.Secrets).Return(nil, nil).Once()
+				build.secretsResolver = func(_ logger, _ SecretResolverRegistry, _ func(string) bool) (SecretsResolver, error) {
+					return resolver, nil
+				}
+				require.NoError(t, build.executeResolveSecretsStage(trace))
+			},
+		},
+		"get sources":   {stage: BuildStageGetSources, collapsed: true},
+		"cleanup":       {stage: BuildStageCleanup, collapsed: true},
+		"after script":  {stage: BuildStageAfterScript},
+		"step script":   {stage: BuildStage("step_script")},
+		"native setup":  {stage: BuildStagePrepare, collapsed: true, native: true},
+		"native script": {stage: BuildStage("step_build"), native: true},
+		"concrete":      {stage: BuildStage("concrete"), native: true},
+	}
+
+	for name, tc := range tests {
+		for _, flagOn := range []bool{false, true} {
+			t.Run(fmt.Sprintf("%s/flag=%t", name, flagOn), func(t *testing.T) {
+				var output bytes.Buffer
+				trace := &Trace{Writer: &output}
+				log, _ := test.NewNullLogger()
+				build := &Build{
+					Job: spec.Job{ID: 1, Features: spec.GitlabFeatures{TraceSections: true}},
+					Runner: &RunnerConfig{RunnerSettings: RunnerSettings{
+						FeatureFlags: map[string]bool{featureflags.CollapseBuildSections: flagOn},
+					}},
+					BuildDir:     t.TempDir(),
+					allVariables: spec.Variables{},
+					logger:       buildlogger.New(trace, logrus.NewEntry(log), buildlogger.Options{}),
+				}
+
+				switch {
+				case tc.run != nil:
+					tc.run(t, build, trace)
+				case tc.native:
+					server := stepstest.New(t)
+					err := build.executeStepStage(t.Context(), server.Connector(), tc.stage, []schema.Step{}, func(cancel context.CancelFunc) {
+						cancel()
+					})
+					require.ErrorIs(t, err, ErrJobCanceled)
+				default:
+					executor := NewMockExecutor(t)
+					executor.On("Shell").Return(&ShellScriptInfo{Shell: "script-shell"})
+					executor.On("Run", matchBuildStage(tc.stage)).Return(nil).Once()
+					require.NoError(t, build.executeStage(t.Context(), tc.stage, executor))
+				}
+				require.NoError(t, build.logger.Close())
+
+				suffix := ""
+				if flagOn && tc.collapsed {
+					suffix = `\[collapsed=true\]`
+				}
+				assert.Regexp(t, `section_start:[0-9]+:`+string(tc.stage)+suffix+"\r", output.String())
+				assert.Regexp(t, `section_end:[0-9]+:`+string(tc.stage)+"\r", output.String())
+			})
+		}
+	}
+}
+
 func TestIsFeatureFlagOn_SetWithRunnerVariables(t *testing.T) {
 	tests := map[string]struct {
 		variable      string

@@ -12,6 +12,7 @@ type RawLogger interface {
 type BuildSection struct {
 	Name        string
 	SkipMetrics bool
+	Collapsed   bool
 	Run         func() error
 }
 
@@ -24,21 +25,26 @@ func nowUnixUTC() int64 {
 	return time.Now().UTC().Unix()
 }
 
-func (s *BuildSection) timestamp(format string, logger RawLogger) {
+func (s *BuildSection) timestamp(format, name string, logger RawLogger) {
 	if s.SkipMetrics {
 		return
 	}
 
-	sectionLine := fmt.Sprintf(format, nowUnixUTC(), s.Name)
+	sectionLine := fmt.Sprintf(format, nowUnixUTC(), name)
 	logger.SendRawLog(sectionLine)
 }
 
 func (s *BuildSection) start(logger RawLogger) {
-	s.timestamp(traceSectionStart, logger)
+	name := s.Name
+	if s.Collapsed {
+		name += "[collapsed=true]"
+	}
+
+	s.timestamp(traceSectionStart, name, logger)
 }
 
 func (s *BuildSection) end(logger RawLogger) {
-	s.timestamp(traceSectionEnd, logger)
+	s.timestamp(traceSectionEnd, s.Name, logger)
 }
 
 func (s *BuildSection) Execute(logger RawLogger) error {
