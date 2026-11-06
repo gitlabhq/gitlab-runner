@@ -1929,11 +1929,14 @@ func TestChownAndUmaskUsage(t *testing.T) {
 	}
 
 	tests := map[string]struct {
-		ffValue       string
-		testImage     string
-		buildsVolume  string
-		extraCommands []string
-		assertOutput  func(t *testing.T, output string)
+		ffValue          string
+		testImage        string
+		buildsVolume     string
+		extraCommands    []string
+		entrypoint       []string
+		imageUser        string
+		expectBuildError bool
+		assertOutput     func(t *testing.T, output string)
 	}{
 		"FF_DISABLE_UMASK_FOR_DOCKER_EXECUTOR not set on root image": {
 			ffValue:      "",
@@ -1969,6 +1972,13 @@ func TestChownAndUmaskUsage(t *testing.T) {
 			},
 			assertOutput: umaskNotUsedUserChangedOnBuildsDir,
 		},
+		"non-root image with custom failing entrypoint": {
+			ffValue:          "true",
+			testImage:        "alpine:3.22",
+			entrypoint:       []string{"/bin/false"},
+			imageUser:        "65534:65534",
+			expectBuildError: true,
+		},
 		"FF_DISABLE_UMASK_FOR_DOCKER_EXECUTOR set to true on non-root image with shared builds directory": {
 			ffValue:      "true",
 			testImage:    common.TestAlpineNoRootImage,
@@ -1983,6 +1993,8 @@ func TestChownAndUmaskUsage(t *testing.T) {
 			require.NoError(t, err)
 
 			jobResponse.GitInfo = gitInfo
+			jobResponse.Image.Entrypoint = tt.entrypoint
+			jobResponse.Image.ExecutorOptions.Docker.User = spec.StringOrInt64(tt.imageUser)
 			jobResponse.Variables = append(jobResponse.Variables, spec.Variable{
 				Key:   featureflags.DisableUmaskForDockerExecutor,
 				Value: tt.ffValue,
@@ -2009,8 +2021,15 @@ func TestChownAndUmaskUsage(t *testing.T) {
 			}
 
 			output, err := buildtest.RunBuildReturningOutput(t, build)
-			require.NoError(t, err)
 
+			if tt.expectBuildError {
+				require.Error(t, err, "the custom /bin/false entrypoint should fail the build")
+				assert.Contains(t, output, "Changing ownership of files",
+					"the user probe must detect the non-root user before the build entrypoint runs")
+				return
+			}
+
+			require.NoError(t, err)
 			tt.assertOutput(t, output)
 		})
 	}

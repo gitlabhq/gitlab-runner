@@ -47,7 +47,6 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/networks"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/prebuilt"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/pull"
-	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/user"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/volumes"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/volumes/parser"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/volumes/permission"
@@ -2560,62 +2559,6 @@ func createFakePrebuiltImages(t *testing.T, architecture string) {
 	}
 }
 
-func TestGetUIDandGID(t *testing.T) {
-	ctx := t.Context()
-	testContainerID := "test-ID"
-	testImageSHA := "test-SHA"
-	testUID := 456
-	testGID := 789
-
-	tests := map[string]struct {
-		mockInspect   func(t *testing.T, i *user.MockInspect)
-		expectedError error
-	}{
-		"UID check returns error": {
-			mockInspect: func(t *testing.T, i *user.MockInspect) {
-				i.On("UID", ctx, testContainerID).Return(0, assert.AnError).Once()
-			},
-			expectedError: assert.AnError,
-		},
-		"UID check succeeds, GID check returns error": {
-			mockInspect: func(t *testing.T, i *user.MockInspect) {
-				i.On("UID", ctx, testContainerID).Return(testUID, nil).Once()
-				i.On("GID", ctx, testContainerID).Return(0, assert.AnError).Once()
-			},
-			expectedError: assert.AnError,
-		},
-		"both checks succeed": {
-			mockInspect: func(t *testing.T, i *user.MockInspect) {
-				i.On("UID", ctx, testContainerID).Return(testUID, nil).Once()
-				i.On("GID", ctx, testContainerID).Return(testGID, nil).Once()
-			},
-			expectedError: nil,
-		},
-	}
-
-	for tn, tt := range tests {
-		t.Run(tn, func(t *testing.T) {
-			inspectMock := user.NewMockInspect(t)
-
-			tt.mockInspect(t, inspectMock)
-
-			log, _ := logrustest.NewNullLogger()
-			uid, gid, err := getUIDandGID(ctx, log, inspectMock, testContainerID, testImageSHA)
-
-			if tt.expectedError != nil {
-				assert.Equal(t, 0, uid)
-				assert.Equal(t, 0, gid)
-				assert.ErrorIs(t, err, tt.expectedError)
-				return
-			}
-
-			assert.NoError(t, err)
-			assert.Equal(t, testUID, uid)
-			assert.Equal(t, testGID, gid)
-		})
-	}
-}
-
 func TestExpandingDockerImageWithImagePullPolicyAlways(t *testing.T) {
 	dockerConfig := &common.DockerConfig{
 		Memory: "42m",
@@ -2841,6 +2784,75 @@ func TestExpandingVolumeDestination(t *testing.T) {
 		"/host:/tmp/foo/$",
 	}
 	assert.ElementsMatch(t, expectedBinds, executor.volumesManager.Binds())
+}
+
+func TestUserProbeContainerConfiguratorContainerConfig(t *testing.T) {
+	tests := map[string]struct {
+		runnerUser   string
+		jobUser      spec.StringOrInt64
+		allowedUsers []string
+		wantUser     string
+		wantErr      bool
+	}{
+		"runner user takes precedence": {
+			runnerUser: "1000:1000",
+			jobUser:    "2000:2000",
+			wantUser:   "1000:1000",
+		},
+		"job user is used when runner user is empty": {
+			jobUser:  "2000:2000",
+			wantUser: "2000:2000",
+		},
+		"empty user is allowed": {
+			wantUser: "",
+		},
+		"disallowed runner user returns error": {
+			runnerUser:   "1000:1000",
+			allowedUsers: []string{"2000:2000"},
+			wantErr:      true,
+		},
+		"disallowed job user returns error": {
+			jobUser:      "2000:2000",
+			allowedUsers: []string{"1000:1000"},
+			wantErr:      true,
+		},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			dockerConfig := &common.DockerConfig{
+				User:         tt.runnerUser,
+				AllowedUsers: tt.allowedUsers,
+			}
+
+			_, e := createExecutorForTestDockerConfiguration(t, dockerConfig, nil)
+
+			imageConfig := spec.Image{
+				Name: "alpine",
+				ExecutorOptions: spec.ImageExecutorOptions{
+					Docker: spec.ImageDockerOptions{
+						User: tt.jobUser,
+					},
+				},
+			}
+
+			configurator := newUserProbeContainerConfigurator(e, imageConfig)
+			config, err := configurator.ContainerConfig(&image.InspectResponse{ID: "123"})
+
+			if tt.wantErr {
+				require.Error(t, err)
+				assert.Nil(t, config)
+				return
+			}
+
+			require.NoError(t, err)
+			require.NotNil(t, config)
+			assert.Equal(t, tt.wantUser, config.User)
+			assert.Equal(t, []string{"id"}, config.Entrypoint)
+			assert.Empty(t, config.Cmd)
+			assert.Nil(t, config.Env)
+		})
+	}
 }
 
 func TestDockerImageWithUser(t *testing.T) {

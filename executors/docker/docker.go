@@ -981,6 +981,48 @@ func (c *defaultContainerConfigurator) NetworkConfig(aliases []string) (*network
 	return c.e.networkConfig(aliases, c.e.Config.Docker.MacAddress)
 }
 
+type userProbeContainerConfigurator struct {
+	*defaultContainerConfigurator
+}
+
+var _ containerConfigurator = &userProbeContainerConfigurator{}
+
+func newUserProbeContainerConfigurator(
+	e *executor,
+	imageDefinition spec.Image,
+) *userProbeContainerConfigurator {
+	return &userProbeContainerConfigurator{
+		defaultContainerConfigurator: newDefaultContainerConfigurator(
+			e,
+			userProbeContainerType,
+			imageDefinition,
+			[]string{},
+			[]string{},
+		),
+	}
+}
+
+func (c *userProbeContainerConfigurator) ContainerConfig(
+	image *image.InspectResponse,
+) (*container.Config, error) {
+	config, err := c.defaultContainerConfigurator.ContainerConfig(image)
+	if err != nil {
+		return nil, err
+	}
+
+	configuredUser, err := c.e.getBuildContainerUser(c.imageDefinition)
+	if err != nil {
+		return nil, err
+	}
+
+	config.User = configuredUser
+	config.Entrypoint = []string{"id"}
+	config.Cmd = []string{}
+	config.Env = nil
+
+	return config, nil
+}
+
 func (e *executor) createContainer(
 	containerType string,
 	imageDefinition spec.Image,
@@ -1020,7 +1062,7 @@ func (e *executor) createContainer(
 
 	var platform *v1.Platform
 	// predefined/helper container always uses native platform
-	if containerType == buildContainerType {
+	if containerType == buildContainerType || containerType == userProbeContainerType {
 		dockerOptions := imageDefinition.ExecutorOptions.Docker.Expand(e.Build.GetAllVariables())
 		platform = e.platformForImage(image, dockerOptions)
 	}
