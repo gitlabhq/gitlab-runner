@@ -48,6 +48,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/volumes/parser"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/volumes/permission"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/wait"
+	autoscaler "gitlab.com/gitlab-org/gitlab-runner/executors/internal/autoscaler"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/container/helperimage"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
@@ -178,30 +179,13 @@ func newDockerTunnel(
 		}
 
 		// We tunnel the docker connection for remote environments.
-		//
-		// To do this, we create a new dial context for Docker's client, whilst
-		// also overridding the daemon hostname it would typically use (if it were to use
-		// its own dialer).
-		scheme, dialer, err := environmentDialContext(ctx, tc, creds.Host, build.IsFeatureFlagOn(featureflags.UseDockerAutoscalerDialStdio))
+		opts, creds, err := tunnelOpts(ctx, tc, creds, build.IsFeatureFlagOn(featureflags.UseDockerAutoscalerDialStdio))
 		if err != nil {
 			_ = tc.Close()
 			return nil, fmt.Errorf("creating env dialer: %w", err)
 		}
 
-		// If the scheme (docker uses it to define the protocol used) is "npipe" or "unix", we
-		// need to use a "fake" host, otherwise when dialing from Linux to Windows or vice-versa
-		// docker will complain because it doesn't think Linux can support "npipe" and doesn't
-		// think Windows can support "unix".
-		switch scheme {
-		case "unix", "npipe", "dial-stdio":
-			creds.Host = internalFakeTunnelHostname
-		}
-
-		return &dockerTunnel{
-			client: tc,
-			opts:   []client.Opt{client.WithDialContext(dialer)},
-			creds:  creds,
-		}, nil
+		return &dockerTunnel{client: tc, opts: opts, creds: creds}, nil
 	}
 
 	return &dockerTunnel{client: nil, opts: nil, creds: creds}, nil
@@ -2085,6 +2069,14 @@ func (e *executor) Cleanup() {
 		}
 	}()
 
+	// Release by label while the tunnel is still open: the defer above closes it
+	// after this block returns.
+	if e.releaseOnCleanup {
+		e.performLabelRelease()
+		e.AbstractExecutor.Cleanup()
+		return
+	}
+
 	if e.suspended {
 		e.BuildLogger.Debugln("Job suspended; preserving containers, volumes, and network")
 		e.AbstractExecutor.Cleanup()
@@ -2124,6 +2116,31 @@ func (e *executor) Cleanup() {
 	}
 
 	e.AbstractExecutor.Cleanup()
+}
+
+// performLabelRelease runs label-based teardown for an expired or
+// label-mismatched suspended environment.
+func (e *executor) performLabelRelease() {
+	acqKey := acquisitionKey(e.Build)
+	if e.dockerConn == nil {
+		e.BuildLogger.WithFields(logrus.Fields{"acquisition_key": acqKey}).
+			Errorln("Environment unreachable during label-based release; containers left on instance")
+		return
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), dockerCleanupTimeout)
+	defer cancel()
+	err := releaseByLabel(ctx, e.dockerConn, e.Config.ID, acqKey)
+	switch {
+	case err == nil:
+	case errors.Is(err, autoscaler.ErrEnvironmentNotFound):
+		// Expected when a resume found the environment's containers gone.
+		e.BuildLogger.Debugln("Label-based release found no containers; the environment is already gone")
+	default:
+		releaseFields := logrus.Fields{"acquisition_key": acqKey}
+		log.AddDeprecatedField(releaseFields, "error", err)
+		e.BuildLogger.WithFields(releaseFields).
+			Errorln("Label-based release failed; some resources may remain on instance")
+	}
 }
 
 // sendSIGTERMToContainerProcs exec's into the specified container and executes the script

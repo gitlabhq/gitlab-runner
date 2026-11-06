@@ -15,6 +15,9 @@ const dockerLabelPrefix = "com.gitlab.gitlab-runner"
 // so the prefixed container_labels config cannot produce it.
 const AcquisitionKeyLabel = common.RuntimeEnvironmentLabelPrefix + "acquisition-key"
 
+// ReusableVolumeLabel marks cache volumes, which release never removes.
+const ReusableVolumeLabel = dockerLabelPrefix + ".reusable"
+
 // Labeler is responsible for handling labelling logic for docker entities - networks, containers.
 type Labeler interface {
 	Labels(otherLabels map[string]string) map[string]string

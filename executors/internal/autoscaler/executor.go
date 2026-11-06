@@ -13,9 +13,29 @@ import (
 	"gitlab.com/gitlab-org/fleeting/taskscaler"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/executors"
 	"gitlab.com/gitlab-org/gitlab-runner/session/terminal"
 	"gitlab.com/gitlab-org/gitlab-runner/steps"
 )
+
+// EnvironmentReleaser is implemented by executor providers that can remove a
+// suspended environment's workload from a running instance without a job
+// attached. Nothing calls it yet: the TTL sweep needs taskscaler to expire
+// suspended slots, which a follow-up adds. Cleanup releases by label directly.
+//
+// It is provider-level because docker has no connection to the instance
+// without a job.
+type EnvironmentReleaser interface {
+	// ReleaseEnvironment removes all docker objects belonging to the environment
+	// identified by acquisitionKey. An environment already gone counts as
+	// released (callers should treat ErrEnvironmentNotFound as success).
+	ReleaseEnvironment(ctx context.Context, cfg *common.RunnerConfig, conn executors.Client, acquisitionKey string) error
+}
+
+// ErrEnvironmentNotFound is returned (wrapped) by ReleaseEnvironment when no
+// containers for the environment exist on the instance. The environment is
+// considered lost rather than active.
+var ErrEnvironmentNotFound = errors.New("environment not found on instance")
 
 var (
 	_ terminal.InteractiveTerminal = (*executor)(nil)
@@ -36,6 +56,18 @@ func (e *executor) Prepare(options common.ExecutorPrepareOptions) (err error) {
 	e.config = *options.Config
 
 	e.build.Log().Infoln("Preparing instance...")
+
+	// Reject suspendable jobs when state_storage is not enabled. Without it a
+	// manager restart loses the suspended slot — the environment can be neither
+	// resumed nor swept. This runs before getRunnerTaskscaler so nothing is set
+	// up first and a guard failure on resume leaves the slot suspended.
+	if options.Build.WillSuspend() &&
+		(options.Config.Autoscaler == nil || !options.Config.Autoscaler.StateStorage.Enabled) {
+		return &common.BuildError{
+			Inner:         errors.New("suspendable environments require autoscaler state_storage to be enabled"),
+			FailureReason: common.ConfigurationError,
+		}
+	}
 
 	acqRef, ok := options.Build.ExecutorData.(*acquisitionRef)
 	if !ok {
