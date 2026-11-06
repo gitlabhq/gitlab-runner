@@ -1,7 +1,7 @@
 ---
 stage: Verify
 group: CI Functions Platform
-info: To determine the technical writer assigned to the Stage/Group associated with this page, see <https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments>
+info: To determine the technical writer assigned to the Stage/Group associated with this page, see <https://handbook.gitlab.com/handbook/marketing/product-and-technical-marketing/technical-writing/#assignments>
 title: 러너 플릿을 계획하고 운영하기
 ---
 
