@@ -1537,6 +1537,36 @@ func TestStringOrArray_UnmarshalFlag(t *testing.T) {
 	}
 }
 
+func TestStringOrArray_UnmarshalFlag_Repeated(t *testing.T) {
+	tests := map[string]struct {
+		values         []string
+		expectedResult StringOrArray
+	}{
+		"repeated values accumulate": {
+			values:         []string{"always", "if-not-present"},
+			expectedResult: StringOrArray{"always", "if-not-present"},
+		},
+		"repeated comma separated values accumulate": {
+			values:         []string{"always,if-not-present", "never"},
+			expectedResult: StringOrArray{"always", "if-not-present", "never"},
+		},
+		"empty string clears accumulated values": {
+			values:         []string{"always", ""},
+			expectedResult: StringOrArray{},
+		},
+	}
+
+	for tn, tt := range tests {
+		t.Run(tn, func(t *testing.T) {
+			var s StringOrArray
+			for _, value := range tt.values {
+				require.NoError(t, s.UnmarshalFlag(value))
+			}
+			assert.Equal(t, tt.expectedResult, s)
+		})
+	}
+}
+
 func TestKubernetesNFS_UnmarshalTOML(t *testing.T) {
 	tests := map[string]struct {
 		toml           string
@@ -3427,6 +3457,7 @@ func TestLoadConfig_SentryDSNFromEnv(t *testing.T) {
 
 func Test_CommandLineFlags(t *testing.T) {
 	tests := map[string]struct {
+		env           map[string]string
 		args          []string
 		expectedError bool
 		verifyArgs    func(t *testing.T, config *RunnerConfig)
@@ -3455,11 +3486,58 @@ func Test_CommandLineFlags(t *testing.T) {
 			},
 			expectedError: true,
 		},
+		"Docker pull policy repeated": {
+			args: []string{
+				"--docker-pull-policy", "always",
+				"--docker-pull-policy", "if-not-present",
+			},
+			verifyArgs: func(t *testing.T, config *RunnerConfig) {
+				assert.Equal(t, StringOrArray{"always", "if-not-present"}, config.Docker.PullPolicy)
+			},
+		},
+		"Docker pull policy comma separated": {
+			args: []string{
+				"--docker-pull-policy", "always,if-not-present",
+			},
+			verifyArgs: func(t *testing.T, config *RunnerConfig) {
+				assert.Equal(t, StringOrArray{"always", "if-not-present"}, config.Docker.PullPolicy)
+			},
+		},
+		"Docker pull policy from environment and flag": {
+			env: map[string]string{
+				"DOCKER_PULL_POLICY": "always",
+			},
+			args: []string{
+				"--docker-pull-policy", "if-not-present",
+			},
+			verifyArgs: func(t *testing.T, config *RunnerConfig) {
+				assert.Equal(t, StringOrArray{"always", "if-not-present"}, config.Docker.PullPolicy)
+			},
+		},
+		"Kubernetes pull policy repeated": {
+			args: []string{
+				"--kubernetes-pull-policy", "always",
+				"--kubernetes-pull-policy", "if-not-present",
+			},
+			verifyArgs: func(t *testing.T, config *RunnerConfig) {
+				assert.Equal(t, StringOrArray{"always", "if-not-present"}, config.Kubernetes.PullPolicy)
+			},
+		},
 	}
 
 	// Loop across tests
 	for tn, tt := range tests {
 		t.Run(tn, func(t *testing.T) {
+			// A pull policy exported in the shell running the tests would be
+			// added to the expected lists. t.Setenv restores it afterwards.
+			for _, key := range []string{"DOCKER_PULL_POLICY", "KUBERNETES_PULL_POLICY"} {
+				t.Setenv(key, "")
+				require.NoError(t, os.Unsetenv(key))
+			}
+			for key, value := range tt.env {
+				t.Setenv(key, value)
+			}
+
 			config := &RunnerConfig{}
 			flags := clihelpers.GetFlagsFromStruct(config)
 			flagSet := flag.NewFlagSet("test-flags", flag.ContinueOnError)
