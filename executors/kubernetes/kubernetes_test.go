@@ -3921,6 +3921,68 @@ func TestPrepare(t *testing.T) {
 	}
 }
 
+func TestPrepare_HelperImageLogging(t *testing.T) {
+	tests := map[string]struct {
+		helperImage string
+		expectedLog string
+	}{
+		"default helper image": {
+			expectedLog: fmt.Sprintf("Using helper image: %s:", helperimage.GitLabRegistryName),
+		},
+		"overridden helper image": {
+			helperImage: "custom.registry.io/custom-helper:v1.0.0",
+			expectedLog: fmt.Sprintf("Using helper image: custom.registry.io/custom-helper:v1.0.0 (overridden, default would be %s:", helperimage.GitLabRegistryName),
+		},
+		"overridden helper image expanding to empty": {
+			helperImage: "$UNSET_PROBE_VAR",
+			expectedLog: fmt.Sprintf("Using helper image:  (overridden, default would be %s:", helperimage.GitLabRegistryName),
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			runnerConfig := &common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Host:        "test-server",
+						HelperImage: tc.helperImage,
+					},
+				},
+			}
+			testBuild := &common.Build{
+				Job: spec.Job{
+					Image: spec.Image{Name: "test-image"},
+				},
+				Runner: runnerConfig,
+			}
+
+			e := newExecutor()
+			e.newPodWatcher = func(c podWatcherConfig) podWatcher {
+				mockPodWatcher := newMockPodWatcher(t)
+				mockPodWatcher.On("Start").Return(nil).Maybe()
+				return mockPodWatcher
+			}
+
+			var logs bytes.Buffer
+			trace := &common.Trace{Writer: &logs}
+			logger := buildlogger.New(trace, logrus.WithFields(logrus.Fields{}), buildlogger.Options{})
+
+			prepareOptions := common.ExecutorPrepareOptions{
+				Config:      testBuild.Runner,
+				Build:       testBuild,
+				Context:     t.Context(),
+				BuildLogger: logger,
+			}
+
+			err := e.Prepare(prepareOptions)
+			require.NoError(t, err)
+
+			require.NotEmpty(t, e.helperImageInfo.Tag)
+			assert.Contains(t, logs.String(), tc.expectedLog+e.helperImageInfo.Tag)
+		})
+	}
+}
+
 func TestSetupDefaultExecutorOptions(t *testing.T) {
 	tests := map[string]func(*testing.T, *executor){
 		"windows": func(t *testing.T, e *executor) {
