@@ -164,7 +164,8 @@ func TestConnect_serveExitsBeforeReady(t *testing.T) {
 	client := executors.NewMockClient(t)
 	client.EXPECT().Run(mock.Anything, mock.Anything).RunAndReturn(
 		runHandler(common.AppVersion.Version, func(ctx context.Context, opts executors.RunOptions) error {
-			return fmt.Errorf("boom")
+			// The autoscaler client reports a non-zero exit this way.
+			return &common.BuildError{Inner: fmt.Errorf("exit status 1"), ExitCode: 1}
 		}),
 	)
 
@@ -172,6 +173,7 @@ func TestConnect_serveExitsBeforeReady(t *testing.T) {
 	require.Error(t, err)
 	assert.Nil(t, dial)
 	assert.ErrorContains(t, err, "step-runner serve exited before becoming ready")
+	assertRunnerSystemFailure(t, err)
 }
 
 func TestConnect_serveExitsCleanlyBeforeReady(t *testing.T) {
@@ -191,6 +193,17 @@ func TestConnect_serveExitsCleanlyBeforeReady(t *testing.T) {
 	assert.ErrorContains(t, err, "step-runner serve exited before becoming ready")
 	assert.NotContains(t, err.Error(), "%!w", "nil error must not be wrapped with %%w")
 	assert.NotContains(t, err.Error(), "<nil>", "nil error must not leak into the message")
+	assertRunnerSystemFailure(t, err)
+}
+
+// assertRunnerSystemFailure checks that the outermost BuildError in err is a
+// runner system failure, so an exit code it wraps cannot turn it into a script
+// failure.
+func assertRunnerSystemFailure(t *testing.T, err error) {
+	t.Helper()
+	var buildErr *common.BuildError
+	require.ErrorAs(t, err, &buildErr)
+	assert.Equal(t, common.RunnerSystemFailure, buildErr.FailureReason)
 }
 
 func TestConnect_noRunnerCommand(t *testing.T) {

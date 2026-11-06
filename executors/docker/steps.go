@@ -103,15 +103,11 @@ func (s *commandExecutor) Connect(ctx context.Context) (func() (io.ReadWriteClos
 	//   was a clean exit, we tell step-runner to not bother connecting by
 	//   returning ErrNoStepRunnerButOkay.
 	var socketPath string
-	var readyChOk bool
 
 	select {
-	case socketPath, readyChOk = <-readyCh:
-		if !readyChOk {
-			return nil, fmt.Errorf("step-runner ready channel closed")
-		}
-		if socketPath == "" {
-			return nil, fmt.Errorf("step-runner ready message missing socket path")
+	case path, ok := <-readyCh:
+		if socketPath, err = readySocketPath(path, ok); err != nil {
+			return nil, err
 		}
 
 	case err := <-errCh:
@@ -180,6 +176,27 @@ func copyStepsProxyOutput(w *io.PipeWriter, src io.Reader) {
 		}
 	}
 	w.CloseWithError(err)
+}
+
+// readySocketPath checks what the ready channel delivered. The ready line is
+// read from build container output, and in "job script as entrypoint" mode the
+// job's image writes there before step-runner starts, so a malformed one is a
+// script failure: left unclassified, it would be reported as a runner system
+// failure.
+func readySocketPath(socketPath string, ok bool) (string, error) {
+	if !ok {
+		return "", &common.BuildError{
+			Inner:         fmt.Errorf("step-runner ready channel closed"),
+			FailureReason: common.ScriptFailure,
+		}
+	}
+	if socketPath == "" {
+		return "", &common.BuildError{
+			Inner:         fmt.Errorf("step-runner ready message missing socket path"),
+			FailureReason: common.ScriptFailure,
+		}
+	}
+	return socketPath, nil
 }
 
 func (e *executor) bootstrap() error {

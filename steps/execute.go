@@ -64,6 +64,16 @@ type ClientInternalError struct {
 func (e *ClientInternalError) Error() string { return e.Err.Error() }
 func (e *ClientInternalError) Unwrap() error { return e.Err }
 
+// ConnectError signals that the Connector failed before step-runner was
+// reachable: the executor could not create, start or attach to the
+// environment that runs step-runner, so no step has run yet.
+type ConnectError struct {
+	Err error
+}
+
+func (e *ConnectError) Error() string { return e.Err.Error() }
+func (e *ConnectError) Unwrap() error { return e.Err }
+
 // Options bundles the parameters Execute needs to run a step-runner job.
 // RegisterCancel is optional; when set, Execute invokes it with a callback
 // that issues a graceful Cancel to step-runner. The signature matches
@@ -83,7 +93,7 @@ type Options struct {
 func Execute(ctx context.Context, opts Options) error {
 	dialFn, err := opts.Connector.Connect(ctx)
 	if err != nil {
-		return fmt.Errorf("creating connect dialer: %w", err)
+		return &ConnectError{Err: fmt.Errorf("creating connect dialer: %w", err)}
 	}
 
 	dialer := &stdioDialer{dialFn: dialFn}
