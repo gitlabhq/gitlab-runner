@@ -1890,6 +1890,12 @@ This configuration would result in an `emptyDir` volume mounted in:
 
 ### User namespaces
 
+{{< history >}}
+
+- [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6557) in GitLab Runner 19.6.
+
+{{< /history >}}
+
 In Kubernetes 1.30 and later, you can isolate the user running in the container from the one on
 the host with [user namespaces](https://kubernetes.io/docs/concepts/workloads/pods/user-namespaces/).
 A process running as root in the container can run as a different unprivileged user on the host.
@@ -1899,33 +1905,74 @@ Operations that require additional settings (such as running as root) can also f
 without opening up additional attack surface on the host.
 
 To use this feature, ensure your cluster has been [properly configured](https://kubernetes.io/docs/concepts/workloads/pods/user-namespaces/#introduction).
-The following example adds `pod_spec` for the `hostUsers` key
-and disables both privileged pods and privilege escalation:
+To report a runtime that does not support user namespaces, the runner service account also needs the `list` permission on `events`. For more information, see [configure runner API permissions](#configure-runner-api-permissions).
+To turn on user namespaces, set `host_users` to `false` in the `[runners.kubernetes]` section.
+The following example turns on user namespaces
+and turns off both privileged pods and privilege escalation:
 
 ```toml
 [[runners]]
-  environment = ["FF_USE_ADVANCED_POD_SPEC_CONFIGURATION=true"]
-  builds_dir = "/tmp/builds"
-[runners.kubernetes]
-  logs_base_dir = "/tmp"
-  scripts_base_dir = "/tmp"
-  privileged = false
-  allowPrivilegeEscalation = false
-[[runners.kubernetes.pod_spec]]
-  name = "hostUsers"
-  patch = '''
-    [{"op": "add", "path": "/hostUsers", "value": false}]
-  '''
-  patch_type = "json"
+  executor = "kubernetes"
+  [runners.kubernetes]
+    host_users = false
+    privileged = false
+    allow_privilege_escalation = false
 ```
 
-With user namespaces, you cannot use the default path for the build directory (`builds_dir`),
-build logs (`logs_base_dir`), or build scripts (`scripts_base_dir`).
-Even the container's root user does not have the permission to mount volumes.
-They also cannot create directories in the root of the container's file system.
+The `host_users` setting controls the `hostUsers` field of the pod specification:
 
-Instead, you can [change the base directory for build logs and scripts](#change-the-base-directory-for-build-logs-and-scripts).
+- `true`: The pod uses the host's user namespace.
+- `false`: The pod runs in its own user namespace.
+- Not set: The cluster default applies. This is typically the host's user namespace.
+
+The runner always sets `hostUsers` to `false`, regardless of the `host_users` setting, when:
+
+- A security context of the build, service, helper, or init-permissions container sets `proc_mount = "unmasked"`. Kubernetes requires user namespaces for an unmasked `/proc`.
+- The job uses suspend and resume, which requires the [`FF_SUSPENDABLE_ENVIRONMENTS` feature flag](../../configuration/feature-flags.md).
+
+If you set `host_users = true` or a job sets `KUBERNETES_HOST_USERS` to `true` in these cases,
+the runner logs a warning in the job log and uses `false`.
+
+With user namespaces, you can use the default paths for the build directory (`builds_dir`),
+build logs (`logs_base_dir`), and build scripts (`scripts_base_dir`).
+By default, `emptyDir` volumes are mounted into the log and script directories.
+The build directory is also an `emptyDir` volume, unless the job uses suspend and resume or you mount your own volume there.
+To use other paths, see [change the base directory for build logs and scripts](#change-the-base-directory-for-build-logs-and-scripts).
 You can also change the build directory by setting `[[runners]].builds_dir`.
+
+#### Allow jobs to override `host_users`
+
+To allow jobs to set `hostUsers` in the pod specification:
+
+1. In the `[runners.kubernetes]` section, set `host_users_overwrite_allowed` to `true`.
+1. In the job, set the `KUBERNETES_HOST_USERS` CI/CD variable to `true` or `false`. The job fails if the value is not a boolean.
+
+If `host_users_overwrite_allowed` is not `true`, the runner ignores `KUBERNETES_HOST_USERS`.
+
+For example, with this configuration, pods use the Kubernetes default
+unless a job sets `KUBERNETES_HOST_USERS`:
+
+```toml
+[[runners]]
+  executor = "kubernetes"
+  [runners.kubernetes]
+    host_users_overwrite_allowed = true
+```
+
+This job runs in its own user namespace:
+
+```yaml
+job:
+  variables:
+    KUBERNETES_HOST_USERS: "false"
+  script:
+    - echo "This job runs in its own user namespace"
+```
+
+> [!warning]
+> If `host_users_overwrite_allowed` is `true`, a job can set `KUBERNETES_HOST_USERS` to `true`
+> to turn off the user namespace isolation that `host_users = false` provides.
+> Set `host_users_overwrite_allowed` to `true` only if you trust the users who can run jobs on the runner.
 
 ## Operating system, architecture, and Windows kernel version
 
