@@ -51,7 +51,7 @@ require (
 	github.com/jedib0t/go-pretty/v6 v6.8.3
 	github.com/johannesboyne/gofakes3 v1.2.0
 	github.com/joho/godotenv v1.5.1
-	github.com/jpillora/backoff v1.0.0
+	github.com/jpillora/backoff v1.1.0
 	github.com/kardianos/service v1.2.4
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/klauspost/compress v1.20.3
