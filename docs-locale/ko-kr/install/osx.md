@@ -1,7 +1,7 @@
 ---
 stage: Verify
 group: Runner Core
-info: To determine the technical writer assigned to the Stage/Group associated with this page, see <https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments>
+info: To determine the technical writer assigned to the Stage/Group associated with this page, see <https://handbook.gitlab.com/handbook/marketing/product-and-technical-marketing/technical-writing/#assignments>
 description: "Apple Silicon 및 Intel x86-64 시스템에서 사용자 모드 서비스로 GitLab Runner를 다운로드, 설치 및 구성합니다."
 title: macOS에 GitLab Runner 설치
 ---
