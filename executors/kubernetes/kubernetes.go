@@ -620,10 +620,10 @@ func (s *executor) prepareInfrastructure(ctx context.Context) error {
 		return err
 	}
 
-	if imageNameFromConfig := s.ExpandValue(s.Config.Kubernetes.HelperImage); imageNameFromConfig != "" {
-		s.BuildLogger.Debugln(fmt.Sprintf("Using helper image: %s (overridden, default would be %s:%s)", imageNameFromConfig, s.helperImageInfo.Name, s.helperImageInfo.Tag))
+	if s.Config.Kubernetes.HelperImage != "" {
+		s.BuildLogger.Println(fmt.Sprintf("Using helper image: %s (overridden, default would be %s)", s.getHelperImage(), s.helperImageInfo))
 	} else {
-		s.BuildLogger.Debugln(fmt.Sprintf("Using helper image: %s:%s", s.helperImageInfo.Name, s.helperImageInfo.Tag))
+		s.BuildLogger.Println(fmt.Sprintf("Using helper image: %s", s.helperImageInfo))
 	}
 
 	if err = s.AbstractExecutor.PrepareBuildAndShell(); err != nil {
