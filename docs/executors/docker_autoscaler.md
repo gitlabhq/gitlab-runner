@@ -287,6 +287,43 @@ concurrent = 10
       idle_time = "20m0s"
 ```
 
+## Suspend and resume job environments
+
+{{< details >}}
+
+- Status: Experiment
+
+{{< /details >}}
+
+{{< history >}}
+
+- Introduced in GitLab Runner 19.4
+  as an [experiment](https://docs.gitlab.com/policy/development_stages_support/#experiment)
+  with a flag named `FF_SUSPENDABLE_ENVIRONMENTS`.
+- Expiry of suspended environments [introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/39468) in GitLab Runner 19.6.
+
+{{< /history >}}
+
+> [!flag]
+> The availability of this feature is controlled by a feature flag.
+> For more information, see the history.
+> This feature is available for testing, but not ready for production use.
+
+With the `FF_SUSPENDABLE_ENVIRONMENTS` [feature flag](../configuration/feature-flags.md),
+a job can suspend its environment instead of releasing it, and a later job can resume it.
+
+A job that asks to suspend fails at job start with a configuration error unless:
+
+- `FF_SUSPENDABLE_ENVIRONMENTS` is enabled in the runner configuration, not only as a CI/CD variable.
+- The `[[runners]]` entry in `config.toml` has `id` set. `gitlab-runner register` sets `id` automatically.
+- [`[runners.autoscaler.state_storage]`](../configuration/advanced-configuration.md#the-runnersautoscalerstate_storage-section) is enabled.
+- `vm_isolation` is disabled.
+- `FF_USE_DOCKER_AUTOSCALER_DIAL_STDIO`, if used, is set in the runner configuration, not as a CI/CD variable.
+
+A suspended environment expires after [`runtime_environment_ttl`](../configuration/advanced-configuration.md#the-runners-section).
+A job that tries to resume an expired environment fails with `runtime_environment_unavailable`.
+Shortly after the TTL, the runner removes the job containers, networks, and volumes. Cache volumes are kept.
+
 ## Slot-based cgroup support
 
 The Docker Autoscaler executor supports slot-based cgroups for improved resource isolation between concurrent jobs. Cgroup paths are automatically applied to Docker containers using the `--cgroup-parent` flag.

@@ -5155,3 +5155,56 @@ func TestResumeDependencies_ForeignAcquisitionKey(t *testing.T) {
 		})
 	}
 }
+
+// Cleanup of an expired, lost or foreign environment releases it by label and
+// skips the normal teardown: the mock fails on any call the test does not set
+// up, such as removing e.temporary.
+func TestCleanup_ReleaseOnCleanup_ReleasesByLabel(t *testing.T) {
+	ours := mock.MatchedBy(func(o client.ContainerListOptions) bool {
+		return o.All && o.Filters["label"][labels.AcquisitionKeyLabel+"=acq-key"] &&
+			o.Filters["label"][common.RuntimeEnvironmentRunnerIDLabel+"=7"]
+	})
+
+	tests := map[string]struct {
+		containers []container.Summary
+		listErr    error
+		wantError  bool
+	}{
+		"environment objects are removed": {
+			containers: []container.Summary{{ID: "env-ctr"}},
+		},
+		"environment already gone is not an error": {},
+		"release failure is logged as an error": {
+			listErr:   errors.New("daemon unavailable"),
+			wantError: true,
+		},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			c := docker.NewMockClient(t)
+			e := newTestExecutor(t, c)
+			e.Config.ID = 7
+			e.Build.ExecutorData = fakeAcquisitionKeyer{key: "acq-key"}
+			e.temporary = []string{"tmp-ctr"}
+			e.releaseOnCleanup = true
+
+			var trace bytes.Buffer
+			e.BuildLogger = buildlogger.New(&common.Trace{Writer: &trace}, logrus.NewEntry(logrus.New()), buildlogger.Options{})
+
+			c.On("ContainerList", mock.Anything, ours).Return(tt.containers, tt.listErr).Once()
+			if tt.listErr == nil {
+				for _, ctr := range tt.containers {
+					c.On("ContainerRemove", mock.Anything, ctr.ID, mock.Anything).Return(nil).Once()
+				}
+				c.On("NetworkList", mock.Anything, mock.Anything).Return([]network.Summary{}, nil).Once()
+				c.On("VolumeList", mock.Anything, mock.Anything).Return(client.VolumeListResult{}, nil).Once()
+			}
+			c.On("Close").Return(nil).Once()
+
+			e.Cleanup()
+
+			assert.Equal(t, tt.wantError, bytes.Contains(trace.Bytes(), []byte("Label-based release failed")), trace.String())
+		})
+	}
+}

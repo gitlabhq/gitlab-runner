@@ -595,3 +595,105 @@ func TestExecutor_Resume_NoSuspendResumeCapability(t *testing.T) {
 	require.ErrorAs(t, err, &buildErr)
 	assert.Equal(t, common.ConfigurationError, buildErr.FailureReason)
 }
+
+func TestExecutor_StateStorageGuard_WillSuspend_StateStorageOff(t *testing.T) {
+	// WillSuspend() + state storage off → ConfigurationError without calling
+	// Acquire or Resume.
+	const (
+		newKey       = "new-key-storage-off"
+		suspendedKey = "ignored-key-storage-off"
+	)
+
+	e, _, me, opts := setupResumeTest(t, "test-token-storage-off", newKey, suspendedKey)
+
+	// Override the build to have SuspendOnSuccess without a runtime key
+	// so it's a fresh suspend job (not a resume), and the state storage guard fires.
+	opts.Build.Job.SuspendOptions.RuntimeEnvironmentKey = ""
+	opts.Build.Job.SuspendOptions.SuspendOnSuccess = true
+
+	if opts.Config.Autoscaler == nil {
+		opts.Config.Autoscaler = &common.AutoscalerConfig{}
+	}
+	opts.Config.Autoscaler.StateStorage.Enabled = false
+
+	// No Acquire or Prepare expectations — guard must short-circuit before
+	// calling getRunnerTaskscaler or Acquire.
+	_ = me
+
+	err := e.Prepare(opts)
+	require.Error(t, err)
+	var buildErr *common.BuildError
+	require.ErrorAs(t, err, &buildErr)
+	assert.Equal(t, common.ConfigurationError, buildErr.FailureReason)
+	assert.Contains(t, err.Error(), "state_storage")
+}
+
+func TestExecutor_StateStorageGuard_WillSuspend_StateStorageOn_Proceeds(t *testing.T) {
+	// WillSuspend() + state storage on → proceeds to Acquire and Prepare.
+	const (
+		newKey       = "new-key-storage-on"
+		suspendedKey = "ignored-key-storage-on"
+	)
+
+	e, ts, me, opts := setupResumeTest(t, "test-token-storage-on", newKey, suspendedKey)
+
+	opts.Build.Job.SuspendOptions.RuntimeEnvironmentKey = ""
+	opts.Build.Job.SuspendOptions.SuspendOnSuccess = true
+	opts.Build.ExecutorData = &acquisitionRef{key: newKey}
+
+	if opts.Config.Autoscaler == nil {
+		opts.Config.Autoscaler = &common.AutoscalerConfig{}
+	}
+	opts.Config.Autoscaler.StateStorage.Enabled = true
+
+	ts.EXPECT().Acquire(mock.Anything, newKey).Return(mocks.NewAcquisition(t), nil).Once()
+	me.MockExecutor.On("Prepare", mock.Anything).Return(nil).Once()
+
+	err := e.Prepare(opts)
+	require.NoError(t, err)
+}
+
+func TestExecutor_StateStorageGuard_FFOff_Proceeds(t *testing.T) {
+	// FF off → WillSuspend() returns false → guard not checked → proceeds normally.
+	const newKey = "new-key-ff-off"
+
+	runnerCfg := &common.RunnerConfig{}
+	runnerCfg.Token = "test-token-ff-off"
+	runnerCfg.ID = 101
+	// SuspendableEnvironments NOT set → WillSuspend() returns false.
+
+	ts := mocks.NewTaskscaler(t)
+	ep := common.NewMockExecutorProvider(t)
+	me := common.NewMockExecutor(t)
+
+	p := New(ep, Config{}).(*provider)
+	p.taskscalerNew = mockTaskscalerNew(ts, false)
+	p.fleetingRunPlugin = mockFleetingRunPlugin(false)
+	p.scalers = map[string]scaler{
+		runnerScalerKey(runnerCfg): {internal: ts, shutdown: func(_ context.Context) {}},
+	}
+
+	build := &common.Build{
+		Runner:       runnerCfg,
+		ExecutorData: &acquisitionRef{key: newKey},
+	}
+	// SuspendOnSuccess set but FF off → WillSuspend() returns false.
+	build.Job.SuspendOptions.SuspendOnSuccess = true
+
+	e := &executor{
+		Executor: me,
+		provider: p,
+		build:    build,
+		config:   *runnerCfg,
+	}
+
+	ts.EXPECT().Acquire(mock.Anything, newKey).Return(mocks.NewAcquisition(t), nil).Once()
+	me.On("Prepare", mock.Anything).Return(nil).Once()
+
+	err := e.Prepare(common.ExecutorPrepareOptions{
+		Config:  runnerCfg,
+		Context: t.Context(),
+		Build:   build,
+	})
+	require.NoError(t, err)
+}
