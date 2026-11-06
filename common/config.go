@@ -271,16 +271,19 @@ func (p *StringOrArray) UnmarshalTOML(data any) error {
 	return nil
 }
 
+// UnmarshalFlag appends the comma-separated items of a command line flag or
+// environment variable value to the list, so a repeated flag accumulates like
+// the other list flags and "always,if-not-present" gives the same list as
+// "always" and "if-not-present" passed separately. An empty value clears the
+// list.
 func (p *StringOrArray) UnmarshalFlag(value string) error {
 	if value == "" {
 		*p = StringOrArray{}
 		return nil
 	}
-	result := StringOrArray{}
 	for item := range strings.SplitSeq(value, ",") {
-		result = append(result, strings.TrimSpace(item))
+		*p = append(*p, strings.TrimSpace(item))
 	}
-	*p = result
 	return nil
 }
 
