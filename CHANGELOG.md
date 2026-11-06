@@ -158,6 +158,18 @@
 - Document installing the Helm chart from an OCI registry [!7398](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/7398)
 - go: Update module github.com/aws/aws-sdk-go-v2/service/s3 to v1.111.0 [!7362](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/7362)
 
+## v19.4.4 (2026-11-05)
+
+### Bug fixes
+
+- Update release page package links to match renamed deb/rpm artifacts [!7787](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/7787)
+- Backport restricting ID-based network disconnect to Windows to 19-4-stable [!7771](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/7771)
+- Fix release page link for the Linux ppc64le binary [!7791](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/7791)
+
+### Maintenance
+
+- Update base images to fix brotli, xz-libs, docker-machine CVEs [!7784](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/7784)
+
 ## v19.4.3 (2026-10-28)
 
 ### Bug fixes
