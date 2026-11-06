@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"io"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -19,6 +20,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/common/buildtest"
 	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
+	"gitlab.com/gitlab-org/gitlab-runner/executors/internal/readywriter"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 	"gitlab.com/gitlab-org/gitlab-runner/steps"
 	"gitlab.com/gitlab-org/step-runner/schema/v1"
@@ -285,7 +287,9 @@ func TestAwaitStepRunnerReady(t *testing.T) {
 			},
 			assert: func(t *testing.T, socketPath string, err error) {
 				assert.Empty(t, socketPath)
-				require.Error(t, err)
+				var buildErr *common.BuildError
+				require.ErrorAs(t, err, &buildErr)
+				assert.Equal(t, common.ScriptFailure, buildErr.FailureReason)
 				assert.Contains(t, err.Error(), "ready channel closed")
 			},
 		},
@@ -296,7 +300,9 @@ func TestAwaitStepRunnerReady(t *testing.T) {
 			},
 			assert: func(t *testing.T, socketPath string, err error) {
 				assert.Empty(t, socketPath)
-				require.Error(t, err)
+				var buildErr *common.BuildError
+				require.ErrorAs(t, err, &buildErr)
+				assert.Equal(t, common.ScriptFailure, buildErr.FailureReason)
 				assert.Contains(t, err.Error(), "missing socket path")
 			},
 		},
@@ -421,6 +427,43 @@ func TestAwaitStepRunnerReady(t *testing.T) {
 			tt.assert(t, socketPath, err)
 			assert.Equal(t, 1, logCancelCalls,
 				"logCancel must be invoked exactly once")
+		})
+	}
+}
+
+// The ready line is read from build container output, which the job's image
+// can also write. A malformed one must be a script failure, not left
+// unclassified: wrapStepStageErr reports an unclassified Connect() failure as
+// a runner system failure, which a job could otherwise force.
+func TestAwaitStepRunnerReady_MalformedReadyLine(t *testing.T) {
+	tests := map[string]struct {
+		line        string
+		expectedErr string
+	}{
+		"empty socket path": {
+			line:        "step-runner is listening on socket \n",
+			expectedErr: "missing socket path",
+		},
+		"overlong socket path": {
+			line:        "step-runner is listening on socket /" + strings.Repeat("a", 4*1024) + "\n",
+			expectedErr: "ready channel closed",
+		},
+	}
+
+	for tn, tc := range tests {
+		t.Run(tn, func(t *testing.T) {
+			rw, readyCh := readywriter.New(t.Context(), io.Discard)
+			_, err := rw.Write([]byte(tc.line))
+			require.NoError(t, err)
+
+			_, err = awaitStepRunnerReady(
+				t.Context(), func() {}, readyCh, make(chan error),
+				make(chan error), make(chan error))
+
+			var buildErr *common.BuildError
+			require.ErrorAs(t, err, &buildErr)
+			assert.Equal(t, common.ScriptFailure, buildErr.FailureReason)
+			assert.Contains(t, err.Error(), tc.expectedErr)
 		})
 	}
 }

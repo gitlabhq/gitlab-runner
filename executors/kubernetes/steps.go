@@ -179,12 +179,20 @@ func awaitStepRunnerReady(
 		// All further output flows over the bidirectional connection;
 		// the log stream is no longer needed.
 		logCancel()
+		// Classify a malformed ready line as a script failure, as the Docker
+		// executor does: wrapStepStageErr reports an unclassified Connect()
+		// failure as a runner system failure.
 		if !ok {
-			return "", errors.New("step-runner ready channel closed")
+			return "", &common.BuildError{
+				Inner:         errors.New("step-runner ready channel closed"),
+				FailureReason: common.ScriptFailure,
+			}
 		}
 		if socketPath == "" {
-			return "", errors.New(
-				"step-runner ready message missing socket path")
+			return "", &common.BuildError{
+				Inner:         errors.New("step-runner ready message missing socket path"),
+				FailureReason: common.ScriptFailure,
+			}
 		}
 		return socketPath, nil
 

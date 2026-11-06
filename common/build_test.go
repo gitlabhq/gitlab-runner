@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -5719,6 +5720,38 @@ func Test_wrapStepStageErr(t *testing.T) {
 			err:            fmt.Errorf("executing steps request: %w", errors.New("something broke")),
 			expectedReason: "",
 		},
+		"connect error": {
+			err: &steps.ConnectError{
+				Err: fmt.Errorf("creating connect dialer: %w", errors.New("ensuring steps pod: pod is invalid")),
+			},
+			expectedReason: RunnerSystemFailure,
+		},
+		"connect error with classified BuildError": {
+			err: &steps.ConnectError{
+				Err: fmt.Errorf("creating connect dialer: %w", &BuildError{
+					Inner:         errors.New("OOMKilled"),
+					FailureReason: ConfigurationError,
+				}),
+			},
+			expectedReason: ConfigurationError,
+		},
+		"connect error with unclassified BuildError": {
+			err: &steps.ConnectError{
+				Err: fmt.Errorf("creating connect dialer: %w", &BuildError{
+					Inner: errors.New(`pod "runner-abc" status is "Unknown"`),
+				}),
+			},
+			expectedReason: RunnerSystemFailure,
+		},
+		"connect error with exit code BuildError": {
+			err: &steps.ConnectError{
+				Err: fmt.Errorf("creating connect dialer: %w", &BuildError{
+					Inner:    errors.New("exit code 1"),
+					ExitCode: 1,
+				}),
+			},
+			expectedReason: "",
+		},
 	}
 
 	for tn, tc := range tests {
@@ -5825,6 +5858,145 @@ func TestBuild_executeStepStage_NilRegisterCancel(t *testing.T) {
 	// panicking on the nil registerCancel.
 	_ = err
 	assert.Empty(t, server.Cancels(), "no Cancel RPC should fire when registerCancel is nil")
+}
+
+// TestBuild_executeStepStage_ConnectFailure covers failures returned by a
+// steps.Connector before step-runner is reachable. Unclassified ones are
+// runner-side and must report RunnerSystemFailure, as attach dispatch does;
+// a classification the executor already made must be kept.
+func TestBuild_executeStepStage_ConnectFailure(t *testing.T) {
+	tests := map[string]struct {
+		connectErr       error
+		expectedNil      bool
+		expectedReason   spec.JobFailureReason
+		expectedExitCode int
+	}{
+		"unclassified error is a system failure": {
+			connectErr: fmt.Errorf("streaming build container logs: %w",
+				errors.New(`Get "https://10.0.0.1:10250/containerLogs/ns/pod/build?follow=true": remote error: tls: internal error`)),
+			expectedReason: RunnerSystemFailure,
+		},
+		"executor failure reason is kept": {
+			connectErr: &BuildError{
+				Inner:         errors.New("image pull failed"),
+				FailureReason: ImagePullFailure,
+			},
+			expectedReason: ImagePullFailure,
+		},
+		"malformed ready line stays a script failure": {
+			connectErr: &BuildError{
+				Inner:         errors.New("step-runner ready message missing socket path"),
+				FailureReason: ScriptFailure,
+			},
+			expectedReason: ScriptFailure,
+		},
+		"container exit code stays a script failure": {
+			connectErr: &BuildError{
+				Inner:    errors.New("exit code 3"),
+				ExitCode: 3,
+			},
+			expectedReason:   "",
+			expectedExitCode: 3,
+		},
+		"no step runner but okay": {
+			connectErr:  steps.ErrNoStepRunnerButOkay,
+			expectedNil: true,
+		},
+	}
+
+	for tn, tc := range tests {
+		t.Run(tn, func(t *testing.T) {
+			connector := steps.NewMockConnector(t)
+			connector.EXPECT().Connect(mock.Anything).Return(nil, tc.connectErr).Once()
+
+			logger, _ := test.NewNullLogger()
+			build := &Build{
+				Job:          spec.Job{ID: 1},
+				Runner:       &RunnerConfig{},
+				allVariables: spec.Variables{},
+				BuildDir:     t.TempDir(),
+				logger:       buildlogger.New(nil, logrus.NewEntry(logger), buildlogger.Options{}),
+			}
+
+			err := build.executeStepStage(t.Context(), connector, "concrete", []schema.Step{}, nil)
+
+			if tc.expectedNil {
+				assert.NoError(t, err)
+				return
+			}
+
+			var berr *BuildError
+			require.ErrorAs(t, err, &berr)
+			assert.Equal(t, tc.expectedReason, berr.FailureReason)
+			assert.Equal(t, tc.expectedExitCode, berr.ExitCode)
+		})
+	}
+}
+
+type mockConnectorExecutor struct {
+	*MockExecutor
+	*steps.MockConnector
+}
+
+// A Connect() cut short by the job timeout or a cancel must still be reported
+// as a timeout or a cancel, not as the runner system failure that
+// wrapStepStageErr gives an unclassified Connect() failure.
+func TestBuild_Run_ConcreteConnectInterrupted(t *testing.T) {
+	tests := map[string]struct {
+		cancel         bool
+		expectedReason spec.JobFailureReason
+	}{
+		"job timeout": {
+			expectedReason: JobExecutionTimeout,
+		},
+		"cancel": {
+			cancel:         true,
+			expectedReason: JobCanceled,
+		},
+	}
+
+	for tn, tc := range tests {
+		t.Run(tn, func(t *testing.T) {
+			synctest.Test(t, func(t *testing.T) {
+				executor := &mockConnectorExecutor{
+					MockExecutor:  NewMockExecutor(t),
+					MockConnector: steps.NewMockConnector(t),
+				}
+				provider := NewMockExecutorProvider(t)
+				provider.On("GetFeatures", mock.Anything).Return(nil).Once()
+				provider.On("Create").Return(executor).Once()
+
+				build := registerExecutorWithSuccessfulBuild(t, provider, &RunnerConfig{
+					RunnerSettings: RunnerSettings{
+						FeatureFlags: map[string]bool{featureflags.UseConcrete: true},
+					},
+				})
+				build.Job.RunnerInfo.Timeout = 1
+
+				trace := &Trace{Writer: io.Discard}
+
+				executor.MockExecutor.On("Prepare", mock.Anything).Return(nil).Once()
+				executor.MockExecutor.On("Shell").Return(&ShellScriptInfo{Shell: "bash", Build: build, Type: NormalShell})
+				executor.MockExecutor.On("Run", mock.Anything).Return(nil).Maybe()
+				executor.MockExecutor.On("Finish", mock.Anything).Once()
+				executor.MockExecutor.On("Cleanup").Once()
+				executor.MockConnector.EXPECT().Connect(mock.Anything).
+					RunAndReturn(func(ctx context.Context) (func() (io.ReadWriteCloser, error), error) {
+						if tc.cancel {
+							trace.Cancel()
+						}
+						<-ctx.Done()
+						return nil, ctx.Err()
+					}).Once()
+
+				err := build.Run(t.Context(), &Config{}, trace)
+
+				var berr *BuildError
+				require.ErrorAs(t, err, &berr)
+				assert.Equal(t, tc.expectedReason, berr.FailureReason)
+			})
+		})
+	}
 }
 
 func TestRun_ShouldSuspend_TriggersExecutorSuspendAndLogs(t *testing.T) {

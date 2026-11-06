@@ -2919,11 +2919,6 @@ func testKubernetesContainerHookFeatureFlag(t *testing.T, featureFlagName string
 		t.Run(tn, func(t *testing.T) {
 			t.Parallel()
 
-			if tn == "invalid hook configuration: more than one handler type" &&
-				featureFlagName == featureflags.UseConcrete && featureFlagValue {
-				t.Skip("pre-step error not classified as system_failure under Concrete dispatch")
-			}
-
 			// withShell needs to fire before withDevHelperImage (inside
 			// getTestBuild) so pwsh sub-cases pick the -pwsh helper artifact.
 			build := getTestBuild(t, common.GetRemoteSuccessfulBuild, withShell(tt.shell))

@@ -659,19 +659,48 @@ func wrapStepStageErr(err error) error {
 		}
 	}
 
-	// If no exit code was found via "exit status" parsing, propagate the exit
-	// code from an inner BuildError if one exists. This handles the case where
-	// Docker's Connect() returns BuildError{ExitCode: N} (container exits before
-	// step-runner is ready) — that path already uses "exit code N" format so the
-	// string-cut above does not match.
-	if berr.ExitCode == 0 {
-		var innerBuildErr *BuildError
-		if errors.As(err, &innerBuildErr) && innerBuildErr.ExitCode != 0 {
+	applyConnectClassification(berr, err)
+
+	return berr
+}
+
+// applyConnectClassification fills in berr from what the executor's Connect()
+// reported: the exit code and failure reason of an inner BuildError, when the
+// checks in wrapStepStageErr did not set them, or RunnerSystemFailure for a
+// Connect() failure the executor did not classify.
+func applyConnectClassification(berr *BuildError, err error) {
+	// Propagate the exit code and failure reason of an inner BuildError, if
+	// one exists, when wrapStepStageErr's checks did not set them. This handles
+	// the case where Docker's Connect() returns BuildError{ExitCode: N}
+	// (container exits before step-runner is ready) — that path already uses
+	// "exit code N" format so the "exit status" parsing does not match — and
+	// keeps a reason the executor already chose, such as ImagePullFailure.
+	var innerBuildErr *BuildError
+	hasInnerBuildErr := errors.As(err, &innerBuildErr)
+	if hasInnerBuildErr {
+		if berr.ExitCode == 0 {
 			berr.ExitCode = innerBuildErr.ExitCode
+		}
+		if berr.FailureReason == "" {
+			berr.FailureReason = innerBuildErr.FailureReason
 		}
 	}
 
-	return berr
+	// A Connect() failure the executor did not classify happened before
+	// step-runner was reachable, so it is reported as a runner-side failure.
+	// Job code can run before that point (Docker's "job script as entrypoint"
+	// mode), so an executor must classify any failure that job output can
+	// cause, such as a malformed step-runner ready line. An inner BuildError
+	// counts as a classification only when it carries an exit code or a
+	// failure reason. The Kubernetes executor wraps a pod that left Running
+	// for a phase other than Failed (such as Unknown, when its node is lost)
+	// in a bare BuildError, which classifies nothing: that is a runner-side
+	// failure too.
+	classified := hasInnerBuildErr && (innerBuildErr.ExitCode != 0 || innerBuildErr.FailureReason != "")
+	var connErr *steps.ConnectError
+	if !classified && errors.As(err, &connErr) {
+		berr.FailureReason = RunnerSystemFailure
+	}
 }
 
 //nolint:gocognit

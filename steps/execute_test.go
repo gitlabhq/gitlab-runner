@@ -4,6 +4,8 @@ package steps_test
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"io"
 	"strconv"
 	"testing"
@@ -11,6 +13,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
 	"gitlab.com/gitlab-org/step-runner/pkg/api/client"
@@ -124,4 +127,33 @@ func TestExecute_NilRegisterCancel_DoesNotPanic(t *testing.T) {
 	}
 
 	assert.Empty(t, server.Cancels(), "no Cancel RPC should fire when RegisterCancel is nil")
+}
+
+// TestExecute_ConnectFailure checks that a Connector failure surfaces as a
+// ConnectError, so callers can tell it from a failure reported once
+// step-runner is running, and that the wrapped error stays reachable.
+func TestExecute_ConnectFailure(t *testing.T) {
+	tests := map[string]error{
+		"plain error":                errors.New("streaming build container logs: remote error: tls: internal error"),
+		"no step runner but okay":    steps.ErrNoStepRunnerButOkay,
+		"wrapped no step runner err": fmt.Errorf("container exited: %w", steps.ErrNoStepRunnerButOkay),
+	}
+
+	for tn, connectErr := range tests {
+		t.Run(tn, func(t *testing.T) {
+			connector := steps.NewMockConnector(t)
+			connector.EXPECT().Connect(mock.Anything).Return(nil, connectErr).Once()
+
+			err := steps.Execute(t.Context(), steps.Options{
+				Connector: connector,
+				Trace:     io.Discard,
+				Log:       logrus.NewEntry(&logrus.Logger{}),
+			})
+
+			var connErr *steps.ConnectError
+			require.ErrorAs(t, err, &connErr)
+			assert.ErrorIs(t, err, connectErr)
+			assert.Contains(t, err.Error(), "creating connect dialer: ")
+		})
+	}
 }

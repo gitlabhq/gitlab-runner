@@ -3,6 +3,7 @@ package instance
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"strings"
@@ -146,12 +147,18 @@ func (e *executor) Connect(ctx context.Context) (func() (io.ReadWriteCloser, err
 
 	case err := <-serveErrCh:
 		_ = serveStop.Close()
-		if err == nil {
-			// A clean exit before the marker means serve stopped without ever
-			// advertising a socket; %w on a nil error would render as "%!w(<nil>)".
-			return nil, fmt.Errorf("step-runner serve exited before becoming ready")
+		// The serve command is the runner's own, so its exit is a runner system
+		// failure. Classify it here: the client reports a non-zero exit as a
+		// BuildError with an exit code, which wrapStepStageErr would otherwise
+		// report as a script failure.
+		inner := errors.New("step-runner serve exited before becoming ready")
+		if err != nil {
+			inner = fmt.Errorf("step-runner serve exited before becoming ready: %w", err)
 		}
-		return nil, fmt.Errorf("step-runner serve exited before becoming ready: %w", err)
+		return nil, &common.BuildError{
+			Inner:         inner,
+			FailureReason: common.RunnerSystemFailure,
+		}
 
 	case <-ctx.Done():
 		_ = serveStop.Close()
