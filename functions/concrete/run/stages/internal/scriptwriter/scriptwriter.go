@@ -87,6 +87,8 @@ func (b *Builder) buildBashScript(lines []string) string {
 			continue
 		}
 
+		lineCheck := exitCodeCheckSuffix(line, checkErr)
+
 		firstLine, _, multiline := strings.Cut(line, "\n")
 		if multiline && b.ScriptSections {
 			sectionName := fmt.Sprintf("%s_%d", b.stepName, i)
@@ -99,7 +101,7 @@ func (b *Builder) buildBashScript(lines []string) string {
 				`printf "section_end:%%s:%s\r\033[0K" "$(date +%%s)"`,
 				sectionName,
 			) + "\n")
-			body.WriteString(line + checkErr + "\n")
+			body.WriteString(line + lineCheck + "\n")
 			continue
 		}
 
@@ -109,7 +111,7 @@ func (b *Builder) buildBashScript(lines []string) string {
 			body.WriteString("echo " + shellEscape("\033[32;1m$ "+line+"\033[0m") + "\n")
 		}
 
-		body.WriteString(line + checkErr + "\n")
+		body.WriteString(line + lineCheck + "\n")
 	}
 
 	var buf strings.Builder
@@ -134,6 +136,44 @@ func (b *Builder) buildBashScript(lines []string) string {
 	buf.WriteString("exit 0\n")
 
 	return buf.String()
+}
+
+// exitCodeCheckSuffix returns the post-command exit-code check for lines that may
+// carry it, and "" for lines that must not (see exitCodeCheckApplies). The check
+// reads $? as the result of the line it follows, so it is appended per line rather
+// than unconditionally. See https://gitlab.com/gitlab-org/gitlab-runner/-/work_items/39634.
+func exitCodeCheckSuffix(line, checkErr string) string {
+	if !exitCodeCheckApplies(line) {
+		return ""
+	}
+	return checkErr
+}
+
+// exitCodeCheckApplies reports whether the post-command exit-code check may be
+// appended after line. The check reads $? from the last line of a multi-line
+// item, so that line decides. It must not follow a bare "else" (where $? still
+// holds the failed if-condition's status), a negated command "! cmd" (where $?
+// is non-zero when cmd succeeds), "fi" or "done" (where $? is the status of the
+// last body command, which may be such a negation), nor "until ...; do" (where
+// $? is the failed condition's status). Failures that "set -o errexit" ignores,
+// such as "false && true", must still abort: that is the purpose of the check.
+// After "then" and "while ...; do", $? is 0, because the body runs only when
+// the condition succeeded.
+// See https://gitlab.com/gitlab-org/gitlab-runner/-/work_items/39634.
+func exitCodeCheckApplies(line string) bool {
+	fields := strings.Fields(line[strings.LastIndexByte(line, '\n')+1:])
+	if len(fields) == 0 {
+		return true
+	}
+	switch fields[0] {
+	case "!", "fi", "done":
+		return false
+	case "until":
+		return fields[len(fields)-1] != "do"
+	case "else":
+		return len(fields) > 1 && !strings.HasPrefix(fields[1], "#")
+	}
+	return true
 }
 
 func (b *Builder) buildPwshScript(lines []string) string {

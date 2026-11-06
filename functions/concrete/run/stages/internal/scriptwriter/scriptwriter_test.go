@@ -260,7 +260,7 @@ func TestBashScript_Execute(t *testing.T) {
 	requireShell(t, ShellBash)
 
 	// elseLines and negationLines are the two shapes that tripped the removed
-	// restore. Both are re-run with ExitCodeCheck below, where they still fail.
+	// restore. Both are also run with ExitCodeCheck below.
 	elseLines := []string{
 		// TAKE_THEN is unset, so the else branch is taken.
 		`if [ "$TAKE_THEN" = "true" ]; then`,
@@ -288,21 +288,11 @@ func TestBashScript_Execute(t *testing.T) {
 			contains: []string{"ELSE_RAN", "AFTER_FI"},
 			excludes: []string{"THEN_RAN"},
 		},
-		// The post-command exit-code check reads $? at the top of the else branch
-		// for exactly the same reason the removed restore did, so it re-raises the
-		// failed if-condition's status and aborts before the else body runs. That
-		// is a pre-existing defect shared with the legacy generators
-		// (shells/bash.go CheckForErrors, driven per script line by
-		// shells/abstract.go writeCommands, and functions/script_legacy), not
-		// something this change introduced, and FF_ENABLE_BASH_EXIT_CODE_CHECK is
-		// off by default. Recorded here so the gap is visible rather than merely
-		// uncovered; un-skip these when gitlab-runner#39634 is fixed.
 		"else branch runs to completion with exit code check": {
 			lines:    elseLines,
 			opts:     []func(*Builder){withExitCodeCheck},
 			contains: []string{"ELSE_RAN", "AFTER_FI"},
 			excludes: []string{"THEN_RAN"},
-			skip:     "known gap gitlab-runner#39634: FF_ENABLE_BASH_EXIT_CODE_CHECK re-raises the failed if-condition's status at the top of the else branch",
 		},
 		"elif branch runs to completion": {
 			lines: []string{
@@ -326,7 +316,104 @@ func TestBashScript_Execute(t *testing.T) {
 			lines:    negationLines,
 			opts:     []func(*Builder){withExitCodeCheck},
 			contains: []string{"AFTER_NEGATION"},
-			skip:     "known gap gitlab-runner#39634: FF_ENABLE_BASH_EXIT_CODE_CHECK re-raises the negated command's non-zero status",
+		},
+		"else with trailing comment runs to completion with exit code check": {
+			lines: []string{
+				`if [ "$TAKE_THEN" = "true" ]; then`,
+				`echo THEN_RAN`,
+				`else # fallback`,
+				`echo ELSE_RAN`,
+				`fi`,
+				`echo AFTER_FI`,
+			},
+			opts:     []func(*Builder){withExitCodeCheck},
+			contains: []string{"ELSE_RAN", "AFTER_FI"},
+			excludes: []string{"THEN_RAN"},
+		},
+		"negation with a tab after the bang does not abort with exit code check": {
+			lines:    []string{"!\ttrue", `echo AFTER_NEGATION`},
+			opts:     []func(*Builder){withExitCodeCheck},
+			contains: []string{"AFTER_NEGATION"},
+		},
+		"if body ending in negation does not abort with exit code check": {
+			lines: []string{
+				`if true; then`,
+				`! true`,
+				`fi`,
+				`echo AFTER_FI`,
+			},
+			opts:     []func(*Builder){withExitCodeCheck},
+			contains: []string{"AFTER_FI"},
+		},
+		"loop body ending in negation does not abort with exit code check": {
+			lines: []string{
+				`for i in 1; do`,
+				`! true`,
+				`done`,
+				`echo AFTER_DONE`,
+			},
+			opts:     []func(*Builder){withExitCodeCheck},
+			contains: []string{"AFTER_DONE"},
+		},
+		"until loop runs to completion with exit code check": {
+			lines: []string{
+				`n=0`,
+				`until [ $n -ge 1 ]; do`,
+				`n=1`,
+				`done`,
+				`echo AFTER_UNTIL`,
+			},
+			opts:     []func(*Builder){withExitCodeCheck},
+			contains: []string{"AFTER_UNTIL"},
+		},
+		// Guards the exact-match in exitCodeCheckApplies: the inner "fi" closes
+		// the nested if, and the outer "else" is still a bare else. Widening
+		// either case to a prefix or substring match breaks this.
+		"nested else runs to completion with exit code check": {
+			lines: []string{
+				`if false; then`,
+				`echo OUTER_THEN`,
+				`else`,
+				`if false; then`,
+				`echo INNER_THEN`,
+				`else`,
+				`echo INNER_ELSE`,
+				`fi`,
+				`fi`,
+				`echo AFTER_FI`,
+			},
+			opts:     []func(*Builder){withExitCodeCheck},
+			contains: []string{"INNER_ELSE", "AFTER_FI"},
+			excludes: []string{"OUTER_THEN", "INNER_THEN"},
+		},
+		// A multi-line script: item (a YAML "- |" block) reaches
+		// exitCodeCheckApplies as one string, so its last line decides, not the
+		// first word of the whole item.
+		"multi-line item whose last line is a failing list aborts with exit code check": {
+			lines:    []string{"! false\nfalse && true", `echo NEVER_RAN`},
+			opts:     []func(*Builder){withExitCodeCheck},
+			wantCode: 1,
+			excludes: []string{"NEVER_RAN"},
+		},
+		"multi-line item ending in a negation does not abort with exit code check": {
+			lines:    []string{"echo FIRST\n! true", `echo AFTER_ITEM`},
+			opts:     []func(*Builder){withExitCodeCheck},
+			contains: []string{"FIRST", "AFTER_ITEM"},
+		},
+		"multi-line item ending in fi after a negation does not abort with exit code check": {
+			lines:    []string{"if true; then\n! true\nfi", `echo AFTER_FI`},
+			opts:     []func(*Builder){withExitCodeCheck},
+			contains: []string{"AFTER_FI"},
+		},
+		"multi-line item ending in done after a negation does not abort with exit code check": {
+			lines:    []string{"for i in 1; do\n! true\ndone", `echo AFTER_DONE`},
+			opts:     []func(*Builder){withExitCodeCheck},
+			contains: []string{"AFTER_DONE"},
+		},
+		"multi-line item ending in a negation does not abort with sections and exit code check": {
+			lines:    []string{"echo FIRST\n! true", `echo AFTER_ITEM`},
+			opts:     []func(*Builder){withExitCodeCheck, withScriptSections},
+			contains: []string{"FIRST", "AFTER_ITEM"},
 		},
 		// errexit must still propagate a plain failing command...
 		"failing command still aborts the script": {
