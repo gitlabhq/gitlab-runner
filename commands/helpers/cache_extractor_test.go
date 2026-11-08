@@ -322,6 +322,73 @@ func TestCacheExtractorRemoteServerFailOnInvalidServer(t *testing.T) {
 	assert.Error(t, err)
 }
 
+// TestCacheExtractorRemoteServerRejectsPartialContent covers the sequential download of a presigned
+// URL, a GET without Range, answered with 206 Partial Content. A caching proxy whose cache key leaves
+// out Range answers it that way once it stored a 206 for an earlier Range request of the same object,
+// such as the bytes=0-0 probe of a runner with FF_USE_PARALLEL_CACHE_TRANSFER. The body is a part of
+// the object, so the download fails and writes no archive, instead of keeping that part as an archive
+// with the object's Last-Modified that every later run finds up to date. An archive already on disk
+// and up to date is still used, as it is for any answer, since nothing is downloaded for it.
+func TestCacheExtractorRemoteServerRejectsPartialContent(t *testing.T) {
+	const earlierArchive = "the archive of an earlier run"
+	lastModified := time.Date(2020, 5, 1, 12, 0, 0, 0, time.UTC)
+
+	tests := map[string]struct {
+		archiveOnDisk bool
+		wantErr       bool
+		wantArchive   string
+	}{
+		"no archive on disk": {
+			wantErr: true,
+		},
+		"archive on disk and up to date": {
+			archiveOnDisk: true,
+			wantArchive:   earlierArchive,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			cdTempDir(t)
+
+			if tc.archiveOnDisk {
+				require.NoError(t, os.WriteFile(cacheExtractorArchive, []byte(earlierArchive), 0o600))
+				require.NoError(t, os.Chtimes(cacheExtractorArchive, time.Now(), lastModified.Add(time.Hour)))
+			}
+
+			payload := parallelTestZipBytes(t)
+			var requests atomic.Int64
+			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				requests.Add(1)
+				w.Header().Set("Last-Modified", lastModified.Format(http.TimeFormat))
+				w.Header().Set("Content-Range", fmt.Sprintf("bytes 0-0/%d", len(payload)))
+				w.WriteHeader(http.StatusPartialContent)
+				_, _ = w.Write(payload[:1])
+			}))
+			t.Cleanup(ts.Close)
+
+			cmd := CacheExtractorCommand{
+				File:               cacheExtractorArchive,
+				URL:                ts.URL + "/cache.zip",
+				TransferBufferSize: defaultCacheTransferBufferSize,
+			}
+
+			err := cmd.handlePresignedURL()
+			assert.Equal(t, int64(1), requests.Load(), "the sequential download makes one GET")
+			if tc.wantErr {
+				require.Error(t, err, "a 206 to a GET without Range should fail the download")
+				assert.ErrorContains(t, err, "206 Partial Content")
+				assert.NoFileExists(t, cacheExtractorArchive)
+				return
+			}
+			require.NoError(t, err)
+			got, err := os.ReadFile(cacheExtractorArchive)
+			require.NoError(t, err)
+			assert.Equal(t, tc.wantArchive, string(got))
+		})
+	}
+}
+
 func TestSelectPresignedURL(t *testing.T) {
 	now := time.Now().UTC().Truncate(time.Second)
 	older := now.Add(-1 * time.Hour)
