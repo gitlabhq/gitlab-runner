@@ -334,6 +334,14 @@ func (c *CacheExtractorCommand) downloadPresignedSequential() error {
 		return nil
 	}
 
+	// getCache accepts any 2xx, but this GET carries no Range, so only a 200 is known to hold the
+	// whole object as stored. A caching proxy whose cache key leaves out Range answers it with a 206
+	// it stored for an earlier Range request, and saving that part would leave an archive that every
+	// later run finds up to date.
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("received: %s, but a download without Range needs 200 OK with the whole object; a caching proxy between the runner and the cache server may be replaying a stored partial response", resp.Status)
+	}
+
 	etag := resp.Header.Get("ETag")
 	cleanedURL := url_helpers.CleanURL(selectedURL)
 	contentLength := getRemoteCacheSize(resp)
