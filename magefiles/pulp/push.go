@@ -111,8 +111,9 @@ type (
 // pulpRetryErrors matches stderr output of pulp commands that failed for a reason worth retrying.
 var pulpRetryErrors = []*regexp.Regexp{
 	// Two concurrent uploads of the same file race to create the artifact. The loser fails with this
-	// and succeeds on retry, because by then the artifact exists and is reused.
-	regexp.MustCompile(`Artifact with sha256 checksum of '.*' already exists`),
+	// and succeeds on retry: the Pulp task then finds the artifact by its sha256 and reuses it. Pulp checks
+	// sha256, sha384 and sha512 for uniqueness, so the error can name any of them.
+	regexp.MustCompile(`Artifact with sha(256|384|512) checksum of '.*' already exists`),
 	// pulp.gitlab.com sits behind Cloudflare, which renders 5xx responses from the origin as an HTML
 	// error page carrying the status code.
 	regexp.MustCompile(`Error reference number: 5\d\d`),

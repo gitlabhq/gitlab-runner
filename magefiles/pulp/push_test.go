@@ -370,6 +370,28 @@ func TestRetryCommandRun(t *testing.T) {
 			expectedError:   false,
 			expectedAttempt: 2,
 		},
+		"pulp: retries when the artifact already exists as a failed task with sha384": {
+			execBehavior: func(attempt int) (bool, string, error) {
+				if attempt == 1 {
+					return false, `Error: Task /pulp/api/v3/tasks/01a1a6a5-c360-7f33-a354-17e3f21ed8f7/ failed: '{'non_field_errors': [ErrorDetail(string="Artifact with sha384 checksum of '2282cbfe4bb9b59ba7e7fd2343f44a63a5b3f8626750c80fe2cc551340eae111e4e399e928d10e2cd9a0675539a774cf' already exists.", code='unique')]}'`, fmt.Errorf("exit status 1")
+				}
+				return true, "", nil
+			},
+			retryableErrs:   pulpRetryErrors,
+			expectedError:   false,
+			expectedAttempt: 2,
+		},
+		"pulp: retries when the artifact already exists as a failed task with sha512": {
+			execBehavior: func(attempt int) (bool, string, error) {
+				if attempt == 1 {
+					return false, `Error: Task /pulp/api/v3/tasks/01a1a6a5-c360-7f33-a354-17e3f21ed8f7/ failed: '{'non_field_errors': [ErrorDetail(string="Artifact with sha512 checksum of 'ab' already exists.", code='unique')]}'`, fmt.Errorf("exit status 1")
+				}
+				return true, "", nil
+			},
+			retryableErrs:   pulpRetryErrors,
+			expectedError:   false,
+			expectedAttempt: 2,
+		},
 		"pulp: does not retry a client error": {
 			execBehavior: func(attempt int) (bool, string, error) {
 				return false, `Error: {"non_field_errors":["Destination upload repository was not provided."]}`, fmt.Errorf("exit status 1")
