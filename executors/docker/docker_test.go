@@ -4301,6 +4301,19 @@ func TestPlatformForImage(t *testing.T) {
 		})
 	}
 
+	t.Run("arm64/v8 request matches an image that records no variant", func(t *testing.T) {
+		e, buffer := newExecutorWithBuffer(t)
+
+		platform := e.platformForImage(
+			&image.InspectResponse{Architecture: "arm64", Os: "linux"},
+			spec.ImageDockerOptions{Platform: "linux/arm64/v8"},
+		)
+
+		require.NotNil(t, platform)
+		assert.Equal(t, "v8", platform.Variant)
+		assert.Empty(t, buffer.String())
+	})
+
 	t.Run("no platform requested returns nil", func(t *testing.T) {
 		e, buffer := newExecutorWithBuffer(t)
 
@@ -4398,6 +4411,25 @@ func TestPlatformForImage(t *testing.T) {
 		require.NotNil(t, platform)
 		assert.Equal(t, "arm", platform.Architecture)
 		assert.Equal(t, "linux", platform.OS)
+		assert.Equal(t, "v6", platform.Variant)
+		assert.Empty(t, buffer.String())
+	})
+
+	t.Run("variant left implicit by the request is taken from the image descriptor", func(t *testing.T) {
+		e, buffer := newExecutorWithBuffer(t)
+
+		platform := e.platformForImage(
+			&image.InspectResponse{
+				Architecture: "arm",
+				Os:           "linux",
+				Descriptor: &v1.Descriptor{
+					Platform: &v1.Platform{OS: "linux", Architecture: "arm", Variant: "v6"},
+				},
+			},
+			spec.ImageDockerOptions{Platform: "linux/arm"},
+		)
+
+		require.NotNil(t, platform)
 		assert.Equal(t, "v6", platform.Variant)
 		assert.Empty(t, buffer.String())
 	})

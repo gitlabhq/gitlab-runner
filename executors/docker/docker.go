@@ -594,15 +594,17 @@ func (e *executor) platformForImage(image *image.InspectResponse, dockerOptions 
 	// warned about a normalized one.
 	platform, err := pull.ParsePlatform(dockerOptions.Platform, nil)
 	if err != nil {
+		e.BuildLogger.Debugln(fmt.Sprintf("Ignoring unparsable platform %q: %v", dockerOptions.Platform, err))
 		return nil
 	}
 
 	if pull.PlatformMatchesImage(platform, image) {
+		have := pull.ImagePlatform(image)
 		if platform.OSVersion == "" {
-			platform.OSVersion = image.OsVersion
+			platform.OSVersion = have.OSVersion
 		}
 		if platform.Variant == "" {
-			platform.Variant = image.Variant
+			platform.Variant = have.Variant
 		}
 	} else {
 		e.BuildLogger.Warningln(fmt.Sprintf(

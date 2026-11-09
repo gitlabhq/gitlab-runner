@@ -59,6 +59,11 @@ type ManagerConfig struct {
 	APIVersion *version.Version
 }
 
+// WarningLogger is the part of a logger that ParsePlatform needs.
+type WarningLogger interface {
+	Warningln(args ...any)
+}
+
 type pullLogger interface {
 	Debugln(args ...any)
 	Infoln(args ...any)
@@ -149,7 +154,7 @@ func (m *manager) GetDockerImage(
 
 	m.logger.Println(fmt.Sprintf("Using effective pull policy of %s for container %s", pullPolicies, imageName))
 
-	// Parsed once rather than per pull policy, so its warning isn't repeated.
+	// Parsed once rather than per pull policy to avoid repeating its warning.
 	platform, err := ParsePlatform(options.Platform, m.logger)
 	if err != nil {
 		return nil, &common.BuildError{Inner: err, FailureReason: common.ConfigurationError}
@@ -212,8 +217,7 @@ func (m *manager) markImageAsUsed(imageName string, image *image.InspectResponse
 // ParsePlatform converts a platform string (e.g. "linux/arm64") into an OCI
 // platform spec, or nil if none was given. A nil logger skips the warning
 // about a normalized OS, for callers parsing a platform already warned about.
-// Exported so the docker executor can reuse it too.
-func ParsePlatform(rawPlatform string, logger pullLogger) (*ocispec.Platform, error) {
+func ParsePlatform(rawPlatform string, logger WarningLogger) (*ocispec.Platform, error) {
 	if rawPlatform == "" {
 		return nil, nil
 	}
@@ -236,32 +240,58 @@ func ParsePlatform(rawPlatform string, logger pullLogger) (*ocispec.Platform, er
 	return &platform, nil
 }
 
+// ImagePlatform returns image's platform. The containerd image store can leave
+// the top-level Architecture and Variant empty and report them in the OCI
+// descriptor instead.
+func ImagePlatform(image *image.InspectResponse) ocispec.Platform {
+	p := ocispec.Platform{
+		OS:           image.Os,
+		Architecture: image.Architecture,
+		Variant:      image.Variant,
+		OSVersion:    image.OsVersion,
+	}
+	if d := image.Descriptor; d != nil && d.Platform != nil {
+		if p.Architecture == "" {
+			p.Architecture = d.Platform.Architecture
+		}
+		if p.Variant == "" {
+			p.Variant = d.Platform.Variant
+		}
+	}
+	return p
+}
+
 // PlatformMatchesImage treats a component the request left empty as matching
-// anything, since it asks for no particular value. Exported so the docker
-// executor can reuse it too.
+// anything, since it asks for no particular value. A nil platform asks for
+// nothing, so it matches every image.
 func PlatformMatchesImage(platform *ocispec.Platform, image *image.InspectResponse) bool {
-	if platform.OS != image.Os || platform.Architecture != image.Architecture {
-		return false
-	}
-	if platform.Variant != "" && platform.Variant != image.Variant {
-		return false
-	}
-	if platform.OSVersion != "" && platform.OSVersion != image.OsVersion {
-		return false
+	if platform == nil {
+		return true
 	}
 
-	return true
+	have := ImagePlatform(image)
+	if platform.OS != have.OS || platform.Architecture != have.Architecture {
+		return false
+	}
+	// Compare normalized variants, so that the default variant of an
+	// architecture (arm64/v8) equals an image that records none.
+	if platform.Variant != "" && platforms.Normalize(*platform).Variant != platforms.Normalize(have).Variant {
+		return false
+	}
+	return platform.OSVersion == "" || windowsBuild(platform.OSVersion) == windowsBuild(have.OSVersion)
+}
+
+// windowsBuild drops the revision from a Windows OS version
+// (major.minor.build.revision), as containerd does when matching platforms.
+func windowsBuild(osVersion string) string {
+	parts := strings.SplitN(osVersion, ".", 4)
+	return strings.Join(parts[:min(len(parts), 3)], ".")
 }
 
 // FormatImagePlatform formats image's platform as an "os/arch[/variant]"
-// specifier. Exported so the docker executor can reuse it too.
+// specifier.
 func FormatImagePlatform(image *image.InspectResponse) string {
-	return platforms.FormatAll(ocispec.Platform{
-		Architecture: image.Architecture,
-		OS:           image.Os,
-		OSVersion:    image.OsVersion,
-		Variant:      image.Variant,
-	})
+	return platforms.FormatAll(ImagePlatform(image))
 }
 
 // normalizeContainerOS corrects a quirk of platforms.Parse: given a bare,
@@ -321,6 +351,15 @@ func (m *manager) getImageUsingPullPolicy(
 
 	// If never is specified then we return what inspect did return
 	if pullPolicy == common.PullPolicyNever {
+		// Warn instead of failing: the daemon decides at container creation,
+		// and a mismatch found by our matcher alone could be a false positive.
+		if wrongPlatform {
+			m.logger.Warningln(fmt.Sprintf(
+				"Locally found image is for platform %s, not the requested %q; "+
+					"it cannot be pulled with %q pull policy",
+				FormatImagePlatform(&existingImage), options.Platform, pullPolicy,
+			))
+		}
 		return &existingImage, err
 	}
 
