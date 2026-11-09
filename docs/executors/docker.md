@@ -1236,6 +1236,12 @@ Use the `never` pull policy:
 Docker executors. The `never` pull policy is usable only when using a pre-defined cloud instance
 images for chosen cloud provider.
 
+> [!note]
+> If a job sets [`image:docker:platform`](https://docs.gitlab.com/ci/yaml/#imagedocker) and the local image is for a different platform,
+> the job fails. The Docker daemon returns an error such as
+> `image with reference <image> was found but does not provide the specified platform`.
+> To fix this failure, pull an image for the requested platform on the Docker host.
+
 Set the `never` policy in the `config.toml`:
 
 ```toml

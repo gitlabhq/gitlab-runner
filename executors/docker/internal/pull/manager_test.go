@@ -15,6 +15,7 @@ import (
 
 	"github.com/hashicorp/go-version"
 	"github.com/moby/moby/api/types/image"
+	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	logrustest "github.com/sirupsen/logrus/hooks/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -141,6 +142,132 @@ func TestParsePlatformLeavesDefaultArmVariantEmpty(t *testing.T) {
 	require.NotNil(t, platform)
 	assert.Equal(t, "arm", platform.Architecture)
 	assert.Empty(t, platform.Variant)
+}
+
+func TestPlatformMatchesImage(t *testing.T) {
+	tests := map[string]struct {
+		requested string
+		image     image.InspectResponse
+		expected  bool
+	}{
+		"no requested platform matches any image": {
+			requested: "",
+			image:     image.InspectResponse{Os: "linux", Architecture: "amd64"},
+			expected:  true,
+		},
+		"arm64 without variant matches any image variant": {
+			requested: "linux/arm64",
+			image:     image.InspectResponse{Os: "linux", Architecture: "arm64", Variant: "v8"},
+			expected:  true,
+		},
+		"arm64/v8 matches an image that records no variant": {
+			requested: "linux/arm64/v8",
+			image:     image.InspectResponse{Os: "linux", Architecture: "arm64"},
+			expected:  true,
+		},
+		"arm64/v8 matches an image with variant v8": {
+			requested: "linux/arm64/v8",
+			image:     image.InspectResponse{Os: "linux", Architecture: "arm64", Variant: "v8"},
+			expected:  true,
+		},
+		"arm/v7 does not match an arm/v6 image": {
+			requested: "linux/arm/v7",
+			image:     image.InspectResponse{Os: "linux", Architecture: "arm", Variant: "v6"},
+			expected:  false,
+		},
+		"arm/v6 matches an arm/v6 image": {
+			requested: "linux/arm/v6",
+			image:     image.InspectResponse{Os: "linux", Architecture: "arm", Variant: "v6"},
+			expected:  true,
+		},
+		"amd64/v2 does not match an image that records no variant": {
+			requested: "linux/amd64/v2",
+			image:     image.InspectResponse{Os: "linux", Architecture: "amd64"},
+			expected:  false,
+		},
+		"amd64/v1 matches an image that records no variant": {
+			requested: "linux/amd64/v1",
+			image:     image.InspectResponse{Os: "linux", Architecture: "amd64"},
+			expected:  true,
+		},
+		"arm/v7 matches an image that records no variant": {
+			requested: "linux/arm/v7",
+			image:     image.InspectResponse{Os: "linux", Architecture: "arm"},
+			expected:  true,
+		},
+		"OS mismatch": {
+			requested: "windows/amd64",
+			image:     image.InspectResponse{Os: "linux", Architecture: "amd64"},
+			expected:  false,
+		},
+		"architecture mismatch": {
+			requested: "linux/arm64",
+			image:     image.InspectResponse{Os: "linux", Architecture: "amd64"},
+			expected:  false,
+		},
+		"empty top-level architecture falls back to the descriptor platform": {
+			requested: "linux/arm64/v8",
+			image: image.InspectResponse{
+				Os: "linux",
+				Descriptor: &ocispec.Descriptor{
+					Platform: &ocispec.Platform{OS: "linux", Architecture: "arm64"},
+				},
+			},
+			expected: true,
+		},
+		"empty top-level variant falls back to the descriptor variant": {
+			requested: "linux/arm/v7",
+			image: image.InspectResponse{
+				Os:           "linux",
+				Architecture: "arm",
+				Descriptor: &ocispec.Descriptor{
+					Platform: &ocispec.Platform{OS: "linux", Architecture: "arm", Variant: "v6"},
+				},
+			},
+			expected: false,
+		},
+		"top-level variant wins over the descriptor variant": {
+			requested: "linux/arm/v7",
+			image: image.InspectResponse{
+				Os:           "linux",
+				Architecture: "arm",
+				Variant:      "v7",
+				Descriptor: &ocispec.Descriptor{
+					Platform: &ocispec.Platform{OS: "linux", Architecture: "arm", Variant: "v6"},
+				},
+			},
+			expected: true,
+		},
+		"descriptor platform with another architecture does not match": {
+			requested: "linux/arm64",
+			image: image.InspectResponse{
+				Os: "linux",
+				Descriptor: &ocispec.Descriptor{
+					Platform: &ocispec.Platform{OS: "linux", Architecture: "amd64"},
+				},
+			},
+			expected: false,
+		},
+		"Windows OS version ignores the revision": {
+			requested: "windows(10.0.17763)/amd64",
+			image:     image.InspectResponse{Os: "windows", Architecture: "amd64", OsVersion: "10.0.17763.7314"},
+			expected:  true,
+		},
+		"Windows OS version with another build does not match": {
+			requested: "windows(10.0.17763)/amd64",
+			image:     image.InspectResponse{Os: "windows", Architecture: "amd64", OsVersion: "10.0.20348.1"},
+			expected:  false,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			platform, err := ParsePlatform(tc.requested, newMockPullLogger(t))
+			require.NoError(t, err)
+
+			assert.Equal(t, tc.expected, PlatformMatchesImage(platform, &tc.image))
+		})
+	}
 }
 
 func TestDockerForNamedImage(t *testing.T) {
@@ -1022,6 +1149,14 @@ func TestPullPolicyWhenConfigAllowedPullPoliciesIsInvalid(t *testing.T) {
 
 func newLoggerMock(t *testing.T) *mockPullLogger {
 	loggerMock := newMockPullLogger(t)
+	allowLogging(loggerMock)
+
+	return loggerMock
+}
+
+// allowLogging lets loggerMock take any log call. Expectations registered on
+// loggerMock beforehand take precedence over it.
+func allowLogging(loggerMock *mockPullLogger) {
 	loggerMock.On("Debugln", mock.AnythingOfType("string")).Maybe()
 	loggerMock.On(
 		"Debugln",
@@ -1046,8 +1181,6 @@ func newLoggerMock(t *testing.T) *mockPullLogger {
 		mock.AnythingOfType("string"),
 		mock.AnythingOfType("string"),
 	).Maybe()
-
-	return loggerMock
 }
 
 func newDefaultTestManager(t *testing.T, client *docker.MockClient, dockerConfig *common.DockerConfig) *manager {
@@ -1296,6 +1429,10 @@ func TestGetDockerImageLocalImagePlatformMismatch(t *testing.T) {
 		localImage    image.InspectResponse
 		expectPull    bool
 		expectedImage string
+		// expectLogMethod is the logger method that must receive a message
+		// containing expectLogContains.
+		expectLogMethod   string
+		expectLogContains string
 	}{
 		"if-not-present, old daemon, local image for another platform: pulls": {
 			apiVersion:    "1.41",
@@ -1303,6 +1440,9 @@ func TestGetDockerImageLocalImagePlatformMismatch(t *testing.T) {
 			localImage:    amd64Image,
 			expectPull:    true,
 			expectedImage: arm64Image.ID,
+
+			expectLogMethod:   "Println",
+			expectLogContains: "pulling it despite",
 		},
 		"if-not-present, old daemon, local image already used for another platform: pulls": {
 			apiVersion:    "1.41",
@@ -1311,6 +1451,9 @@ func TestGetDockerImageLocalImagePlatformMismatch(t *testing.T) {
 			localImage:    amd64Image,
 			expectPull:    true,
 			expectedImage: arm64Image.ID,
+
+			expectLogMethod:   "Println",
+			expectLogContains: "pulling it despite",
 		},
 		"if-not-present, old daemon, local image for the requested platform: reuses it": {
 			apiVersion:    "1.41",
@@ -1329,6 +1472,9 @@ func TestGetDockerImageLocalImagePlatformMismatch(t *testing.T) {
 			pullPolicy:    common.PullPolicyNever,
 			localImage:    amd64Image,
 			expectedImage: amd64Image.ID,
+
+			expectLogMethod:   "Warningln",
+			expectLogContains: `cannot be pulled with "never"`,
 		},
 	}
 
@@ -1339,6 +1485,14 @@ func TestGetDockerImageLocalImagePlatformMismatch(t *testing.T) {
 			dockerConfig := &common.DockerConfig{PullPolicy: []string{tc.pullPolicy}}
 			dockerOptions := spec.ImageDockerOptions{Platform: "linux/arm64"}
 			m := newDefaultTestManager(t, c, dockerConfig)
+			if tc.expectLogMethod != "" {
+				loggerMock := newMockPullLogger(t)
+				loggerMock.On(tc.expectLogMethod, mock.MatchedBy(func(msg string) bool {
+					return strings.Contains(msg, tc.expectLogContains)
+				})).Once()
+				allowLogging(loggerMock)
+				m.logger = loggerMock
+			}
 			m.config.APIVersion = version.Must(version.NewVersion(tc.apiVersion))
 
 			pulled := false
