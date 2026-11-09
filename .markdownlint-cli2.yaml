@@ -30,7 +30,9 @@ config:
   reference-links-images: false     # MD052
   ul-style:                         # MD004
     style: "dash"
+  table-column-count: false         # MD056, enforced by rumdl
   table-column-style: false         # MD060
+  table-pipe-style: false           # MD055, enforced by rumdl
 
   # Keep this item last due to length
   proper-names:                     # MD044
