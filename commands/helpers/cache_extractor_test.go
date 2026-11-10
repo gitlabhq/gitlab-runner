@@ -322,6 +322,27 @@ func TestCacheExtractorRemoteServerFailOnInvalidServer(t *testing.T) {
 	assert.Error(t, err)
 }
 
+// TestCacheExtractorRemoteServerRejectsNoContent covers a 2xx other than 200 and 206: a 204 to the
+// GET without Range holds no archive, so the download fails and writes none.
+func TestCacheExtractorRemoteServerRejectsNoContent(t *testing.T) {
+	cdTempDir(t)
+
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusNoContent)
+	}))
+	t.Cleanup(ts.Close)
+
+	cmd := CacheExtractorCommand{
+		File:               cacheExtractorArchive,
+		URL:                ts.URL + "/cache.zip",
+		TransferBufferSize: defaultCacheTransferBufferSize,
+	}
+
+	err := cmd.handlePresignedURL()
+	require.ErrorContains(t, err, "204 No Content")
+	assert.NoFileExists(t, cacheExtractorArchive)
+}
+
 // TestCacheExtractorRemoteServerRejectsPartialContent covers the sequential download of a presigned
 // URL, a GET without Range, answered with 206 Partial Content. A caching proxy whose cache key leaves
 // out Range answers it that way once it stored a 206 for an earlier Range request of the same object,
@@ -387,6 +408,37 @@ func TestCacheExtractorRemoteServerRejectsPartialContent(t *testing.T) {
 			assert.Equal(t, tc.wantArchive, string(got))
 		})
 	}
+}
+
+// TestCacheExtractorRemoteServerRejectsPartialContentAfterRangeProbe covers the same 206 reached
+// through FF_USE_PARALLEL_CACHE_TRANSFER: the object fits in one chunk, so the bytes=0-0 probe
+// falls back to the sequential GET.
+func TestCacheExtractorRemoteServerRejectsPartialContentAfterRangeProbe(t *testing.T) {
+	t.Setenv(featureflags.UseParallelCacheTransfer, "true")
+	cdTempDir(t)
+
+	payload := parallelTestZipBytes(t)
+	var ranges []string
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ranges = append(ranges, r.Header.Get("Range"))
+		w.Header().Set("Content-Range", fmt.Sprintf("bytes 0-0/%d", len(payload)))
+		w.WriteHeader(http.StatusPartialContent)
+		_, _ = w.Write(payload[:1])
+	}))
+	t.Cleanup(ts.Close)
+
+	cmd := CacheExtractorCommand{
+		File:               cacheExtractorArchive,
+		URL:                ts.URL + "/cache.zip",
+		ChunkSize:          len(payload),
+		Concurrency:        4,
+		TransferBufferSize: defaultCacheTransferBufferSize,
+	}
+
+	err := cmd.handlePresignedURL()
+	require.ErrorContains(t, err, "received: 206 Partial Content, but a download without Range needs 200 OK")
+	assert.Equal(t, []string{"bytes=0-0", ""}, ranges, "the probe, then one GET without Range")
+	assert.NoFileExists(t, cacheExtractorArchive)
 }
 
 func TestSelectPresignedURL(t *testing.T) {
@@ -903,7 +955,7 @@ func TestCacheExtractorPresignedParallelTransferFallsBackOnFullBodyChunk(t *test
 // TestCacheExtractorPresignedParallelTransferRejectsChunkOutsideRange covers chunks answered with a
 // 206 that is not for the requested range. A sequential GET would not help: a caching proxy whose
 // cache key leaves out Range answers every request, one without Range included, with the partial
-// 206 it stored first, and the sequential download would keep that as the archive. So the parallel
+// 206 it stored first, which the sequential download rejects. So the parallel
 // download fails with a retryable error, no GET without Range is made and no archive is written.
 func TestCacheExtractorPresignedParallelTransferRejectsChunkOutsideRange(t *testing.T) {
 	tests := map[string]struct {
