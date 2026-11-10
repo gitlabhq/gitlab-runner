@@ -424,7 +424,7 @@ func (s *executor) stepsServiceContainer(
 		return api.Container{}, err
 	}
 
-	command, args := s.getCommandAndArgs(service)
+	command, args := s.getCommandAndArgs(service, true)
 
 	return api.Container{
 		Name:            name,

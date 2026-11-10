@@ -138,20 +138,6 @@ func (s *executor) guardSuspendCompatibility() error {
 				"legacy code path. Disable that feature flag to use suspendable environments")
 	}
 
-	if s.Build.IsFeatureFlagOn(featureflags.KubernetesHonorEntrypoint) {
-		for name, svc := range s.options.Services {
-			if len(svc.Entrypoint) > 0 || len(svc.Command) > 0 {
-				return fmt.Errorf(
-					"suspend/resume is not compatible with FF_KUBERNETES_HONOR_ENTRYPOINT when "+
-						"a service (%q) declares an explicit entrypoint or command: the flag changes "+
-						"how the overlay entrypoint is threaded through the service container, "+
-						"causing the service to be unreachable after pivot_root. "+
-						"Disable FF_KUBERNETES_HONOR_ENTRYPOINT to use suspendable environments "+
-						"with overlay-wrapped service containers", name)
-			}
-		}
-	}
-
 	if err := s.guardSuspendCapabilityDrop(); err != nil {
 		return err
 	}

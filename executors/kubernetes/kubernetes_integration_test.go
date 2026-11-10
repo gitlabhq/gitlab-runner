@@ -4879,3 +4879,152 @@ func withDevHelperImage(t *testing.T, build *common.Build, imageRefRE string) {
 
 	require.FailNow(t, "helper image not found", "could not find image ref matching %q in %q", imageRefRE, f)
 }
+
+func TestServiceEntrypointAndCommandNotIgnored(t *testing.T) {
+	t.Parallel()
+
+	kubernetes.SkipKubectlIntegrationTests(t, "kubectl", "cluster-info")
+
+	// The service writes a marker into the shared builds dir and stays alive;
+	// the build container reads it back. If the service's entrypoint/command is
+	// dropped, busybox runs its default shell, no marker is written, and the
+	// build fails on the missing file.
+	const marker = "service-process-ran"
+
+	serviceJob := func() (spec.Job, error) {
+		return common.GetRemoteBuildResponse(
+			"sleep 15",
+			"cat /builds/svc-marker.txt",
+		)
+	}
+
+	testCases := map[string]struct {
+		service              spec.Image
+		useHonorEntrypointFF bool
+	}{
+		"service command with entrypoint feature flag on": {
+			service: spec.Image{
+				Name:    common.TestAlpineImage,
+				Alias:   "probe",
+				Command: []string{"sh", "-c", "echo " + marker + " > /builds/svc-marker.txt; sleep 300"},
+			},
+			useHonorEntrypointFF: true,
+		},
+		"service command with entrypoint feature flag off": {
+			service: spec.Image{
+				Name:    common.TestAlpineImage,
+				Alias:   "probe",
+				Command: []string{"sh", "-c", "echo " + marker + " > /builds/svc-marker.txt; sleep 300"},
+			},
+			useHonorEntrypointFF: false,
+		},
+		"service entrypoint and command with entrypoint feature flag on": {
+			service: spec.Image{
+				Name:       common.TestAlpineImage,
+				Alias:      "probe",
+				Entrypoint: []string{"sh", "-c"},
+				Command:    []string{"echo " + marker + " > /builds/svc-marker.txt; sleep 300"},
+			},
+			useHonorEntrypointFF: true,
+		},
+		"service entrypoint only with entrypoint feature flag on": {
+			service: spec.Image{
+				Name:       common.TestAlpineImage,
+				Alias:      "probe",
+				Entrypoint: []string{"sh", "-c", "echo " + marker + " > /builds/svc-marker.txt; sleep 300"},
+			},
+			useHonorEntrypointFF: true,
+		},
+	}
+
+	for tn, tc := range testCases {
+		t.Run(tn, func(t *testing.T) {
+			t.Parallel()
+
+			build := getTestBuildWithImage(t, common.TestAlpineImage, serviceJob)
+			build.Services = spec.Services{tc.service}
+			build.Variables = append(
+				build.Variables,
+				spec.Variable{
+					Key:   featureflags.KubernetesHonorEntrypoint,
+					Value: strconv.FormatBool(tc.useHonorEntrypointFF),
+				},
+			)
+
+			out, err := buildtest.RunBuildReturningOutput(t, build)
+			t.Log(out)
+			require.NoError(t, err)
+			assert.Contains(t, out, marker,
+				"the service's configured process must run and write the marker")
+		})
+	}
+}
+
+// TestServiceDependencyScanningResolutionScript reproduces the regression that
+// was actually reported: the Dependency Scanning v2 resolution jobs declare the
+// analyzer as a service with a command and no entrypoint, and with
+// FF_KUBERNETES_HONOR_ENTRYPOINT on that command used to be dropped. The
+// analyzer then started in its default scan mode and never wrote
+// .gitlab_ds/dependency_resolution.sh, so the job timed out waiting for it.
+//
+// The job below mirrors Jobs/Dependency-Scanning.v2.gitlab-ci.yml: create the
+// shared directory, signal readiness, and wait for the resolution script. The
+// job exits non-zero when the script is absent, so the build failing is the
+// assertion -- matching on job output would also match the shell trace of the
+// command that produces it.
+//
+// GITLAB_FEATURES is what GitLab normally injects to advertise licensed
+// features and the analyzer reads it directly, so no licensed instance is
+// needed. CI_JOB_ID is set explicitly because the integration harness builds a
+// synthetic job response that leaves it empty, and the analyzer refuses to run
+// in service mode without it.
+func TestServiceDependencyScanningResolutionScript(t *testing.T) {
+	t.Parallel()
+
+	kubernetes.SkipKubectlIntegrationTests(t, "kubectl", "cluster-info")
+
+	const analyzerImage = "registry.gitlab.com/security-products/dependency-scanning:2"
+	const jobID = "70001"
+
+	resolutionJob := func() (spec.Job, error) {
+		return common.GetRemoteBuildResponse(
+			// Minimal maven project for the analyzer to resolve.
+			"printf '%s' '<project><modelVersion>4.0.0</modelVersion>"+
+				"<groupId>t</groupId><artifactId>t</artifactId><version>1</version></project>' > pom.xml",
+			// Shared directory, world-writable: the containers may run as different UIDs.
+			"mkdir -p .gitlab_ds && chmod 777 .gitlab_ds",
+			"touch .gitlab_ds/env && chmod 666 .gitlab_ds/env",
+			// Signal readiness for the service to begin.
+			"touch .gitlab_ds/ready_"+jobID+" && chmod 666 .gitlab_ds/ready_"+jobID,
+			// Wait for the service to generate the resolution script.
+			"i=0; while [ ! -f .gitlab_ds/dependency_resolution.sh ] && [ $i -lt 120 ]; do sleep 1; i=$((i+1)); done",
+			"cat .gitlab_ds/service.log 2>/dev/null || echo 'no service log'",
+			"ls -la .gitlab_ds/",
+			// The build failing is the assertion.
+			"test -f .gitlab_ds/dependency_resolution.sh",
+		)
+	}
+
+	build := getTestBuildWithImage(t, common.TestAlpineImage, resolutionJob)
+	build.Services = spec.Services{
+		{
+			Name:  analyzerImage,
+			Alias: "ds-analyzer",
+			Command: []string{
+				"/analyzer", "dependency-resolution-service",
+				"--project-types", "maven", "--checkout-timeout=90",
+			},
+		},
+	}
+	build.Variables = append(
+		build.Variables,
+		spec.Variable{Key: featureflags.KubernetesHonorEntrypoint, Value: "true", Public: true},
+		spec.Variable{Key: "GITLAB_FEATURES", Value: "dependency_scanning", Public: true},
+		spec.Variable{Key: "CI_JOB_ID", Value: jobID, Public: true},
+	)
+
+	out, err := buildtest.RunBuildReturningOutput(t, build)
+	t.Log(out)
+	require.NoError(t, err,
+		"the analyzer must run in dependency-resolution-service mode and write the resolution script")
+}

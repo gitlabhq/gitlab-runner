@@ -1141,3 +1141,46 @@ func TestSuspendServiceDataMount(t *testing.T) {
 	assert.Equal(t, "services/redis/data", m.SubPath)
 	assert.Empty(t, m.SubPathExpr, "SubPath and SubPathExpr are mutually exclusive; SubPathExpr must be empty")
 }
+
+// A service declaring an explicit entrypoint or command used to be rejected
+// outright when FF_KUBERNETES_HONOR_ENTRYPOINT was on, because the flag left
+// the service container with no command or args and the overlay had nothing to
+// exec after pivot_root. The flag now resolves those fields the same way it
+// does with the flag off, so the combination is supported and the guard must
+// not reject it.
+func TestGuardSuspendCompatibility_HonorEntrypointWithServiceOverrides(t *testing.T) {
+	tests := map[string]spec.Image{
+		"command only": {
+			Name:    "alpine:3.14.2",
+			Command: []string{"sh", "-c", "sleep 300"},
+		},
+		"entrypoint only": {
+			Name:       "alpine:3.14.2",
+			Entrypoint: []string{"/custom-entrypoint"},
+		},
+		"entrypoint and command": {
+			Name:       "alpine:3.14.2",
+			Entrypoint: []string{"/custom-entrypoint"},
+			Command:    []string{"--flag"},
+		},
+		"neither": {
+			Name: "alpine:3.14.2",
+		},
+	}
+
+	for name, service := range tests {
+		t.Run(name, func(t *testing.T) {
+			e := newTestExecutorWithKubeClient(t, &common.KubernetesConfig{})
+			e.DefaultBuildsDir = "/builds"
+			e.Build.Runner.RunnerCredentials.ID = 1
+			svc := service
+			e.options = &kubernetesOptions{Services: map[string]*spec.Image{"svc-0": &svc}}
+			markSuspendableFFOn(e)
+			e.Build.Job.Variables = append(e.Build.Job.Variables,
+				spec.Variable{Key: featureflags.KubernetesHonorEntrypoint, Value: "true"},
+			)
+
+			assert.NoError(t, e.guardSuspendCompatibility())
+		})
+	}
+}
