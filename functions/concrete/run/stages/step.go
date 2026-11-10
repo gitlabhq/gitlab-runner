@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"os/exec"
 
 	"gitlab.com/gitlab-org/gitlab-runner/functions/concrete/run/env"
 	"gitlab.com/gitlab-org/gitlab-runner/functions/concrete/run/stages/internal/scriptwriter"
@@ -32,14 +33,23 @@ func (s Step) Run(ctx context.Context, e *env.Env) error {
 		return nil
 	}
 
+	// any user scripts that would previously be executed in the helper
+	// container benefit from being able to use the bundled git and CA certs
+	var envVars map[string]string
+	switch s.Step {
+	case "pre_clone_script", "post_clone_script":
+		envVars = e.HelperEnvs(envVars)
+	}
+
 	sw := scriptwriter.New(s.Step, e.Shell)
+	sw.LookPath = shellLookPath(e, envVars)
 	sw.DebugTrace = s.Debug
 	sw.ExitCodeCheck = s.BashExitCodeCheck
 	sw.ScriptSections = s.ScriptSections
 	sw.UseLegacyBashEval = s.UseLegacyBashEval
 
 	script := sw.Build(s.Script)
-	if err := shell(ctx, e, script, s.Step); err != nil {
+	if err := shell(ctx, e, script, envVars); err != nil {
 		// AllowFailure is intentionally not honored: abstract shell
 		// ignores it on script steps too, and the runner core has no
 		// way to record a non-zero exit while clearing failure_reason.
@@ -56,7 +66,17 @@ func (s Step) shouldRun(e *env.Env) bool {
 	return s.OnFailure
 }
 
-func shell(ctx context.Context, e *env.Env, script, stepName string) error {
+// shellLookPath finds shells where the legacy executor finds them. Login-shell
+// executors start the shell from this process, so they use its PATH. Other
+// executors find the shell inside the job, so they use the job's PATH.
+func shellLookPath(e *env.Env, envVars map[string]string) func(string) (string, error) {
+	if e.LoginShell {
+		return exec.LookPath
+	}
+	return func(name string) (string, error) { return e.LookPath(name, envVars) }
+}
+
+func shell(ctx context.Context, e *env.Env, script string, envVars map[string]string) error {
 	isPwsh := e.Shell == "pwsh" || e.Shell == "powershell"
 
 	ext := ".sh"
@@ -88,21 +108,16 @@ func shell(ctx context.Context, e *env.Env, script, stepName string) error {
 
 	switch {
 	case isPwsh:
-		cmd = e.Shell
+		cmd, err = shellLookPath(e, envVars)(e.Shell)
 		args = []string{"-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-File", f.Name()}
 	case e.LoginShell:
-		cmd = e.Shell
+		cmd, err = shellLookPath(e, envVars)(e.Shell)
 		args = []string{"-l", f.Name()}
 	default:
 		cmd = f.Name()
 	}
-
-	// any user scripts that would previously be executed in the helper
-	// container benefit from being able to use the bundled git and CA certs
-	var envVars map[string]string
-	switch stepName {
-	case "pre_clone_script", "post_clone_script":
-		envVars = e.HelperEnvs(envVars)
+	if err != nil {
+		return fmt.Errorf("finding shell %q: %w", e.Shell, err)
 	}
 
 	return e.Command(ctx, cmd, envVars, args...)

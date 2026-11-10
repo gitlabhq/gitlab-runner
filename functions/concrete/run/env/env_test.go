@@ -3,9 +3,14 @@
 package env
 
 import (
+	"os"
+	"os/exec"
+	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestExpandValue_GitLabEnvTakesPriorityOverEnv(t *testing.T) {
@@ -51,6 +56,92 @@ func TestExpandValue_ShellEscapes(t *testing.T) {
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
 			assert.Equal(t, tc.want, e.ExpandValue(tc.in))
+		})
+	}
+}
+
+func TestLookPath_UsesJobPath(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("uses POSIX executable bits")
+	}
+
+	dirs := map[string]string{}
+	for _, n := range []string{"process", "env", "gitlab", "extra"} {
+		dirs[n] = t.TempDir()
+		require.NoError(t, os.WriteFile(filepath.Join(dirs[n], "tool"), nil, 0o755))
+	}
+	t.Setenv("PATH", dirs["process"])
+
+	nonExec := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(nonExec, "tool"), nil, 0o644))
+
+	tests := map[string]struct {
+		env, gitlab, extra string
+		want               string
+	}{
+		"process PATH when the job sets none": {want: "process"},
+		"job variable PATH":                   {env: dirs["env"], want: "env"},
+		"GITLAB_ENV PATH beats job variable":  {env: dirs["env"], gitlab: dirs["gitlab"], want: "gitlab"},
+		"extra PATH beats both":               {env: dirs["env"], gitlab: dirs["gitlab"], extra: dirs["extra"], want: "extra"},
+		"non-executable file is skipped":      {env: nonExec + ":" + dirs["env"], want: "env"},
+		"relative entries are skipped":        {env: ".", want: ""},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			e := &Env{Env: map[string]string{}, GitLabEnv: map[string]string{}}
+			var extra map[string]string
+			if tc.env != "" {
+				e.Env["PATH"] = tc.env
+			}
+			if tc.gitlab != "" {
+				e.GitLabEnv["PATH"] = tc.gitlab
+			}
+			if tc.extra != "" {
+				extra = map[string]string{"PATH": tc.extra}
+			}
+
+			got, err := e.LookPath("tool", extra)
+			if tc.want == "" {
+				require.ErrorIs(t, err, exec.ErrNotFound)
+				return
+			}
+			require.NoError(t, err)
+			assert.Equal(t, filepath.Join(dirs[tc.want], "tool"), got)
+		})
+	}
+}
+
+func TestLookPath_Windows(t *testing.T) {
+	if runtime.GOOS != "windows" {
+		t.Skip("Windows Path key and PATHEXT")
+	}
+
+	procDir, jobDir := t.TempDir(), t.TempDir()
+	for _, d := range []string{procDir, jobDir} {
+		require.NoError(t, os.WriteFile(filepath.Join(d, "tool.exe"), nil, 0o644))
+	}
+	t.Setenv("Path", procDir)
+
+	tests := map[string]struct {
+		jobKey string
+		want   string
+	}{
+		"process Path when the job sets none": {want: procDir},
+		"job PATH beats process Path":         {jobKey: "PATH", want: jobDir},
+		"job key matched case-insensitively":  {jobKey: "path", want: jobDir},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			e := &Env{Env: map[string]string{}, GitLabEnv: map[string]string{}}
+			if tc.jobKey != "" {
+				e.Env[tc.jobKey] = jobDir
+			}
+
+			got, err := e.LookPath("tool", nil)
+			require.NoError(t, err)
+			assert.Equal(t, filepath.Join(tc.want, "tool.exe"), got)
 		})
 	}
 }

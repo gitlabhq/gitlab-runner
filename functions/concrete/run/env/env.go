@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 	"time"
@@ -144,6 +145,18 @@ func (e *Env) RunnerCommand(ctx context.Context, extra map[string]string, args .
 }
 
 func (e *Env) Command(ctx context.Context, name string, env map[string]string, args ...string) error {
+	cmd := gracefulexitcmd.New(ctx, e.GracefulExitDelay, name, args...)
+	cmd.Dir = e.WorkingDir
+	cmd.Env = e.environ(env)
+	cmd.Stdout = e.Stdout
+	cmd.Stderr = e.Stderr
+
+	return normalizeExitError(cmd.Run(), cmd.ProcessState)
+}
+
+// environ returns the environment Command gives to a child process. Later
+// entries win, as in os/exec.
+func (e *Env) environ(extra map[string]string) []string {
 	environ := os.Environ()
 	for k, v := range e.Env {
 		environ = append(environ, k+"="+v)
@@ -151,17 +164,55 @@ func (e *Env) Command(ctx context.Context, name string, env map[string]string, a
 	for k, v := range e.GitLabEnv {
 		environ = append(environ, k+"="+v)
 	}
-	for k, v := range env {
+	for k, v := range extra {
 		environ = append(environ, k+"="+v)
 	}
 
-	cmd := gracefulexitcmd.New(ctx, e.GracefulExitDelay, name, args...)
-	cmd.Dir = e.WorkingDir
-	cmd.Env = environ
-	cmd.Stdout = e.Stdout
-	cmd.Stderr = e.Stderr
+	return environ
+}
 
-	return normalizeExitError(cmd.Run(), cmd.ProcessState)
+// LookPath finds name in the PATH that Command gives to the child, which
+// is the job's PATH. exec.LookPath searches the PATH of this process
+// instead, and the two can differ.
+func (e *Env) LookPath(name string, extra map[string]string) (string, error) {
+	if filepath.Base(name) != name {
+		return name, nil
+	}
+
+	var path string
+	for _, kv := range e.environ(extra) {
+		if k, v, ok := strings.Cut(kv, "="); ok && isPathKey(k) {
+			path = v
+		}
+	}
+
+	for _, dir := range filepath.SplitList(path) {
+		if !filepath.IsAbs(dir) {
+			continue
+		}
+		// An absolute path makes exec.LookPath check only this file: Eaccess
+		// on Unix, and PATHEXT extensions on Windows.
+		if p, err := exec.LookPath(filepath.Join(dir, name)); err == nil {
+			return p, nil
+		}
+	}
+
+	return "", &notInJobPathError{name: name}
+}
+
+type notInJobPathError struct{ name string }
+
+func (e *notInJobPathError) Error() string {
+	return e.name + ": executable file not found in the job PATH"
+}
+
+func (e *notInJobPathError) Unwrap() error { return exec.ErrNotFound }
+
+func isPathKey(k string) bool {
+	if runtime.GOOS == "windows" {
+		return strings.EqualFold(k, "PATH")
+	}
+	return k == "PATH"
 }
 
 // normalizeExitError reclassifies two exec outcomes that gracefulexitcmd
