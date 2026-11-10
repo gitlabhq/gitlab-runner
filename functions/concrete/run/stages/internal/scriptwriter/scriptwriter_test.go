@@ -20,7 +20,7 @@ func requireShell(t *testing.T, shell string) {
 	t.Helper()
 	switch shell {
 	case ShellBash, ShellSh:
-		if _, err := resolveShell(ShellBash); err != nil {
+		if _, err := resolveShell(ShellBash, exec.LookPath); err != nil {
 			t.Skipf("skipping: no POSIX shell available")
 		}
 	case ShellPwsh, ShellPowershell:
@@ -224,7 +224,7 @@ func runBash(t *testing.T, script string) (string, int) {
 	// resolveShell, not a hardcoded "bash": requireShell gates on resolveShell,
 	// which falls back to sh, so a host without bash in PATH would admit the
 	// test and then fail to exec.
-	shell, err := resolveShell(ShellBash)
+	shell, err := resolveShell(ShellBash, exec.LookPath)
 	require.NoError(t, err)
 
 	out, err := exec.Command(shell, path).CombinedOutput()
@@ -511,7 +511,7 @@ func TestBuild_Dispatch(t *testing.T) {
 func TestResolveShellHost(t *testing.T) {
 	requireShell(t, ShellBash)
 
-	p, err := resolveShell(ShellBash)
+	p, err := resolveShell(ShellBash, exec.LookPath)
 	require.NoError(t, err)
 	assert.True(t, filepath.IsAbs(p), "expected absolute path, got %s", p)
 }
@@ -634,7 +634,7 @@ func TestResolveShell(t *testing.T) {
 			paths := useShellDirs(t, tc.dirs...)
 			t.Setenv("PATH", t.TempDir())
 
-			got, err := resolveShell(tc.shell)
+			got, err := resolveShell(tc.shell, exec.LookPath)
 			if tc.want == "" {
 				require.Error(t, err)
 				return
@@ -659,7 +659,7 @@ func TestResolveShellSearchesPathFirst(t *testing.T) {
 	t.Run("PATH beats fixed directories", func(t *testing.T) {
 		useShellDirs(t, "d:bash,sh")
 
-		got, err := resolveShell(ShellBash)
+		got, err := resolveShell(ShellBash, exec.LookPath)
 		require.NoError(t, err)
 		assert.Equal(t, pathBash, got)
 	})
@@ -667,7 +667,7 @@ func TestResolveShellSearchesPathFirst(t *testing.T) {
 	t.Run("fixed directories are used when PATH has no matching shell", func(t *testing.T) {
 		paths := useShellDirs(t, "d:sh")
 
-		got, err := resolveShell(ShellSh)
+		got, err := resolveShell(ShellSh, exec.LookPath)
 		require.NoError(t, err)
 		assert.Equal(t, paths["d/sh"], got)
 	})
@@ -700,4 +700,24 @@ func TestBashScriptShebang(t *testing.T) {
 
 		assert.True(t, strings.HasPrefix(script, "#!/bin/sh\n"), script)
 	})
+}
+
+func TestShebangUsesLookPath(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("pwsh scripts have no shebang on Windows")
+	}
+
+	useShellDirs(t, "d:bash,sh")
+	lookPath := func(name string) (string, error) { return "/job/bin/" + name, nil }
+
+	for _, shell := range []string{ShellBash, ShellSh, ShellPwsh} {
+		t.Run(shell, func(t *testing.T) {
+			b := New("test", shell)
+			b.LookPath = lookPath
+
+			script := b.Build([]string{"echo hello"})
+
+			assert.True(t, strings.HasPrefix(script, "#!/job/bin/"+shell+"\n"), script)
+		})
+	}
 }

@@ -34,11 +34,15 @@ type Builder struct {
 	// closed via `< /dev/null` to suppress the script-body leak on
 	// cancellation (see issue 39005).
 	UseLegacyBashEval bool
+
+	// LookPath resolves a shell name to a path. It defaults to
+	// exec.LookPath.
+	LookPath func(string) (string, error)
 }
 
 // New creates a Builder for the given step name and shell.
 func New(stepName, shell string) *Builder {
-	return &Builder{stepName: stepName, shell: shell}
+	return &Builder{stepName: stepName, shell: shell, LookPath: exec.LookPath}
 }
 
 // Build renders the script lines into a complete shell script.
@@ -69,7 +73,7 @@ func (b *Builder) Build(lines []string) string {
 // the header. That is safe there because an assignment, unlike bash's "(exit N)",
 // is not a command that can fail and so cannot trip $ErrorActionPreference.
 func (b *Builder) buildBashScript(lines []string) string {
-	shPath, err := resolveShell(b.shell)
+	shPath, err := resolveShell(b.shell, b.LookPath)
 	if err != nil {
 		shPath = "/bin/sh"
 	}
@@ -137,7 +141,7 @@ func (b *Builder) buildBashScript(lines []string) string {
 }
 
 func (b *Builder) buildPwshScript(lines []string) string {
-	shPath, err := exec.LookPath(b.shell)
+	shPath, err := b.LookPath(b.shell)
 	if err != nil {
 		shPath = b.shell
 	}
@@ -208,14 +212,14 @@ func (b *Builder) buildPwshScript(lines []string) string {
 // resolveShell returns the absolute path of the POSIX shell to run. "sh" only
 // matches sh. Any other value, including an unknown one, prefers bash and
 // falls back to sh. PATH is searched first, then shellSearchDirs.
-func resolveShell(name string) (string, error) {
+func resolveShell(name string, lookPath func(string) (string, error)) (string, error) {
 	names := []string{ShellBash, ShellSh}
 	if name == ShellSh {
 		names = []string{ShellSh}
 	}
 
 	for _, n := range names {
-		if p, err := exec.LookPath(n); err == nil {
+		if p, err := lookPath(n); err == nil {
 			return p, nil
 		}
 	}

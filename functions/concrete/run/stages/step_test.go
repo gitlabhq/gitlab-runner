@@ -5,7 +5,10 @@ package stages
 import (
 	"bytes"
 	"maps"
+	"os"
 	"os/exec"
+	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -320,4 +323,77 @@ func TestStep_FailureThenCleanup(t *testing.T) {
 			assert.Contains(t, stdout(e), "cleanup_ran")
 		})
 	}
+}
+
+func TestStep_ResolvesNamedShell(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("fake shells are POSIX scripts")
+	}
+
+	jobBin := t.TempDir()
+	processBin := t.TempDir()
+	t.Setenv("PATH", processBin)
+
+	for _, dir := range []string{jobBin, processBin} {
+		for _, name := range []string{"fakeshell", "pwsh"} {
+			fake := filepath.Join(dir, name)
+			require.NoError(t, os.WriteFile(fake, []byte("#!/bin/sh\necho ran-$0\n"), 0o755))
+		}
+	}
+
+	tests := map[string]struct {
+		shell      string
+		loginShell bool
+		jobPath    string
+		wantDir    string
+		wantErr    bool
+	}{
+		"pwsh uses the job PATH":                {shell: "pwsh", jobPath: jobBin, wantDir: jobBin},
+		"pwsh missing from the job PATH":        {shell: "pwsh", jobPath: t.TempDir(), wantErr: true},
+		"login shell uses the process PATH":     {shell: "fakeshell", loginShell: true, jobPath: jobBin, wantDir: processBin},
+		"login shell ignores an empty job PATH": {shell: "fakeshell", loginShell: true, jobPath: t.TempDir(), wantDir: processBin},
+		"login pwsh uses the process PATH":      {shell: "pwsh", loginShell: true, jobPath: t.TempDir(), wantDir: processBin},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			e := newTestEnv(t, tc.shell)
+			e.LoginShell = tc.loginShell
+			e.Env["PATH"] = tc.jobPath
+
+			step := Step{Step: "test", Script: []string{"echo hi"}, OnSuccess: true}
+			err := step.Run(t.Context(), e)
+			if tc.wantErr {
+				require.ErrorIs(t, err, exec.ErrNotFound)
+				return
+			}
+			require.NoError(t, err)
+
+			assert.Contains(t, stdout(e), "ran-"+filepath.Join(tc.wantDir, tc.shell))
+		})
+	}
+}
+
+func TestStep_ShebangUsesJobPath(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("shebangs are not used on Windows")
+	}
+
+	bash, err := exec.LookPath("bash")
+	if err != nil {
+		t.Skip("bash not available")
+	}
+
+	jobBin := t.TempDir()
+	jobBash := filepath.Join(jobBin, "bash")
+	require.NoError(t, os.Symlink(bash, jobBash))
+	t.Setenv("PATH", t.TempDir())
+
+	e := newTestEnv(t, "bash")
+	e.Env["PATH"] = jobBin
+
+	step := Step{Step: "test", Script: []string{`echo "interpreter=$BASH"`}, OnSuccess: true}
+	require.NoError(t, step.Run(t.Context(), e))
+
+	assert.Contains(t, stdout(e), "interpreter="+jobBash)
 }
