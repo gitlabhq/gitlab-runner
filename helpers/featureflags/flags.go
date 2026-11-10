@@ -63,6 +63,7 @@ const (
 	MachineOptionsExpandEnv              string = "FF_MACHINE_OPTIONS_EXPAND_ENV"
 	DockerMachineJSONOutput              string = "FF_DOCKER_MACHINE_JSON_OUTPUT"
 	KubernetesHealthCheckInspectImages   string = "FF_KUBERNETES_HEALTH_CHECK_INSPECT_IMAGES"
+	KubernetesAnchorOverwriteAllowed     string = "FF_KUBERNETES_ANCHOR_OVERWRITE_ALLOWED"
 )
 
 type FeatureFlag struct {
@@ -541,6 +542,19 @@ var flags = []FeatureFlag{
 			"on Docker Hub. It authenticates with the job's own credentials. Private images that need " +
 			"`image_pull_secrets` also need `image_pull_secrets_readable_by_jobs`. The wait ends after 30 seconds " +
 			"with a warning. The helper image must be the same version as the runner. Not supported for native steps jobs.",
+	},
+	{
+		Name:         KubernetesAnchorOverwriteAllowed,
+		DefaultValue: false,
+		Deprecated:   false,
+		Description: "When enabled, the Kubernetes executor matches each `*_overwrite_allowed` regular expression " +
+			"against the whole value, as if it started with `^` and ended with `$`. " +
+			"When disabled, an expression matches any part of the value unless it is anchored. " +
+			"For more information, see [regular expressions in overwrite settings](../executors/kubernetes/_index.md#regular-expressions-in-overwrite-settings). " +
+			"To turn it on for every job, set it in the " +
+			"[`[runners.feature_flags]` configuration](#enable-feature-flag-in-runner-configuration), " +
+			"which a job cannot override. Where that configuration does not set it, " +
+			"a job can turn it on for itself with a CI/CD variable.",
 	},
 }
 
