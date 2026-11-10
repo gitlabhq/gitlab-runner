@@ -43,45 +43,108 @@ func (s *fakeEntrypointForwarderSink) Close() error {
 	return s.closeError
 }
 
+// containerLogTimestamps are timestamps in front of a log line. The kubelet writes the time the container runtime
+// recorded, in the runtime's zone, so on a node whose time zone is not UTC it ends in an offset instead of Z. An
+// explicit zero offset is valid RFC 3339 as well.
+var containerLogTimestamps = []struct {
+	name      string
+	timestamp string
+}{
+	{name: "UTC", timestamp: someTimestamp},
+	{name: "positive offset", timestamp: "2024-07-25T11:50:54.008163908+02:00"},
+	{name: "zero offset", timestamp: "2024-07-25T09:50:54.008163908+00:00"},
+	{name: "negative offset", timestamp: "2024-07-25T04:50:54.008163908-05:00"},
+}
+
+// timestampBuffer prefixes every write with timestamp and a space, the way the kubelet prefixes every log line.
+// Without a timestamp it uses someTimestamp.
 type timestampBuffer struct {
 	bytes.Buffer
+
+	timestamp string
 }
 
 func (b *timestampBuffer) Write(p []byte) (int, error) {
-	return fmt.Fprintf(&b.Buffer, "%s %s", someTimestamp, p)
+	timestamp := b.timestamp
+	if timestamp == "" {
+		timestamp = someTimestamp
+	}
+
+	return fmt.Fprintf(&b.Buffer, "%s %s", timestamp, p)
 }
 
 func TestEntrypointLogForwarder(t *testing.T) {
 	t.Run("forward, pause, resume", func(t *testing.T) {
+		for _, tc := range containerLogTimestamps {
+			t.Run(tc.name, func(t *testing.T) {
+				sink := &fakeEntrypointForwarderSink{}
+
+				lf := &entrypointLogForwarder{
+					Sink: sink,
+				}
+
+				buf := timestampBuffer{timestamp: tc.timestamp}
+
+				fmt.Fprintln(&buf, "1")
+				fmt.Fprintln(&buf, "2")
+
+				fmt.Fprintln(&buf, logPauseMarker)
+
+				fmt.Fprintln(&buf, "3")
+				fmt.Fprintln(&buf, "4")
+
+				fmt.Fprintln(&buf, logResumeMarker)
+
+				fmt.Fprintln(&buf, "5")
+
+				_, err := io.Copy(lf, &buf)
+				require.NoError(t, err)
+
+				expectedBuf := timestampBuffer{timestamp: tc.timestamp}
+				fmt.Fprintln(&expectedBuf, "1")
+				fmt.Fprintln(&expectedBuf, "2")
+				fmt.Fprintln(&expectedBuf, "5")
+
+				assert.Equal(t, expectedBuf.String(), sink.String())
+			})
+		}
+	})
+
+	t.Run("marker after something other than a timestamp", func(t *testing.T) {
 		sink := &fakeEntrypointForwarderSink{}
 
 		lf := &entrypointLogForwarder{
 			Sink: sink,
 		}
 
-		var buf timestampBuffer
+		// the first word is followed by a space, like a timestamp would be, but it is not one, so the marker is just
+		// output of the build container
+		input := "not-a-timestamp " + logPauseMarker + "\n" +
+			"2024-07-25 09:50:54 " + logPauseMarker + "\n" +
+			"after\n"
 
-		fmt.Fprintln(&buf, "1")
-		fmt.Fprintln(&buf, "2")
-
-		fmt.Fprintln(&buf, logPauseMarker)
-
-		fmt.Fprintln(&buf, "3")
-		fmt.Fprintln(&buf, "4")
-
-		fmt.Fprintln(&buf, logResumeMarker)
-
-		fmt.Fprintln(&buf, "5")
-
-		_, err := io.Copy(lf, &buf)
+		_, err := io.Copy(lf, bytes.NewBufferString(input))
 		require.NoError(t, err)
 
-		var expectedBuf timestampBuffer
-		fmt.Fprintln(&expectedBuf, "1")
-		fmt.Fprintln(&expectedBuf, "2")
-		fmt.Fprintln(&expectedBuf, "5")
+		assert.Equal(t, input, sink.String())
+	})
 
-		assert.Equal(t, expectedBuf.String(), sink.String())
+	t.Run("lines too short for a timestamp and a space", func(t *testing.T) {
+		sink := &fakeEntrypointForwarderSink{}
+
+		lf := &entrypointLogForwarder{
+			Sink: sink,
+		}
+
+		input := "\n" +
+			"short\n" +
+			// 30 bytes with the newline: as long as a UTC timestamp, one byte short of a timestamp and its space
+			"2024-07-25T09:50:54.008163908\n"
+
+		_, err := io.Copy(lf, bytes.NewBufferString(input))
+		require.NoError(t, err)
+
+		assert.Equal(t, input, sink.String())
 	})
 
 	t.Run("multiple writes, one line", func(t *testing.T) {
@@ -128,32 +191,36 @@ func TestEntrypointLogForwarder(t *testing.T) {
 	})
 
 	t.Run("with timestamp", func(t *testing.T) {
-		sink := &fakeEntrypointForwarderSink{}
+		for _, tc := range containerLogTimestamps {
+			t.Run(tc.name, func(t *testing.T) {
+				sink := &fakeEntrypointForwarderSink{}
 
-		lf := &entrypointLogForwarder{
-			Sink: sink,
+				lf := &entrypointLogForwarder{
+					Sink: sink,
+				}
+
+				buf := timestampBuffer{timestamp: tc.timestamp}
+
+				fmt.Fprintln(&buf, "cow")
+				fmt.Fprintln(&buf, logPauseMarker)
+				fmt.Fprintln(&buf, "no cow")
+				// we are missing the space between the TS and the marker, thus the marker won't do anything
+				// write directly to the underlying Buffer to avoid writing the timestamp correctly
+				fmt.Fprintln(&buf.Buffer, tc.timestamp+logResumeMarker)
+				fmt.Fprintln(&buf, "still no cow")
+				fmt.Fprintln(&buf, logResumeMarker)
+				fmt.Fprintln(&buf, "sheep")
+
+				_, err := io.Copy(lf, &buf)
+				require.NoError(t, err)
+
+				expectedBuf := timestampBuffer{timestamp: tc.timestamp}
+				fmt.Fprintln(&expectedBuf, "cow")
+				fmt.Fprintln(&expectedBuf, "sheep")
+
+				assert.Equal(t, expectedBuf.String(), sink.String())
+			})
 		}
-
-		var buf timestampBuffer
-
-		fmt.Fprintln(&buf, "cow")
-		fmt.Fprintln(&buf, logPauseMarker)
-		fmt.Fprintln(&buf, "no cow")
-		// we are missing the space between the TS and the marker, thus the marker won't do anything
-		// write directly to the underlying Buffer to avoid writing the timestamp correctly
-		fmt.Fprintln(&buf.Buffer, someTimestamp+logResumeMarker)
-		fmt.Fprintln(&buf, "still no cow")
-		fmt.Fprintln(&buf, logResumeMarker)
-		fmt.Fprintln(&buf, "sheep")
-
-		_, err := io.Copy(lf, &buf)
-		require.NoError(t, err)
-
-		var expectedBuf timestampBuffer
-		fmt.Fprintln(&expectedBuf, "cow")
-		fmt.Fprintln(&expectedBuf, "sheep")
-
-		assert.Equal(t, expectedBuf.String(), sink.String())
 	})
 
 	t.Run("flushes on close", func(t *testing.T) {

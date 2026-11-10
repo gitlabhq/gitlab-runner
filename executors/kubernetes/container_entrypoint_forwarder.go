@@ -1,13 +1,21 @@
 package kubernetes
 
 import (
+	"bytes"
 	"io"
 	"time"
 
 	"gitlab.com/gitlab-org/gitlab-runner/shells"
 )
 
-const containerLoggerTimeStampFormat = "2006-01-02T15:04:05.999999999Z"
+// containerLoggerTimeStampFormat is the layout of the timestamp the kubelet puts in front of every log line when the
+// logs are requested with timestamps. The kubelet writes the time the container runtime recorded, in the runtime's
+// zone, so the timestamp ends in Z on a node whose time zone is UTC and in an offset such as +02:00 on any other.
+const containerLoggerTimeStampFormat = time.RFC3339Nano
+
+// containerLoggerTimeStampMaxLen is the length of the longest timestamp in containerLoggerTimeStampFormat, with all
+// nine fractional digits and an offset.
+const containerLoggerTimeStampMaxLen = len("2006-01-02T15:04:05.999999999-07:00")
 
 // entrypointLogForwarder implements an io.WriteCloser and forwards logs to the Sink.
 // If we see markers for starting or stopping a step, we pause / resume log forwarding, so that we only forward logs
@@ -91,22 +99,20 @@ func (lf *entrypointLogForwarder) Close() error {
 func (lf *entrypointLogForwarder) commandStatus(p []byte) (shells.StageCommandStatus, bool) {
 	cmdStatus := shells.StageCommandStatus{}
 
-	// check if the first part resembles a timestamp
-	if len(p) < len(containerLoggerTimeStampFormat) ||
-		p[len(containerLoggerTimeStampFormat)] != ' ' {
+	// check if the first part resembles a timestamp; its length depends on the zone, so look for the space after it,
+	// no further than the longest timestamp
+	tsLen := bytes.IndexByte(p[:min(len(p), containerLoggerTimeStampMaxLen+1)], ' ')
+	if tsLen < 0 {
 		return cmdStatus, false
 	}
 
-	line := string(p)
-	ts := line[:len(containerLoggerTimeStampFormat)]
-	_, err := time.Parse(containerLoggerTimeStampFormat, ts)
-
+	_, err := time.Parse(containerLoggerTimeStampFormat, string(p[:tsLen]))
 	if err != nil {
 		return cmdStatus, false
 	}
 
 	// the actual log line starts after the timestamp + a space
-	line = line[len(containerLoggerTimeStampFormat)+1:]
+	line := string(p[tsLen+1:])
 
 	ok := cmdStatus.TryUnmarshal(line)
 	return cmdStatus, ok
