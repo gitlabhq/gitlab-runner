@@ -1855,7 +1855,7 @@ func (s *executor) buildContainer(opts containerBuildOpts) (api.Container, error
 		return api.Container{}, err
 	}
 
-	command, args := s.getCommandAndArgs(opts.imageDefinition, opts.command...)
+	command, args := s.getCommandAndArgs(opts.imageDefinition, opts.isServiceContainer, opts.command...)
 
 	container := api.Container{
 		Name:            opts.name,
@@ -1917,8 +1917,19 @@ func (s *executor) shouldUseStartupProbe() bool {
 	return honorEntrypoint && legacyExecMode
 }
 
-func (s *executor) getCommandAndArgs(imageDefinition spec.Image, command ...string) (retCommand []string, retArgs []string) {
+func (s *executor) getCommandAndArgs(
+	imageDefinition spec.Image,
+	isServiceContainer bool,
+	command ...string,
+) (retCommand []string, retArgs []string) {
 	if s.Build.IsFeatureFlagOn(featureflags.KubernetesHonorEntrypoint) {
+		// Service containers still honour an explicit entrypoint/command from
+		// the job spec: the flag means "don't inject our own entrypoint", not
+		// "ignore what the user configured". Build and helper containers keep
+		// deferring entirely to the image, as before.
+		if isServiceContainer {
+			return serviceCommandAndArgs(imageDefinition)
+		}
 		return []string{}, command
 	}
 
@@ -1927,6 +1938,25 @@ func (s *executor) getCommandAndArgs(imageDefinition spec.Image, command ...stri
 	}
 
 	var args []string
+	if len(imageDefinition.Command) > 0 {
+		args = imageDefinition.Command
+	}
+
+	return command, args
+}
+
+// serviceCommandAndArgs maps a service's job-spec overrides onto the Kubernetes
+// container fields: entrypoint becomes Command, command becomes Args. Fields the
+// user did not set are left unset so the image's own ENTRYPOINT/CMD still apply.
+func serviceCommandAndArgs(imageDefinition spec.Image) ([]string, []string) {
+	if len(imageDefinition.Entrypoint) == 0 && len(imageDefinition.Command) == 0 {
+		return []string{}, nil
+	}
+
+	var command, args []string
+	if len(imageDefinition.Entrypoint) > 0 {
+		command = imageDefinition.Entrypoint
+	}
 	if len(imageDefinition.Command) > 0 {
 		args = imageDefinition.Command
 	}
