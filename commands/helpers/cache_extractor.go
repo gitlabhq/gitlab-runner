@@ -316,7 +316,7 @@ func (c *CacheExtractorCommand) presignedParallelDownloadEligible() bool {
 // errRangeNotHonored marks a chunk answered with 200 and the whole object: the server ignored Range,
 // and a sequential GET still downloads such an object. A 206 for another range is not marked: a
 // caching proxy whose cache key leaves out Range answers the sequential GET with the same partial
-// 206, and the sequential download would keep that as the archive.
+// 206, which the sequential download rejects.
 var errRangeNotHonored = errors.New("range not honored")
 
 // tryPresignedParallelDownload uses a single-byte Range GET (not HEAD: presigned S3 URLs are typically
