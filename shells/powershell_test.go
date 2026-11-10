@@ -967,6 +967,18 @@ func Test_PsWriter_Variable(t *testing.T) {
 			wantLinux:   "${KEY}=\"VALUE\"${env:KEY}=${KEY}",
 			wantWindows: "${KEY}=\"VALUE\"${env:KEY}=${KEY}",
 		},
+		"regular var with double quotation marks": {
+			variable:    spec.Variable{Key: "KEY", Value: "a“b”c„d"},
+			writer:      PsWriter{TemporaryPath: "C:/foo/bar"},
+			wantLinux:   "${KEY}=\"a`“b`”c`„d\"${env:KEY}=${KEY}",
+			wantWindows: "${KEY}=\"a`“b`”c`„d\"${env:KEY}=${KEY}",
+		},
+		"regular var with single quotation marks": {
+			variable:    spec.Variable{Key: "KEY", Value: "a‘b’c‚d‛e"},
+			writer:      PsWriter{TemporaryPath: "C:/foo/bar"},
+			wantLinux:   "${KEY}=\"a‘b’c‚d‛e\"${env:KEY}=${KEY}",
+			wantWindows: "${KEY}=\"a‘b’c‚d‛e\"${env:KEY}=${KEY}",
+		},
 		"regular var with dashes": {
 			variable:    spec.Variable{Key: "Test-Variable", Value: "value"},
 			writer:      PsWriter{TemporaryPath: "C:/foo/bar"},

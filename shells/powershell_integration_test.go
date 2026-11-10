@@ -4,15 +4,19 @@ package shells
 
 import (
 	"bytes"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"slices"
+	"strconv"
 	"strings"
 	"testing"
+	"unicode/utf16"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 )
 
@@ -124,5 +128,114 @@ $sw.Close()
 		payload := data[len(bom):]
 		assert.Equal(t, []byte(content), payload,
 			"content after BOM should be the em-dash encoded in UTF-8")
+	})
+}
+
+// writeCodeUnitsFunction defines a PowerShell function printing the UTF-16
+// code units of its first argument, so that what the parser read can be
+// compared without depending on the code page the shell writes its output in.
+const writeCodeUnitsFunction = `function Write-CodeUnits { ($args[0].ToCharArray() | ForEach-Object { [int]$_ }) -join ' ' }`
+
+// codeUnits is what Write-CodeUnits prints for text.
+func codeUnits(text string) string {
+	var units []string
+	for _, unit := range utf16.Encode([]rune(text)) {
+		units = append(units, strconv.Itoa(int(unit)))
+	}
+	return strings.Join(units, " ")
+}
+
+// onEachPowershell runs f with a writer for each PowerShell the host has.
+// Windows PowerShell reads a script file without a BOM in the system code
+// page, so its script is written with one, as the runner does when it passes
+// a script as a file.
+func onEachPowershell(t *testing.T, f func(t *testing.T, shell string, writer *PsWriter)) {
+	writers := map[string]*PsWriter{
+		SNPowershell: {Shell: SNPowershell, EOL: "\r\n", PassFile: true, TemporaryPath: "tmp"},
+		SNPwsh:       {Shell: SNPwsh, EOL: "\n", TemporaryPath: "tmp"},
+	}
+
+	for shell, writer := range writers {
+		t.Run(shell, func(t *testing.T) {
+			helpers.SkipIntegrationTests(t, shell)
+			f(t, shell, writer)
+		})
+	}
+}
+
+// runScriptLines runs the writer's script as a file and returns the non-empty
+// lines it printed.
+func runScriptLines(t *testing.T, shell string, writer *PsWriter) []string {
+	t.Helper()
+
+	scriptFile := filepath.Join(t.TempDir(), "script.ps1")
+	require.NoError(t, os.WriteFile(scriptFile, []byte(writer.Finish(false)), 0o600))
+
+	cmd := exec.Command(shell, "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-File", scriptFile)
+	cmd.Env = testEnv()
+	out, err := cmd.CombinedOutput()
+	require.NoError(t, err, "output: %s", out)
+
+	var lines []string
+	for line := range strings.Lines(string(out)) {
+		if line = strings.TrimSpace(line); line != "" {
+			lines = append(lines, line)
+		}
+	}
+	return lines
+}
+
+// TestPowershell_CommandKeepsSingleQuoteCharacters runs a generated script that
+// passes arguments holding U+2018 to U+201B through Command, and checks that
+// the parser reads each argument unchanged.
+func TestPowershell_CommandKeepsSingleQuoteCharacters(t *testing.T) {
+	arguments := []string{
+		"it's",
+		"it‘s", // left single quotation mark
+		"it’s", // right single quotation mark
+		"it‚s", // single low-9 quotation mark
+		"it‛s", // single high-reversed-9 quotation mark
+		"a’b‘c",
+		"it’’s",
+		"'‘’‚‛",
+	}
+
+	onEachPowershell(t, func(t *testing.T, shell string, writer *PsWriter) {
+		writer.Line(writeCodeUnitsFunction)
+		var want []string
+		for _, argument := range arguments {
+			writer.Command("Write-CodeUnits", argument)
+			want = append(want, codeUnits(argument))
+		}
+
+		assert.Equal(t, want, runScriptLines(t, shell, writer))
+	})
+}
+
+// TestPowershell_VariableKeepsQuoteCharacters runs a generated script that
+// sets variables holding every character PowerShell reads as a quote, and
+// checks that the variable and its environment copy hold each value unchanged.
+func TestPowershell_VariableKeepsQuoteCharacters(t *testing.T) {
+	values := []string{
+		`it's`,
+		`say "hi"`,
+		"a“b”c„d",   // double quotation marks
+		"a‘b’c‚d‛e", // single quotation marks
+		"it’’s",
+		`'"‘’‚‛“”„`,
+	}
+
+	onEachPowershell(t, func(t *testing.T, shell string, writer *PsWriter) {
+		writer.Line(writeCodeUnitsFunction)
+		var want []string
+		for i, value := range values {
+			key := fmt.Sprintf("QUOTES_%d", i)
+			writer.Variable(spec.Variable{Key: key, Value: value})
+			writer.Linef("Write-CodeUnits ${%s}", key)
+			writer.Linef("Write-CodeUnits ${env:%s}", key)
+			want = append(want, codeUnits(value), codeUnits(value))
+		}
+
+		assert.Equal(t, want, runScriptLines(t, shell, writer))
 	})
 }
