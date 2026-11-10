@@ -144,6 +144,14 @@ lint:
 	@$(MAKE) check_test_directives >/dev/stderr
 	@$(GOLANGLINT) run $(OUT_FORMAT) $(LINT_FLAGS) ./...
 
+.PHONY: check_deadcode
+check_deadcode:
+	@scripts/check-deadcode check
+
+.PHONY: update_deadcode_baseline
+update_deadcode_baseline:
+	@scripts/check-deadcode update
+
 .PHONY: lint-docs
 lint-docs:
 	@scripts/lint-docs

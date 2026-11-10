@@ -5,6 +5,7 @@
 .code-backstage-patterns: &code-backstage-patterns
   - ".gitlab-ci.yml"
   - ".golangci.yml"
+  - ".deadcode-baseline"
   - ".gitlab/ci/**/*"
   - ".gitattributes"
   - "Makefile*"
