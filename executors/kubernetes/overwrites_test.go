@@ -16,6 +16,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/common/buildlogger"
 	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 )
 
 type variableOverwrites map[string]string
@@ -675,7 +676,7 @@ func TestOverwrites(t *testing.T) {
 				test.PodAnnotationsOverwriteValues,
 			)
 
-			values, err := createOverwrites(test.Config, variables, logger)
+			values, err := createOverwrites(test.Config, variables, false, logger)
 			assert.ErrorIs(t, err, test.Error)
 			assert.Equal(t, test.Expected, values)
 		})
@@ -688,23 +689,31 @@ func TestOverwrites(t *testing.T) {
 // requested value unless it is anchored with ^ and $, and for pod labels,
 // pod annotations, node selectors and node tolerations it is matched
 // against the whole variable value, the key included.
+//
+// Each case runs with FF_KUBERNETES_ANCHOR_OVERWRITE_ALLOWED off and on.
+// With the flag on, the expression is matched against the whole value, so
+// a value that an unanchored expression matches only in part is refused
+// (refusedWhenAnchored), and every other case has the same result in both
+// modes.
 func TestOverwritesAllowedPatternMatching(t *testing.T) {
 	logger := stdoutLogger()
 
 	tests := []struct {
-		name     string
-		config   common.KubernetesConfig
-		variable spec.Variable
-		refused  bool
-		got      func(o *overwrites) any
-		want     any
+		name                string
+		config              common.KubernetesConfig
+		variable            spec.Variable
+		refused             bool
+		refusedWhenAnchored bool
+		got                 func(o *overwrites) any
+		want                any
 	}{
 		{
-			name:     "namespace pattern matches anywhere in the value",
-			config:   common.KubernetesConfig{NamespaceOverwriteAllowed: "ci-.*"},
-			variable: spec.Variable{Key: NamespaceOverwriteVariableName, Value: "review-ci-apps"},
-			got:      func(o *overwrites) any { return o.namespace },
-			want:     "review-ci-apps",
+			name:                "namespace pattern matches anywhere in the value",
+			config:              common.KubernetesConfig{NamespaceOverwriteAllowed: "ci-.*"},
+			variable:            spec.Variable{Key: NamespaceOverwriteVariableName, Value: "review-ci-apps"},
+			refusedWhenAnchored: true,
+			got:                 func(o *overwrites) any { return o.namespace },
+			want:                "review-ci-apps",
 		},
 		{
 			name:     "anchored namespace pattern refuses a value it matches only in part",
@@ -720,11 +729,12 @@ func TestOverwritesAllowedPatternMatching(t *testing.T) {
 			want:     "ci-feature",
 		},
 		{
-			name:     "service account pattern matches anywhere in the value",
-			config:   common.KubernetesConfig{ServiceAccountOverwriteAllowed: "ci-builder"},
-			variable: spec.Variable{Key: ServiceAccountOverwriteVariableName, Value: "ci-builder-2"},
-			got:      func(o *overwrites) any { return o.serviceAccount },
-			want:     "ci-builder-2",
+			name:                "service account pattern matches anywhere in the value",
+			config:              common.KubernetesConfig{ServiceAccountOverwriteAllowed: "ci-builder"},
+			variable:            spec.Variable{Key: ServiceAccountOverwriteVariableName, Value: "ci-builder-2"},
+			refusedWhenAnchored: true,
+			got:                 func(o *overwrites) any { return o.serviceAccount },
+			want:                "ci-builder-2",
 		},
 		{
 			name:     "anchored service account pattern accepts the exact name",
@@ -740,11 +750,12 @@ func TestOverwritesAllowedPatternMatching(t *testing.T) {
 			refused:  true,
 		},
 		{
-			name:     "node selector pattern matches anywhere in key=value",
-			config:   common.KubernetesConfig{NodeSelectorOverwriteAllowed: "kubernetes.io/arch=.*"},
-			variable: spec.Variable{Key: NodeSelectorOverwriteVariablePrefix + "ARCH", Value: "beta.kubernetes.io/arch=amd64"},
-			got:      func(o *overwrites) any { return o.nodeSelector },
-			want:     map[string]string{"beta.kubernetes.io/arch": "amd64"},
+			name:                "node selector pattern matches anywhere in key=value",
+			config:              common.KubernetesConfig{NodeSelectorOverwriteAllowed: "kubernetes.io/arch=.*"},
+			variable:            spec.Variable{Key: NodeSelectorOverwriteVariablePrefix + "ARCH", Value: "beta.kubernetes.io/arch=amd64"},
+			refusedWhenAnchored: true,
+			got:                 func(o *overwrites) any { return o.nodeSelector },
+			want:                map[string]string{"beta.kubernetes.io/arch": "amd64"},
 		},
 		{
 			name:     "anchored node selector pattern refuses another key",
@@ -779,11 +790,12 @@ func TestOverwritesAllowedPatternMatching(t *testing.T) {
 			refused:  true,
 		},
 		{
-			name:     "pod annotation pattern can match in the value part",
-			config:   common.KubernetesConfig{PodAnnotationsOverwriteAllowed: `example\.com/`},
-			variable: spec.Variable{Key: PodAnnotationsOverwriteVariablePrefix + "1", Value: "description=example.com/build"},
-			got:      func(o *overwrites) any { return o.podAnnotations },
-			want:     map[string]string{"description": "example.com/build"},
+			name:                "pod annotation pattern can match in the value part",
+			config:              common.KubernetesConfig{PodAnnotationsOverwriteAllowed: `example\.com/`},
+			variable:            spec.Variable{Key: PodAnnotationsOverwriteVariablePrefix + "1", Value: "description=example.com/build"},
+			refusedWhenAnchored: true,
+			got:                 func(o *overwrites) any { return o.podAnnotations },
+			want:                map[string]string{"description": "example.com/build"},
 		},
 		{
 			name:     "anchored pod annotation pattern refuses a match in the value part",
@@ -804,19 +816,190 @@ func TestOverwritesAllowedPatternMatching(t *testing.T) {
 			got:      func(o *overwrites) any { return o.nodeTolerations },
 			want:     map[string]string{"dedicated=ci": "NoSchedule"},
 		},
+		{
+			name:                "node toleration pattern can match without the effect",
+			config:              common.KubernetesConfig{NodeTolerationsOverwriteAllowed: "dedicated=ci"},
+			variable:            spec.Variable{Key: NodeTolerationsOverwriteVariablePrefix + "1", Value: "dedicated=ci:NoSchedule"},
+			refusedWhenAnchored: true,
+			got:                 func(o *overwrites) any { return o.nodeTolerations },
+			want:                map[string]string{"dedicated=ci": "NoSchedule"},
+		},
+		{
+			name:                "pod label pattern can match a longer value",
+			config:              common.KubernetesConfig{PodLabelsOverwriteAllowed: "team=(build|test)"},
+			variable:            spec.Variable{Key: PodLabelsOverwriteVariablePrefix + "1", Value: "team=builder"},
+			refusedWhenAnchored: true,
+			got:                 func(o *overwrites) any { return o.podLabels },
+			want:                map[string]string{"team": "builder"},
+		},
+		{
+			name:     "unanchored namespace pattern accepts a value it matches whole",
+			config:   common.KubernetesConfig{NamespaceOverwriteAllowed: "ci-.*"},
+			variable: spec.Variable{Key: NamespaceOverwriteVariableName, Value: "ci-feature"},
+			got:      func(o *overwrites) any { return o.namespace },
+			want:     "ci-feature",
+		},
+		{
+			name:                "an alternation matches one of its branches anywhere in the value",
+			config:              common.KubernetesConfig{NamespaceOverwriteAllowed: "ci-builds|ci-review"},
+			variable:            spec.Variable{Key: NamespaceOverwriteVariableName, Value: "my-ci-review"},
+			refusedWhenAnchored: true,
+			got:                 func(o *overwrites) any { return o.namespace },
+			want:                "my-ci-review",
+		},
+		{
+			name:     "an alternation accepts each of its branches",
+			config:   common.KubernetesConfig{NamespaceOverwriteAllowed: "ci-builds|ci-review"},
+			variable: spec.Variable{Key: NamespaceOverwriteVariableName, Value: "ci-review"},
+			got:      func(o *overwrites) any { return o.namespace },
+			want:     "ci-review",
+		},
+		{
+			name:     "an empty pattern disables the overwrite",
+			config:   common.KubernetesConfig{Namespace: "default"},
+			variable: spec.Variable{Key: NamespaceOverwriteVariableName, Value: "ci-feature"},
+			got:      func(o *overwrites) any { return o.namespace },
+			want:     "default",
+		},
+		{
+			name:     "bearer token overwrite accepts any non-empty value",
+			config:   common.KubernetesConfig{BearerTokenOverwriteAllowed: true},
+			variable: spec.Variable{Key: BearerTokenOverwriteVariableValue, Value: "first-line\nsecond-line"},
+			got:      func(o *overwrites) any { return o.bearerToken },
+			want:     "first-line\nsecond-line",
+		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			o, err := createOverwrites(&tc.config, spec.Variables{tc.variable}, logger)
-			if tc.refused {
-				assert.ErrorIs(t, err, new(malformedOverwriteError))
-				assert.Nil(t, o)
+			for _, anchor := range []bool{false, true} {
+				t.Run(fmt.Sprintf("%s=%t", featureflags.KubernetesAnchorOverwriteAllowed, anchor), func(t *testing.T) {
+					o, err := createOverwrites(&tc.config, spec.Variables{tc.variable}, anchor, logger)
+					if tc.refused || (anchor && tc.refusedWhenAnchored) {
+						assert.ErrorIs(t, err, new(malformedOverwriteError))
+						assert.Nil(t, o)
+						return
+					}
+
+					require.NoError(t, err)
+					assert.Equal(t, tc.want, tc.got(o))
+				})
+			}
+		})
+	}
+}
+
+func Test_overwriteRegexCheck_anchorMatchesWrappedExpression(t *testing.T) {
+	regexes := []string{`a|b`, `a|ab`, `(?m)^a$`, `.*`, `a*?`, `\Aa\z`, `(a|ab)(c|bcd)`}
+	values := []string{"", "a", "b", "ab", "ba", "a\n", "a\nb", "abcd", "\n"}
+
+	for _, regex := range regexes {
+		for _, value := range values {
+			t.Run(regex+" on "+value, func(t *testing.T) {
+				got := overwriteRegexCheck(regex, value, true)
+				want := overwriteRegexCheck("^(?:"+regex+")$", value, false)
+				assert.Equal(t, want == nil, got == nil)
+			})
+		}
+	}
+}
+
+func Test_overwriteRegexCheck(t *testing.T) {
+	tests := []struct {
+		name    string
+		regex   string
+		value   string
+		anchor  bool
+		wantErr string
+	}{
+		{
+			name:  "unanchored expression matches part of the value",
+			regex: "ci-.*",
+			value: "review-ci-apps",
+		},
+		{
+			name:    "anchored expression names the expression as configured",
+			regex:   "ci-.*",
+			value:   "review-ci-apps",
+			anchor:  true,
+			wantErr: `provided value "review-ci-apps" does not match "ci-.*"`,
+		},
+		{
+			name:    "anchored alternation is matched as a whole",
+			regex:   "ci-builds|ci-review",
+			value:   "my-ci-review",
+			anchor:  true,
+			wantErr: `provided value "my-ci-review" does not match "ci-builds|ci-review"`,
+		},
+		{
+			name:   "anchored expression keeps its flags",
+			regex:  "(?i)ci-.*",
+			value:  "CI-Review",
+			anchor: true,
+		},
+		{
+			name:   "expression that is already anchored",
+			regex:  "^(ci-builds|ci-review)$",
+			value:  "ci-review",
+			anchor: true,
+		},
+		{
+			name:   "anchored alternation whose first branch is a prefix of the value",
+			regex:  "ci|ci-review",
+			value:  "ci-review",
+			anchor: true,
+		},
+		{
+			name:  "unanchored alternation of anchored branches matches part of the value",
+			regex: "^ci-builds|ci-review$",
+			value: "my-ci-review",
+		},
+		{
+			name:    "anchored alternation of anchored branches is matched as a whole",
+			regex:   "^ci-builds|ci-review$",
+			value:   "my-ci-review",
+			anchor:  true,
+			wantErr: `provided value "my-ci-review" does not match "^ci-builds|ci-review$"`,
+		},
+		{
+			name:    "unanchored expression that does not compile",
+			regex:   "a)|(b",
+			value:   "a",
+			wantErr: "error parsing regexp: unexpected ): `a)|(b`",
+		},
+		{
+			name:    "anchored expression that does not compile, although its anchored form would",
+			regex:   "a)|(b",
+			value:   "a",
+			anchor:  true,
+			wantErr: "error parsing regexp: unexpected ): `a)|(b`",
+		},
+		// An unclosed \Q quotes the rest of the expression, so ^(?:\Qci-)$
+		// would quote ")$" too and not compile.
+		{
+			name:   "anchored expression that compiles only as written",
+			regex:  `\Qci-`,
+			value:  "ci-",
+			anchor: true,
+		},
+		{
+			name:    "anchored expression that compiles only as written is matched as a whole",
+			regex:   `\Qci-`,
+			value:   "my-ci-",
+			anchor:  true,
+			wantErr: `provided value "my-ci-" does not match "\\Qci-"`,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			err := overwriteRegexCheck(tc.regex, tc.value, tc.anchor)
+			if tc.wantErr == "" {
+				assert.NoError(t, err)
 				return
 			}
 
-			require.NoError(t, err)
-			assert.Equal(t, tc.want, tc.got(o))
+			assert.EqualError(t, err, tc.wantErr)
 		})
 	}
 }
@@ -864,7 +1047,7 @@ func Test_overwrites_evaluateExplicitServiceResourceOverwrite(t *testing.T) {
 		ServiceEphemeralStorageRequestOverwriteMaxAllowed: "2Gi",
 		ServiceEphemeralStorageLimitOverwriteMaxAllowed:   "4Gi",
 	}
-	defaultOverwrites, err := createOverwrites(defaultKubernetesConfig, spec.Variables{}, defaultLogger)
+	defaultOverwrites, err := createOverwrites(defaultKubernetesConfig, spec.Variables{}, false, defaultLogger)
 	assert.NoError(t, err)
 	defaultServiceLimits := mustCreateResourceList(
 		t,
@@ -1201,7 +1384,7 @@ func Test_overwrites_getServiceResourceLimits(t *testing.T) {
 		ServiceEphemeralStorageRequestOverwriteMaxAllowed: "2Gi",
 		ServiceEphemeralStorageLimitOverwriteMaxAllowed:   "4Gi",
 	}
-	defaultOverwrites, err := createOverwrites(defaultKubernetesConfig, spec.Variables{}, defaultLogger)
+	defaultOverwrites, err := createOverwrites(defaultKubernetesConfig, spec.Variables{}, false, defaultLogger)
 	assert.NoError(t, err)
 	err = defaultOverwrites.evaluateMaxServiceResourcesOverwrite(
 		defaultKubernetesConfig,
@@ -1279,6 +1462,7 @@ func Test_overwrites_getServiceResourceRequests(t *testing.T) {
 	defaultOverwrites, err := createOverwrites(
 		defaultKubernetesConfig,
 		spec.Variables{},
+		false,
 		defaultLogger,
 	)
 	assert.NoError(t, err)

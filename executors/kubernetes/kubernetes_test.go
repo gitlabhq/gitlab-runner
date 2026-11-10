@@ -4150,6 +4150,87 @@ func TestSetupCredentialsHonoursCredentialHelperAllowlist(t *testing.T) {
 	assert.Contains(t, logs.String(), "nonexistent-helper")
 }
 
+// TestPrepareOverwritesAnchorFeatureFlagPrecedence checks that
+// FF_KUBERNETES_ANCHOR_OVERWRITE_ALLOWED is read like the other feature
+// flags: from [runners.feature_flags] when it sets the flag, otherwise from a
+// job variable. Anchoring only refuses more values, so a job can make its own
+// matching stricter, but cannot turn off anchoring that the runner turns on.
+func TestPrepareOverwritesAnchorFeatureFlagPrecedence(t *testing.T) {
+	const flag = featureflags.KubernetesAnchorOverwriteAllowed
+
+	// A job variable can switch this flag in both directions when the runner
+	// configuration does not set it. That is safe only while the default is false.
+	for _, ff := range featureflags.GetAll() {
+		if ff.Name == flag {
+			require.False(t, ff.DefaultValue)
+		}
+	}
+
+	tests := map[string]struct {
+		runnerFeatureFlags map[string]bool
+		jobFeatureFlag     string
+		refused            bool
+	}{
+		"flag not set": {
+			refused: false,
+		},
+		"flag set by a job variable only": {
+			jobFeatureFlag: "true",
+			refused:        true,
+		},
+		"flag set in the runner configuration": {
+			runnerFeatureFlags: map[string]bool{flag: true},
+			refused:            true,
+		},
+		"flag set in the runner configuration and false in a job variable": {
+			runnerFeatureFlags: map[string]bool{flag: true},
+			jobFeatureFlag:     "false",
+			refused:            true,
+		},
+		"flag false in the runner configuration and true in a job variable": {
+			runnerFeatureFlags: map[string]bool{flag: false},
+			jobFeatureFlag:     "true",
+			refused:            false,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			runnerConfig := common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					FeatureFlags: tc.runnerFeatureFlags,
+					Kubernetes: &common.KubernetesConfig{
+						Namespace:                 "default",
+						NamespaceOverwriteAllowed: "ci-.*",
+					},
+				},
+			}
+
+			variables := spec.Variables{{Key: NamespaceOverwriteVariableName, Value: "review-ci-apps"}}
+			if tc.jobFeatureFlag != "" {
+				variables = append(variables, spec.Variable{Key: flag, Value: tc.jobFeatureFlag})
+			}
+
+			ex := newExecutor()
+			ex.AbstractExecutor.Config = runnerConfig
+			ex.AbstractExecutor.Build = &common.Build{
+				Job:    spec.Job{Variables: variables},
+				Runner: &runnerConfig,
+			}
+			ex.BuildLogger = buildlogger.New(&common.Trace{Writer: io.Discard}, logrus.WithFields(logrus.Fields{}), buildlogger.Options{})
+
+			err := ex.prepareOverwrites(variables)
+			if tc.refused {
+				assert.ErrorIs(t, err, new(malformedOverwriteError))
+				return
+			}
+
+			require.NoError(t, err)
+			assert.Equal(t, "review-ci-apps", ex.configurationOverwrites.namespace)
+		})
+	}
+}
+
 func TestSetupBuildNamespace(t *testing.T) {
 	version, _ := testVersionAndCodec()
 
@@ -4367,6 +4448,7 @@ func TestServiceAccountExists(t *testing.T) {
 			ex := newExecutor()
 			ex.kubeClient = testKubernetesClient(version, fake.CreateHTTPClient(tc.clientFunc))
 			ex.AbstractExecutor.Config.RunnerSettings.Kubernetes.Namespace = namespace
+			ex.AbstractExecutor.Build = &common.Build{}
 
 			ctx, cancel := context.WithTimeout(t.Context(), time.Second*30)
 			defer cancel()
@@ -4432,6 +4514,7 @@ func TestSecretExists(t *testing.T) {
 			ex := newExecutor()
 			ex.kubeClient = testKubernetesClient(version, fake.CreateHTTPClient(tc.clientFunc))
 			ex.AbstractExecutor.Config.RunnerSettings.Kubernetes.Namespace = DefaultResourceIdentifier
+			ex.AbstractExecutor.Build = &common.Build{}
 
 			ctx, cancel := context.WithTimeout(t.Context(), time.Second*30)
 			defer cancel()
@@ -4643,6 +4726,7 @@ func TestWaitForResources(t *testing.T) {
 				ex.kubeClient = testKubernetesClient(version, fake.CreateHTTPClient(tc.clientFunc))
 				ex.AbstractExecutor.Config.RunnerSettings.Kubernetes.Namespace = DefaultResourceIdentifier
 				ex.AbstractExecutor.Config.RunnerSettings.Kubernetes.ResourceAvailabilityCheckMaxAttempts = 3
+				ex.AbstractExecutor.Build = &common.Build{}
 
 				var err error
 

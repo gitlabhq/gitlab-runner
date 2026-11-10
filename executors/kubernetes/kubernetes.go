@@ -3811,7 +3811,15 @@ func (s *executor) checkScriptExecution(stage common.BuildStage, err error) erro
 }
 
 func (s *executor) prepareOverwrites(variables spec.Variables) error {
-	values, err := createOverwrites(s.Config.Kubernetes, variables, s.BuildLogger)
+	// Anchoring only refuses more values, so a job may turn this flag on with
+	// a variable. If its default ever becomes true, read it from the runner
+	// configuration only, or a job could turn anchoring off.
+	values, err := createOverwrites(
+		s.Config.Kubernetes,
+		variables,
+		s.Build.IsFeatureFlagOn(featureflags.KubernetesAnchorOverwriteAllowed),
+		s.BuildLogger,
+	)
 	if err != nil {
 		return err
 	}

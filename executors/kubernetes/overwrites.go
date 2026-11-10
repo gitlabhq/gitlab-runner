@@ -171,6 +171,7 @@ type overwrites struct {
 func createOverwrites(
 	config *common.KubernetesConfig,
 	variables spec.Variables,
+	anchorOverwriteAllowed bool,
 	logger buildlogger.Logger,
 ) (*overwrites, error) {
 	var err error
@@ -183,6 +184,7 @@ func createOverwrites(
 		"Namespace",
 		config.Namespace,
 		config.NamespaceOverwriteAllowed,
+		anchorOverwriteAllowed,
 		namespaceOverwrite,
 		logger,
 	)
@@ -195,6 +197,7 @@ func createOverwrites(
 		"ServiceAccount",
 		config.ServiceAccount,
 		config.ServiceAccountOverwriteAllowed,
+		anchorOverwriteAllowed,
 		serviceAccountOverwrite,
 		logger,
 	)
@@ -230,6 +233,7 @@ func createOverwrites(
 		"PodLabels",
 		config.PodLabels,
 		config.PodLabelsOverwriteAllowed,
+		anchorOverwriteAllowed,
 		variables,
 		PodLabelsOverwriteVariablePrefix,
 		logger,
@@ -243,6 +247,7 @@ func createOverwrites(
 		"PodAnnotations",
 		config.PodAnnotations,
 		config.PodAnnotationsOverwriteAllowed,
+		anchorOverwriteAllowed,
 		variables,
 		PodAnnotationsOverwriteVariablePrefix,
 		logger,
@@ -256,6 +261,7 @@ func createOverwrites(
 		"NodeSelector",
 		config.NodeSelector,
 		config.NodeSelectorOverwriteAllowed,
+		anchorOverwriteAllowed,
 		variables,
 		NodeSelectorOverwriteVariablePrefix,
 		logger,
@@ -269,6 +275,7 @@ func createOverwrites(
 		"NodeTolerations",
 		config.NodeTolerations,
 		config.NodeTolerationsOverwriteAllowed,
+		anchorOverwriteAllowed,
 		variables,
 		NodeTolerationsOverwriteVariablePrefix,
 		logger,
@@ -646,14 +653,18 @@ func (o *overwrites) evaluateBoolControlledOverwrite(
 	overwriteValue string,
 	logger buildlogger.Logger,
 ) (string, error) {
+	// The ".+" stands for "any value" and is not a setting of the runner
+	// configuration, so it is never anchored.
 	if canOverride {
-		return o.evaluateOverwrite(fieldName, value, ".+", overwriteValue, logger)
+		return o.evaluateOverwrite(fieldName, value, ".+", false, overwriteValue, logger)
 	}
-	return o.evaluateOverwrite(fieldName, value, "", overwriteValue, logger)
+	return o.evaluateOverwrite(fieldName, value, "", false, overwriteValue, logger)
 }
 
 func (o *overwrites) evaluateOverwrite(
-	fieldName, value, regex, overwriteValue string,
+	fieldName, value, regex string,
+	anchor bool,
+	overwriteValue string,
 	logger buildlogger.Logger,
 ) (string, error) {
 	if regex == "" {
@@ -665,7 +676,7 @@ func (o *overwrites) evaluateOverwrite(
 		return value, nil
 	}
 
-	if err := overwriteRegexCheck(regex, overwriteValue); err != nil {
+	if err := overwriteRegexCheck(regex, overwriteValue, anchor); err != nil {
 		return value, err
 	}
 
@@ -679,16 +690,40 @@ func (o *overwrites) evaluateOverwrite(
 	return overwriteValue, nil
 }
 
-func overwriteRegexCheck(regex, value string) error {
+// overwriteRegexCheck checks value against the regex of an *_overwrite_allowed
+// setting. With anchor, the regex must match the whole value, as if it were
+// written ^(?:regex)$. An alternation such as a|b stays between both anchors.
+//
+// The regex is compiled once, as written. A regex that does not compile is
+// refused in both modes, even when ^(?:regex)$ would compile. A regex that
+// compiles only as written, such as an unclosed \Q, is accepted. Errors name
+// the regex as written.
+func overwriteRegexCheck(regex, value string, anchor bool) error {
 	var err error
 	var r *regexp.Regexp
 	if r, err = regexp.Compile(regex); err != nil {
 		return err
 	}
-	if match := r.MatchString(value); !match {
+	var match bool
+	if anchor {
+		match = matchesWholeValue(r, value)
+	} else {
+		match = r.MatchString(value)
+	}
+	if !match {
 		return &malformedOverwriteError{value: value, pattern: regex}
 	}
 	return nil
+}
+
+// matchesWholeValue reports whether r matches all of value. A leftmost-longest
+// match starts as early as possible and, among those, ends as late as
+// possible, so it spans value exactly when some match of r does. Longest
+// changes r, which overwriteRegexCheck compiles for one check only.
+func matchesWholeValue(r *regexp.Regexp, value string) bool {
+	r.Longest()
+	loc := r.FindStringIndex(value)
+	return len(loc) == 2 && loc[0] == 0 && loc[1] == len(value)
 }
 
 // splitMapOverwrite splits provided string on the first "=" and returns (key, value, nil).
@@ -722,6 +757,7 @@ func (o *overwrites) evaluateMapOverwrite(
 	fieldName string,
 	values map[string]string,
 	regex string,
+	anchor bool,
 	variables spec.Variables,
 	variablesSelector string,
 	logger buildlogger.Logger,
@@ -740,7 +776,7 @@ func (o *overwrites) evaluateMapOverwrite(
 			continue
 		}
 
-		if err := overwriteRegexCheck(regex, variable.Value); err != nil {
+		if err := overwriteRegexCheck(regex, variable.Value, anchor); err != nil {
 			return nil, err
 		}
 

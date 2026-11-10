@@ -512,6 +512,30 @@ In a basic string, in double quotes, TOML reads the backslash as the start of an
   node_selector_overwrite_allowed = '^kubernetes\.io/arch=.*$'
 ```
 
+To match each of these expressions against the whole value without anchoring it yourself,
+set the `FF_KUBERNETES_ANCHOR_OVERWRITE_ALLOWED` [feature flag](../../configuration/feature-flags.md) to `true`
+in the `[runners.feature_flags]` section of the `config.toml` file.
+With this feature flag, each expression is matched as if it started with `^` and ended with `$`,
+so `ci-.*` matches `ci-review`, but not `review-ci-apps`.
+An expression that is already anchored, such as `^ci-.*$` or `^(ci-builds|ci-review)$`, matches the same values
+with or without the feature flag.
+
+Alternations are anchored as a whole. For example with `^ci-builds|ci-review$`:
+
+- Without the feature flag, the pattern matches `ci-builds-2` and `my-ci-review`.
+- With the feature flag, the pattern matches only `ci-builds` and `ci-review`.
+
+A job cannot override the feature flag when `[runners.feature_flags]` sets it.
+Otherwise, a job can turn it on for itself with a CI/CD variable,
+which makes matching stricter for that job only.
+
+```toml
+[[runners]]
+  executor = "kubernetes"
+  [runners.feature_flags]
+    FF_KUBERNETES_ANCHOR_OVERWRITE_ALLOWED = true
+```
+
 ## Pre-warm cluster capacity with pause pods
 
 {{< history >}}
