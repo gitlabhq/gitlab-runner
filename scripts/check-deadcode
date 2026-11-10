@@ -1,0 +1,77 @@
+#!/usr/bin/env bash
+
+# Reports functions that no main package can reach. Code that only tests call
+# counts as unreachable. The check fails when a finding is not in
+# .deadcode-baseline, or when a baseline entry is no longer a finding. A
+# failed check exits 3, and a broken tool exits with another code.
+#
+# Usage: scripts/check-deadcode [check|update]
+
+set -euo pipefail
+
+export LC_ALL=C GOWORK=off
+
+GIT_ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")" && git rev-parse --show-toplevel)
+BASELINE="${GIT_ROOT}/.deadcode-baseline"
+DEADCODE_VERSION=${DEADCODE_VERSION:-v0.38.0}
+
+# Findings depend on the platform and build tags, so the analysis always runs
+# for linux/amd64, the platform of the CI job. The tool is built for the host
+# first, because it must run here whatever GOOS is.
+# Line numbers are dropped so that unrelated edits do not change a finding.
+# Mage targets run through mage, and test support code is only used by tests,
+# so none of them are reachable from main. The test support code is the
+# packages in directories named *test, and the named files that hold test
+# helpers outside such a package. common/trace.go is an exact path because a
+# trace.go pattern also matches network/trace.go.
+findings() {
+    GOBIN="${tmp}" GOOS='' GOARCH='' GOFLAGS='' go install "golang.org/x/tools/cmd/deadcode@${DEADCODE_VERSION}" || return
+    (cd "${GIT_ROOT}" && GOOS=linux GOARCH=amd64 CGO_ENABLED=0 "${tmp}/deadcode" ./...) |
+        sed -E 's/:[0-9]+:[0-9]+:/:/' |
+        { grep -Ev '^magefiles/|(^|/)[^/]*test/|^common/(support|test|trace)\.go:|^helpers/ssh/stub_[^/]*\.go:' || true; } | # no match is a valid result
+        sort -u
+}
+
+mode=${1:-check}
+if [ "${mode}" != check ] && [ "${mode}" != update ]; then
+    echo "usage: $0 [check|update]" >&2
+    exit 2
+fi
+
+tmp=$(mktemp -d)
+trap 'rm -rf "${tmp}"' EXIT
+out="${tmp}/findings"
+
+# Run findings on its own so a deadcode failure stops the script.
+findings >"${out}"
+
+case "${mode}" in
+update)
+    cp "${out}" "${BASELINE}"
+    echo "Wrote $(wc -l <"${BASELINE}" | tr -d ' ') findings to ${BASELINE}"
+    ;;
+check)
+    sort -u "${BASELINE}" >"${tmp}/baseline"
+    new=$(comm -13 "${tmp}/baseline" "${out}")
+    gone=$(comm -23 "${tmp}/baseline" "${out}")
+    if [ -n "${new}" ]; then
+        echo "New unreachable code, not called from any main package:"
+        echo "${new}"
+        echo
+        echo "Remove it, or run 'make update_deadcode_baseline' if it is intended."
+        echo "This warning is expected when the code that calls it is added later."
+        echo
+    fi
+    if [ -n "${gone}" ]; then
+        echo "Baseline entries that are no longer unreachable code:"
+        echo "${gone}"
+        echo
+        echo "Run 'make update_deadcode_baseline' to remove them."
+        echo
+    fi
+    if [ -n "${new}" ] || [ -n "${gone}" ]; then
+        exit 3
+    fi
+    echo "The findings match ${BASELINE##*/}."
+    ;;
+esac

@@ -81,6 +81,19 @@ go:lint:
     when: always
     expire_in: 7d
 
+go:deadcode:
+  stage: qa
+  extends:
+    - .rules:merge_request_pipelines:no_docs
+    - .no_dependencies
+    - .go-cache
+  image: $RUNNER_LINTERS_IMAGE
+  needs: []
+  allow_failure: true
+  script:
+    - scripts/check-deadcode check
+  timeout: 20 minutes
+
 shell:lint:
   stage: qa
   extends:
