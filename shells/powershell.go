@@ -502,7 +502,28 @@ func (p *PsWriter) Variable(variable spec.Variable) {
 		p.Linef("${%s}=%s", variable.Key, psQuoteVariable(variable.Value))
 	}
 
-	p.Linef("${env:%s}=${%s}", variable.Key, variable.Key)
+	if !variable.File && len(variable.Value) > 32766 {
+		p.Linef("if (([Version]$PSVersionTable.PSVersion) -lt [Version]'6.1' -and ${%s}.Length -gt 32766) {", variable.Key)
+		p.Indent()
+		p.Warningf("%s exceeded the environment variable length limit and was truncated", variable.Key)
+		p.Linef("if ([char]::IsHighSurrogate(${%s}[32765])) {", variable.Key)
+		p.Indent()
+		p.Linef("${env:%s}=${%s}.Substring(0, 32765)", variable.Key, variable.Key)
+		p.Unindent()
+		p.Line("} else {")
+		p.Indent()
+		p.Linef("${env:%s}=${%s}.Substring(0, 32766)", variable.Key, variable.Key)
+		p.Unindent()
+		p.Line("}")
+		p.Unindent()
+		p.Line("} else {")
+		p.Indent()
+		p.Linef("${env:%s}=${%s}", variable.Key, variable.Key)
+		p.Unindent()
+		p.Line("}")
+	} else {
+		p.Linef("${env:%s}=${%s}", variable.Key, variable.Key)
+	}
 }
 
 func (p *PsWriter) ExportRaw(name, value string) {
