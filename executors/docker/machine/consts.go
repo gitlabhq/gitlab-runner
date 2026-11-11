@@ -13,7 +13,7 @@ var machineCreateCommandTimeout = 1 * time.Hour
 var machineCredentialsCommandTimeout = 1 * time.Hour
 var machineExistCommandTimeout = 1 * time.Hour
 var machineRemoveCommandTimeout = 1 * time.Hour
-var machineStopCommandTimeout = 1 * time.Minute
+var machineStopCommandTimeout = 2 * time.Minute
 
 // Consecutive Acquire passes an idle machine may be missing from `docker-machine ls` before it is dropped.
 const vanishedAfterMisses = 3
