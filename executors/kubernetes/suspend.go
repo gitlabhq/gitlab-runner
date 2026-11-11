@@ -111,6 +111,10 @@ func (s *executor) guardSuspendCompatibility() error {
 		return nil
 	}
 
+	if err := s.guardSweepVisibility(); err != nil {
+		return err
+	}
+
 	if s.Build.Runner.ID <= 0 {
 		return errors.New(
 			"suspend/resume requires a positive runner ID, but this runner's config.toml has " +
@@ -147,6 +151,47 @@ func (s *executor) guardSuspendCompatibility() error {
 	}
 
 	return s.guardSuspendReservedMountPaths()
+}
+
+// guardSweepVisibility refuses to create a suspended environment the cleanup
+// loop cannot see, since nothing would ever remove it after the TTL. The loop
+// runs only for runners that enable FF_SUSPENDABLE_ENVIRONMENTS in their
+// configuration, and only lists the configured namespace unless
+// NamespacePerJob is set. Release-only resumes are allowed through: they remove
+// an environment rather than leave one behind.
+func (s *executor) guardSweepVisibility() error {
+	if !s.Build.WillSuspend() {
+		return nil
+	}
+
+	if !s.Build.Runner.IsFeatureFlagOn(featureflags.SuspendableEnvironments) {
+		return &common.BuildError{
+			Inner: errors.New(
+				"suspend requires FF_SUSPENDABLE_ENVIRONMENTS to be enabled in [runners.feature_flags] " +
+					"of the runner configuration, not as a CI/CD variable or in [runners] environment: " +
+					"the cleanup loop that removes suspended environments " +
+					"after runtime_environment_ttl only runs for runners that enable it"),
+			FailureReason: common.ConfigurationError,
+		}
+	}
+
+	// A resume reuses an environment that already exists in the namespace from
+	// its key, so only a first run can create one outside the swept namespace.
+	if s.isResume || s.Config.Kubernetes.NamespacePerJob {
+		return nil
+	}
+
+	if swept := runtimeEnvironmentNamespace(s.Config.Kubernetes); s.configurationOverwrites.namespace != swept {
+		return &common.BuildError{
+			Inner: fmt.Errorf(
+				"suspend requires the job to run in namespace %q, which the cleanup loop sweeps, but it "+
+					"resolves to %q: namespace overwrites are not supported for suspendable jobs",
+				swept, s.configurationOverwrites.namespace),
+			FailureReason: common.ConfigurationError,
+		}
+	}
+
+	return nil
 }
 
 // guardSuspendCapabilityDrop rejects the job if cap_drop would undo the
@@ -377,8 +422,11 @@ func (s *executor) ensureSuspendResources(ctx context.Context) error {
 		// Missing cleanup permissions must not break suspend, so warn and
 		// carry on: the labelled PVC is still swept, only the namespace stays.
 		if err := s.labelRuntimeEnvironmentNamespace(ctx); err != nil {
-			s.BuildLogger.Warningln(fmt.Sprintf(
-				"failed to label build namespace for suspended environment cleanup: %v", err))
+			msg := "failed to label build namespace for suspended environment cleanup; " +
+				"the namespace will not be removed after the TTL"
+			s.BuildLogger.Warningln(fmt.Sprintf("%s: %v", msg, err))
+			// Operators fix the RBAC, so tell the manager log too.
+			s.Build.Log().WithError(err).Warningln(msg)
 		}
 	}
 	if err := s.createOverlayConfigMap(ctx); err != nil {
@@ -485,16 +533,16 @@ func labelsMergePatch(labels map[string]string) ([]byte, error) {
 	return patch, nil
 }
 
+// retainsSuspendedEnvironment reports whether Cleanup must keep the
+// environment: the job suspended, or it is a resume that failed in Prepare
+// or failed in Run before its pod existed, so the environment can be
+// resumed again.
+func (s *executor) retainsSuspendedEnvironment() bool {
+	return s.suspended || (s.isResume && (!s.resumeStarted || s.pod == nil))
+}
+
 func (s *executor) deleteSuspendRootfsPVC(ctx context.Context) {
-	if s.suspendRootfsPVCName == "" {
-		return
-	}
-	if s.suspended {
-		return
-	}
-	// For a resume job, retain the PVC if no pod was created — Prepare failed
-	// before the job ran, so the user can retry with the same environment.
-	if s.isResume && s.pod == nil {
+	if s.suspendRootfsPVCName == "" || s.retainsSuspendedEnvironment() {
 		return
 	}
 	//nolint:gocritic // kubeAPI annotation, not commented-out code
@@ -520,6 +568,12 @@ func (s *executor) createOverlayConfigMap(ctx context.Context) error {
 	cm := &api.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: s.overlayConfigMapName(),
+			// Lets releaseRuntimeEnvironment remove a ConfigMap that a crashed
+			// job left behind.
+			Labels: map[string]string{
+				common.RuntimeEnvironmentRunnerIDLabel: s.runtimeEnvironmentRunnerID(),
+				runtimeEnvironmentPVCLabel:             s.suspendRootfsPVCName,
+			},
 		},
 		Data: map[string]string{
 			overlayScriptKey: overlayEntrypointScript,
@@ -552,9 +606,11 @@ func (s *executor) createOverlayConfigMap(ctx context.Context) error {
 	return nil
 }
 
-func (s *executor) deleteOverlayConfigMap(ctx context.Context) {
+// deleteOverlayConfigMap reports false only when the delete failed, so the
+// caller can keep the PVC that lets the cleanup loop find the ConfigMap.
+func (s *executor) deleteOverlayConfigMap(ctx context.Context) bool {
 	if s.Build == nil || s.kubeClient == nil || s.configurationOverwrites == nil {
-		return
+		return true
 	}
 	name := s.overlayConfigMapName()
 	//nolint:gocritic // kubeAPI annotation, not commented-out code
@@ -563,7 +619,9 @@ func (s *executor) deleteOverlayConfigMap(ctx context.Context) {
 		Delete(ctx, name, metav1.DeleteOptions{})
 	if err != nil && !kubeerrors.IsNotFound(err) {
 		s.BuildLogger.Warningln(fmt.Sprintf("failed to delete overlay ConfigMap %q: %v", name, err))
+		return false
 	}
+	return true
 }
 
 // suspendVolumes returns the 2 volumes required by a suspendable pod:

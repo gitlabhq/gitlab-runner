@@ -5,6 +5,7 @@ package kubernetes
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/url"
 	"testing"
 	"time"
@@ -70,42 +71,57 @@ func TestResume_HonorsStampedExpiryOverCurrentTTL(t *testing.T) {
 	assert.True(t, r.isResume)
 }
 
-func TestEnsureSuspendResources_NamespacePerJobLabelsNamespace(t *testing.T) {
-	tests := []struct {
-		name            string
-		namespacePerJob bool
-		isResume        bool
-		wantLabel       bool
-	}{
-		{name: "namespace per job, first run", namespacePerJob: true, wantLabel: true},
-		{name: "namespace per job, resume keeps existing labels", namespacePerJob: true, isResume: true},
-		{name: "shared namespace is never labelled"},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+func TestEnsureSuspendResources_Labels(t *testing.T) {
+	for _, namespacePerJob := range []bool{true, false} {
+		t.Run(fmt.Sprintf("namespace per job %v", namespacePerJob), func(t *testing.T) {
 			e := newSuspendableExecutor(t)
 			e.Build.Runner.RunnerCredentials.ID = 42
-			e.Config.Kubernetes.NamespacePerJob = tt.namespacePerJob
-			e.isResume = tt.isResume
-			if tt.isResume {
-				e.suspendRootfsPVCName = "existing"
-			}
+			e.Config.Kubernetes.NamespacePerJob = namespacePerJob
 			_, err := e.kubeClient.CoreV1().Namespaces().Create(t.Context(),
 				&api.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "test-ns"}}, metav1.CreateOptions{})
 			require.NoError(t, err)
 
 			require.NoError(t, e.ensureSuspendResources(t.Context()))
 
+			pvc, err := e.kubeClient.CoreV1().PersistentVolumeClaims("test-ns").
+				Get(t.Context(), e.suspendRootfsPVCName, metav1.GetOptions{})
+			require.NoError(t, err)
+			assert.Equal(t, "42", pvc.Labels[common.RuntimeEnvironmentRunnerIDLabel])
+			cm, err := e.kubeClient.CoreV1().ConfigMaps("test-ns").Get(t.Context(), e.overlayConfigMapName(), metav1.GetOptions{})
+			require.NoError(t, err)
+			assert.Equal(t, "42", cm.Labels[common.RuntimeEnvironmentRunnerIDLabel])
+			assert.Equal(t, e.suspendRootfsPVCName, cm.Labels[runtimeEnvironmentPVCLabel])
+
+			// Only a per-job namespace is the environment's to delete.
 			ns, err := e.kubeClient.CoreV1().Namespaces().Get(t.Context(), "test-ns", metav1.GetOptions{})
 			require.NoError(t, err)
-			if tt.wantLabel {
+			if namespacePerJob {
 				assert.Equal(t, "42", ns.Labels[common.RuntimeEnvironmentRunnerIDLabel])
-				return
+			} else {
+				assert.NotContains(t, ns.Labels, common.RuntimeEnvironmentRunnerIDLabel)
 			}
-			assert.NotContains(t, ns.Labels, common.RuntimeEnvironmentRunnerIDLabel)
 		})
 	}
+}
+
+func TestEnsureSuspendResources_Labels_Resume(t *testing.T) {
+	e := newSuspendableExecutor(t)
+	e.Build.Runner.RunnerCredentials.ID = 42
+	e.Config.Kubernetes.NamespacePerJob = true
+	_, err := e.kubeClient.CoreV1().Namespaces().Create(t.Context(),
+		&api.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "test-ns"}}, metav1.CreateOptions{})
+	require.NoError(t, err)
+	e.isResume = true
+	e.suspendRootfsPVCName = "existing"
+
+	require.NoError(t, e.ensureSuspendResources(t.Context()))
+
+	// releaseRuntimeEnvironment finds a resumed job's ConfigMap by the PVC it
+	// resumed from.
+	cm, err := e.kubeClient.CoreV1().ConfigMaps("test-ns").Get(t.Context(), e.overlayConfigMapName(), metav1.GetOptions{})
+	require.NoError(t, err)
+	assert.Equal(t, "42", cm.Labels[common.RuntimeEnvironmentRunnerIDLabel])
+	assert.Equal(t, "existing", cm.Labels[runtimeEnvironmentPVCLabel])
 }
 
 func TestLabelsMergePatch_EscapesJSON(t *testing.T) {
@@ -149,11 +165,6 @@ func TestResume_RuntimeEnvironmentAvailability(t *testing.T) {
 		wantGone    bool
 		wantErr     string
 	}{
-		{
-			name:      "fresh PVC resumes",
-			namespace: true,
-			pvc:       resumePVC(time.Now().Add(47 * time.Hour)),
-		},
 		{
 			name:      "PVC just before its expiry resumes",
 			namespace: true,

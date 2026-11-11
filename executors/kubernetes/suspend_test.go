@@ -124,12 +124,13 @@ func TestEnsureSuspendRootfsPVC_Retry_ReusesExistingPVC(t *testing.T) {
 
 func TestDeleteSuspendRootfsPVC(t *testing.T) {
 	tests := []struct {
-		name       string
-		pvcName    string
-		suspended  bool
-		isResume   bool
-		pod        *api.Pod
-		wantDelete bool
+		name          string
+		pvcName       string
+		suspended     bool
+		isResume      bool
+		resumeStarted bool
+		pod           *api.Pod
+		wantDelete    bool
 	}{
 		{
 			name:       "When no PVC exists, no-op",
@@ -158,11 +159,27 @@ func TestDeleteSuspendRootfsPVC(t *testing.T) {
 			wantDelete: false,
 		},
 		{
-			name:       "When a resume job is completed then delete the inherited PVC",
+			name:          "When a resume job is completed then delete the inherited PVC",
+			pvcName:       "gl-runner-env-abc",
+			isResume:      true,
+			resumeStarted: true,
+			pod:           &api.Pod{},
+			wantDelete:    true,
+		},
+		{
+			name:       "When a resume job's prepare failed after the pod was created then do not delete the inherited PVC",
 			pvcName:    "gl-runner-env-abc",
 			isResume:   true,
 			pod:        &api.Pod{},
-			wantDelete: true,
+			wantDelete: false,
+		},
+		{
+			name:          "When a resume job's run failed before the pod was created then do not delete the inherited PVC",
+			pvcName:       "gl-runner-env-abc",
+			isResume:      true,
+			resumeStarted: true,
+			pod:           nil,
+			wantDelete:    false,
 		},
 		{
 			name:       "When a resume job is not found, likely because prepare failed then do not delete the attached PVC",
@@ -178,6 +195,7 @@ func TestDeleteSuspendRootfsPVC(t *testing.T) {
 			e.suspendRootfsPVCName = tc.pvcName
 			e.suspended = tc.suspended
 			e.isResume = tc.isResume
+			e.resumeStarted = tc.resumeStarted
 			e.pod = tc.pod
 
 			e.deleteSuspendRootfsPVC(t.Context())

@@ -1451,6 +1451,14 @@ func markSuspendableFFOn(e *executor) {
 	e.Build.Job.Variables = append(e.Build.Job.Variables,
 		spec.Variable{Key: featureflags.SuspendableEnvironments, Value: "true"},
 	)
+	// guardSweepVisibility requires the runner-level flag and the namespace
+	// the cleanup loop sweeps.
+	if e.Build.Runner != nil {
+		e.Build.Runner.FeatureFlags = map[string]bool{featureflags.SuspendableEnvironments: true}
+	}
+	if e.configurationOverwrites != nil && e.Config.Kubernetes != nil {
+		e.Config.Kubernetes.Namespace = e.configurationOverwrites.namespace
+	}
 }
 
 func TestCleanup_PVCLifecycle(t *testing.T) {
@@ -1458,6 +1466,7 @@ func TestCleanup_PVCLifecycle(t *testing.T) {
 		name           string
 		suspended      bool
 		isResume       bool
+		resumeStarted  bool
 		pod            *api.Pod
 		wantPVCDeleted bool
 	}{
@@ -1482,11 +1491,27 @@ func TestCleanup_PVCLifecycle(t *testing.T) {
 			wantPVCDeleted: false,
 		},
 		{
-			name:           "PVC is deleted for non-suspendable resumed job",
+			name:           "PVC is not deleted on a resume job whose prepare failed after the pod was created",
 			suspended:      false,
 			isResume:       true,
 			pod:            &api.Pod{ObjectMeta: metav1.ObjectMeta{Name: "test-pod", Namespace: "test-ns"}},
+			wantPVCDeleted: false,
+		},
+		{
+			name:           "PVC is deleted for non-suspendable resumed job",
+			suspended:      false,
+			isResume:       true,
+			resumeStarted:  true,
+			pod:            &api.Pod{ObjectMeta: metav1.ObjectMeta{Name: "test-pod", Namespace: "test-ns"}},
 			wantPVCDeleted: true,
+		},
+		{
+			name:           "PVC is not deleted on a resume job whose run failed before the pod was created",
+			suspended:      false,
+			isResume:       true,
+			resumeStarted:  true,
+			pod:            nil,
+			wantPVCDeleted: false,
 		},
 		{
 			name:           "PVC is not deleted for a suspendable resumed job",
@@ -1501,6 +1526,7 @@ func TestCleanup_PVCLifecycle(t *testing.T) {
 			e := newTestExecutorWithKubeClient(t, &common.KubernetesConfig{})
 			e.suspended = tc.suspended
 			e.isResume = tc.isResume
+			e.resumeStarted = tc.resumeStarted
 			e.pod = tc.pod
 			e.suspendRootfsPVCName = "gl-runner-env-abc"
 
@@ -1508,6 +1534,35 @@ func TestCleanup_PVCLifecycle(t *testing.T) {
 
 			assert.Equal(t, tc.wantPVCDeleted,
 				hasDelete(e.kubeClient.(*testclient.Clientset), "persistentvolumeclaims"))
+		})
+	}
+}
+
+func TestCleanup_KeepsPVCWhenConfigMapDeleteFails(t *testing.T) {
+	tests := []struct {
+		name           string
+		configMapErr   error
+		wantPVCDeleted bool
+	}{
+		{name: "ConfigMap deleted", wantPVCDeleted: true},
+		{name: "ConfigMap already gone", configMapErr: kubeerrors.NewNotFound(api.Resource("configmaps"), "cm"),
+			wantPVCDeleted: true},
+		{name: "ConfigMap delete fails", configMapErr: errors.New("forbidden"), wantPVCDeleted: false},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			e := newTestExecutorWithKubeClient(t, &common.KubernetesConfig{})
+			markSuspendableFFOn(e)
+			e.suspendRootfsPVCName = "gl-runner-env-abc"
+			client := e.kubeClient.(*testclient.Clientset)
+			client.PrependReactor("delete", "configmaps",
+				func(k8stesting.Action) (bool, kuberuntime.Object, error) {
+					return tc.configMapErr != nil, nil, tc.configMapErr
+				})
+
+			e.Cleanup()
+
+			assert.Equal(t, tc.wantPVCDeleted, hasDelete(client, "persistentvolumeclaims"))
 		})
 	}
 }

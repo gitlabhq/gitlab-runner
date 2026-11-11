@@ -122,7 +122,7 @@ You can either:
 | Resource | Verb (Optional Feature/Config Flags) |
 |----------|-------------------------------|
 | apps/deployments | create (`kubernetes.autoscaler`), delete (`kubernetes.autoscaler`), get (`kubernetes.autoscaler`), list (`kubernetes.autoscaler`), update (`kubernetes.autoscaler`) |
-| configmaps | create (`FF_SUSPENDABLE_ENVIRONMENTS=true`), delete (`FF_SUSPENDABLE_ENVIRONMENTS=true`), get (`FF_SUSPENDABLE_ENVIRONMENTS=true`), update (`FF_SUSPENDABLE_ENVIRONMENTS=true`) |
+| configmaps | create (`FF_SUSPENDABLE_ENVIRONMENTS=true`), delete (`FF_SUSPENDABLE_ENVIRONMENTS=true`), get (`FF_SUSPENDABLE_ENVIRONMENTS=true`), list (`FF_SUSPENDABLE_ENVIRONMENTS=true`), update (`FF_SUSPENDABLE_ENVIRONMENTS=true`) |
 | events | list (`hostUsers=false`, `print_pod_warning_events=true`), watch (`FF_PRINT_POD_EVENTS=true`) |
 | namespaces | create (`kubernetes.NamespacePerJob=true`), delete (`kubernetes.NamespacePerJob=true`), get (`FF_SUSPENDABLE_ENVIRONMENTS=true`), list (`FF_SUSPENDABLE_ENVIRONMENTS=true`, `kubernetes.NamespacePerJob=true`), patch (`FF_SUSPENDABLE_ENVIRONMENTS=true`, `kubernetes.NamespacePerJob=true`) |
 | persistentvolumeclaims | create (`FF_SUSPENDABLE_ENVIRONMENTS=true`), delete (`FF_SUSPENDABLE_ENVIRONMENTS=true`), get (`FF_SUSPENDABLE_ENVIRONMENTS=true`), list (`FF_SUSPENDABLE_ENVIRONMENTS=true`) |
@@ -163,6 +163,7 @@ rules:
   - "create" # Required when `FF_SUSPENDABLE_ENVIRONMENTS=true`
   - "delete" # Required when `FF_SUSPENDABLE_ENVIRONMENTS=true`
   - "get" # Required when `FF_SUSPENDABLE_ENVIRONMENTS=true`
+  - "list" # Required when `FF_SUSPENDABLE_ENVIRONMENTS=true`
   - "update" # Required when `FF_SUSPENDABLE_ENVIRONMENTS=true`
 - apiGroups: [""]
   resources: ["events"]
@@ -432,6 +433,59 @@ This approach allows developers to optimize resource usage per job while maintai
 | `scripts_base_dir`                            | Base directory to be prepended to the generated path to store build scripts. For more information, see [Change the base directory for build logs and scripts](#change-the-base-directory-for-build-logs-and-scripts). |
 | `print_pod_warning_events`                    | Controls whether the runner prints Kubernetes warning messages for the job pod, both while the pod starts (for example, scheduling failures) and when retrieving warning events after a job fails. Enabled by default. The job-failure event retrieval requires a service account with at least [`events: list` permissions](#configure-runner-api-permissions). |
 | `pod_disruption_budget`                       | When enabled, a [`PodDisruptionBudget`](https://kubernetes.io/docs/tasks/run-application/configure-pdb/) is created for each job pod to prevent eviction during voluntary disruptions such as node drains and cluster upgrades. Disabled by default. Requires a service account with [`poddisruptionbudgets` permissions](#configure-runner-api-permissions). |
+
+### Suspended environment cleanup
+
+When `FF_SUSPENDABLE_ENVIRONMENTS` is enabled in `[runners.feature_flags]`, each runner manager
+runs a cleanup loop every 10 minutes. The loop removes suspended environments 10 minutes after
+they expire. A job that tries to resume an expired environment fails with the
+`runtime_environment_unavailable` failure reason.
+
+When the first job of an environment is prepared, the runner creates the environment's PVC and
+labels it `environment.runner.gitlab.com/expires-at` with the expiry: the current time plus
+[`runtime_environment_ttl`](../../configuration/advanced-configuration.md#the-runners-section),
+which defaults to 7 days. Suspend and resume don't change the label, and changing
+`runtime_environment_ttl` affects only environments created afterward. A PVC without a valid
+label cannot be resumed, and the cleanup loop leaves it in place.
+
+The cleanup loop:
+
+- Lists the PVC objects labeled `environment.runner.gitlab.com/runner-id=<runner ID>`. With
+  `namespace_per_job`, it lists them in all namespaces. Otherwise, it lists them in the configured
+  `namespace` only.
+- Skips a PVC that is mounted by a pod that is pending or running, so a job that runs past the expiry
+  finishes on intact storage.
+- Deletes the PVC and any overlay ConfigMap left behind for it.
+- With `namespace_per_job`, deletes labeled job namespaces that no longer contain a PVC.
+
+All runner managers of a registration share the runner ID, so any of them can clean up an
+environment. Each environment carries its own expiry, so runner managers of a registration
+can use different `runtime_environment_ttl` values.
+
+The cleanup loop and resume need these permissions, which are included in the table in
+[Configure runner API permissions](#configure-runner-api-permissions):
+
+- `get` on `persistentvolumeclaims` to check the expiry of an environment before it resumes. Without
+  it, resumes fail.
+- `list` and `delete` on `persistentvolumeclaims`, `list` and `delete` on `configmaps`, and `list`
+  on `pods` for the cleanup loop.
+- With `namespace_per_job`, the job needs `patch` on `namespaces` to label its namespace, and the
+  cleanup loop needs `list` and `delete` on `namespaces` and the permissions above in every
+  namespace. Grant them with a `ClusterRole` and `ClusterRoleBinding` instead of a `Role`.
+
+If the runner lacks the cleanup permissions, suspend and resume still work, but expired
+environments are not removed and the runner logs the error on every cleanup run.
+
+Restrictions:
+
+- The runner configuration must enable `FF_SUSPENDABLE_ENVIRONMENTS` in `[runners.feature_flags]`.
+  Setting the feature flag as a CI/CD variable or in `[runners] environment` does not count.
+  A job that asks to suspend without the flag in `[runners.feature_flags]` fails with a
+  configuration error, because the cleanup loop would never remove its environment.
+- A job that asks to suspend must run in the configured `namespace`, or use `namespace_per_job`.
+  Namespace overwrites are not supported for jobs that suspend.
+- Runners that connect to different GitLab instances must not share a namespace, or a cluster when
+  `namespace_per_job` is enabled. Runner IDs are unique only in one GitLab instance.
 
 ### Configuration example
 
