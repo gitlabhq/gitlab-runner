@@ -1037,6 +1037,70 @@ func Test_PsWriter_Variable(t *testing.T) {
 	}
 }
 
+func Test_PsWriter_Variable_EnvironmentLimit(t *testing.T) {
+	longValue := strings.Repeat("a", 32767)
+
+	for _, key := range []string{
+		"CI_COMMIT_MESSAGE",
+		"CI_COMMIT_DESCRIPTION",
+		"CI_MERGE_REQUEST_DESCRIPTION",
+		"OTHER_VARIABLE",
+	} {
+		t.Run(key+" long value", func(t *testing.T) {
+			writer := &PsWriter{TemporaryPath: "C:/builds/project.tmp"}
+			writer.Variable(spec.Variable{Key: key, Value: longValue})
+			output := writer.String()
+
+			assert.Contains(t, output, "if (([Version]$PSVersionTable.PSVersion) -lt [Version]'6.1' -and ${"+key+"}.Length -gt 32766) {")
+			assert.NotContains(t, output, "$psVer")
+			assert.NotContains(t, output, "$env:OS")
+
+			assert.Contains(t, output, key+" exceeded the environment variable length limit and was truncated")
+			assert.Contains(t, output, "[char]::IsHighSurrogate(${"+key+"}[32765])")
+			assert.Contains(t, output, "${env:"+key+"}=${"+key+"}.Substring(0, 32765)")
+			assert.Contains(t, output, "${env:"+key+"}=${"+key+"}.Substring(0, 32766)")
+		})
+	}
+
+	t.Run("short values do not generate truncation guard", func(t *testing.T) {
+		for _, key := range []string{
+			"CI_COMMIT_MESSAGE",
+			"CI_COMMIT_DESCRIPTION",
+			"CI_MERGE_REQUEST_DESCRIPTION",
+			"OTHER_VARIABLE",
+		} {
+			writer := &PsWriter{TemporaryPath: "C:/builds/project.tmp"}
+			writer.Variable(spec.Variable{Key: key, Value: "message"})
+			output := writer.String()
+
+			assert.NotContains(t, output, "32766")
+			assert.NotContains(t, output, "$PSVersionTable")
+			assert.Contains(t, output, "${env:"+key+"}=${"+key+"}")
+		}
+	})
+
+	t.Run("file variables do not generate truncation guard", func(t *testing.T) {
+		writer := &PsWriter{TemporaryPath: "C:/builds/project.tmp"}
+		writer.Variable(spec.Variable{
+			Key:   "LONG_FILE_VARIABLE",
+			Value: longValue,
+			File:  true,
+		})
+		output := writer.String()
+
+		assert.NotContains(t, output, "32766")
+		assert.NotContains(t, output, "$PSVersionTable")
+		assert.Contains(t, output, "${env:LONG_FILE_VARIABLE}=${LONG_FILE_VARIABLE}")
+	})
+
+	t.Run("other variables remain unchanged", func(t *testing.T) {
+		writer := &PsWriter{TemporaryPath: "C:/builds/project.tmp"}
+		writer.Variable(spec.Variable{Key: "OTHER_VARIABLE", Value: "value"})
+
+		assert.Equal(t, "${OTHER_VARIABLE}=\"value\"${env:OTHER_VARIABLE}=${OTHER_VARIABLE}", writer.String())
+	})
+}
+
 func Test_PsWriter_DotEnvVariables(t *testing.T) {
 	templateLinux := "New-Item -ItemType directory -Force -Path \"foo/bar\" | out-null$CurrentDirectory = (Resolve-Path ./).Path[System.IO.File]::WriteAllText(\"$CurrentDirectory/foo/bar/test\", @\"\n%s\n\"@)"
 	templateWindows := "New-Item -ItemType directory -Force -Path \"foo\\bar\" | out-null$CurrentDirectory = (Resolve-Path .\\).Path[System.IO.File]::WriteAllText(\"$CurrentDirectory\\foo\\bar\\test\", @\"\n%s\n\"@)"
