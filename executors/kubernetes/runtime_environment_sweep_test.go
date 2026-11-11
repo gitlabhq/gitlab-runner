@@ -198,6 +198,9 @@ func TestSweepRuntimeEnvironments_NamespacePerJob(t *testing.T) {
 	terminating := sweepNamespace("ci-job-term", "7")
 	terminating.DeletionTimestamp = &metav1.Time{Time: sweepNow}
 	terminating.Finalizers = []string{"kubernetes"}
+	releasing := sweepPVC("ci-job-6", "releasing", expiredAt(), "7")
+	releasing.DeletionTimestamp = &metav1.Time{Time: sweepNow}
+	releasing.Finalizers = []string{"kubernetes.io/pvc-protection"}
 	objects := []runtime.Object{
 		// Expired environment: PVC and then its namespace go.
 		sweepNamespace("ci-job-1", "7"),
@@ -216,6 +219,9 @@ func TestSweepRuntimeEnvironments_NamespacePerJob(t *testing.T) {
 		sweepPVC("ci-job-5", "theirs", expiredAt(), "8"),
 		// Already terminating: not deleted again.
 		terminating,
+		// PVC released but still terminating: the namespace goes anyway.
+		sweepNamespace("ci-job-6", "7"),
+		releasing,
 	}
 	client := fake.NewClientset(objects...)
 
@@ -223,20 +229,22 @@ func TestSweepRuntimeEnvironments_NamespacePerJob(t *testing.T) {
 		sweepRunnerConfig(&common.KubernetesConfig{NamespacePerJob: true}), sweepNow, logrus.New())
 	require.NoError(t, err)
 
-	assert.ElementsMatch(t, []string{"ci-job-2/fresh", "ci-job-3/busy", "ci-job-5/theirs"}, remainingPVCs(t, client))
+	assert.ElementsMatch(t, []string{"ci-job-2/fresh", "ci-job-3/busy", "ci-job-5/theirs", "ci-job-6/releasing"},
+		remainingPVCs(t, client))
 	assert.ElementsMatch(t, []string{"ci-job-2", "ci-job-3", "ci-job-4", "ci-job-5", "ci-job-term"},
 		remainingNamespaces(t, client))
 }
 
 func TestSweepRuntimeEnvironments_Errors(t *testing.T) {
 	tests := []struct {
-		name     string
-		verb     string
-		resource string
+		name      string
+		verb      string
+		resource  string
+		wantCalls int
 	}{
-		{name: "list PVCs forbidden", verb: "list", resource: "persistentvolumeclaims"},
-		{name: "list pods fails", verb: "list", resource: "pods"},
-		{name: "delete PVC fails", verb: "delete", resource: "persistentvolumeclaims"},
+		{name: "list PVCs forbidden", verb: "list", resource: "persistentvolumeclaims", wantCalls: 1},
+		{name: "list pods fails once per namespace", verb: "list", resource: "pods", wantCalls: 1},
+		{name: "delete PVC fails, the next PVC is still tried", verb: "delete", resource: "persistentvolumeclaims", wantCalls: 2},
 	}
 
 	for _, tt := range tests {
@@ -245,7 +253,9 @@ func TestSweepRuntimeEnvironments_Errors(t *testing.T) {
 				sweepPVC("ci", "expired-a", expiredAt(), "7"),
 				sweepPVC("ci", "expired-b", expiredAt(), "7"),
 			)
+			calls := 0
 			client.PrependReactor(tt.verb, tt.resource, func(k8stesting.Action) (bool, runtime.Object, error) {
+				calls++
 				return true, nil, errors.New("boom")
 			})
 
@@ -254,6 +264,7 @@ func TestSweepRuntimeEnvironments_Errors(t *testing.T) {
 			assert.ErrorContains(t, err, "boom")
 			// Any of these failures leaves both PVCs in place.
 			assert.Len(t, remainingPVCs(t, client), 2)
+			assert.Equal(t, tt.wantCalls, calls)
 		})
 	}
 }
@@ -274,47 +285,89 @@ func TestSweepRuntimeEnvironments_DeleteNamespaceFails(t *testing.T) {
 }
 
 func TestReleaseRuntimeEnvironment(t *testing.T) {
+	cm := func(name, pvc, runnerID string) *api.ConfigMap {
+		cm := &api.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: "ci", Labels: map[string]string{}}}
+		if pvc != "" {
+			cm.Labels[runtimeEnvironmentPVCLabel] = pvc
+		}
+		if runnerID != "" {
+			cm.Labels[common.RuntimeEnvironmentRunnerIDLabel] = runnerID
+		}
+		return cm
+	}
+	allCMs := []string{"overlay-env", "overlay-env-other-runner", "overlay-other", "unrelated"}
+
 	tests := []struct {
-		name    string
-		fields  map[string][]string
-		wantErr string
-		want    []string
+		name     string
+		fields   map[string][]string
+		failCMs  bool
+		wantErr  string
+		wantPVCs []string
+		wantCMs  []string
 	}{
 		{
-			name:   "deletes the PVC",
-			fields: map[string][]string{envKeyNamespace: {"ci"}, envKeyPVC: {"env"}},
-			want:   []string{},
+			name:     "deletes the PVC and its ConfigMaps",
+			fields:   map[string][]string{envKeyNamespace: {"ci"}, envKeyPVC: {"env"}},
+			wantPVCs: []string{},
+			wantCMs:  []string{"overlay-env-other-runner", "overlay-other", "unrelated"},
 		},
 		{
-			name:   "already gone counts as released",
-			fields: map[string][]string{envKeyNamespace: {"ci"}, envKeyPVC: {"missing"}},
-			want:   []string{"ci/env"},
+			name:     "already gone counts as released",
+			fields:   map[string][]string{envKeyNamespace: {"ci"}, envKeyPVC: {"missing"}},
+			wantPVCs: []string{"ci/env"},
+			wantCMs:  allCMs,
 		},
 		{
-			name:    "missing namespace field",
-			fields:  map[string][]string{envKeyPVC: {"env"}},
-			wantErr: "namespace",
-			want:    []string{"ci/env"},
+			name:     "ConfigMap error keeps the PVC so the next tick retries",
+			fields:   map[string][]string{envKeyNamespace: {"ci"}, envKeyPVC: {"env"}},
+			failCMs:  true,
+			wantErr:  "forbidden",
+			wantPVCs: []string{"ci/env"},
+			wantCMs:  allCMs,
 		},
 		{
-			name:    "missing pvc field",
-			fields:  map[string][]string{envKeyNamespace: {"ci"}},
-			wantErr: "pvc",
-			want:    []string{"ci/env"},
+			name:     "missing namespace field",
+			fields:   map[string][]string{envKeyPVC: {"env"}},
+			wantErr:  "namespace",
+			wantPVCs: []string{"ci/env"},
+			wantCMs:  allCMs,
+		},
+		{
+			name:     "missing pvc field",
+			fields:   map[string][]string{envKeyNamespace: {"ci"}},
+			wantErr:  "pvc",
+			wantPVCs: []string{"ci/env"},
+			wantCMs:  allCMs,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			client := fake.NewClientset(sweepPVC("ci", "env", expiredAt(), "7"))
+			client := fake.NewClientset(sweepPVC("ci", "env", expiredAt(), "7"),
+				cm("overlay-env", "env", "7"), cm("overlay-env-other-runner", "env", "8"),
+				cm("overlay-other", "other", "7"), cm("unrelated", "", ""))
+			if tt.failCMs {
+				client.PrependReactor("list", "configmaps", func(k8stesting.Action) (bool, runtime.Object, error) {
+					return true, nil, errors.New("forbidden")
+				})
+			}
 
-			err := releaseRuntimeEnvironment(t.Context(), client, tt.fields)
+			err := releaseRuntimeEnvironment(t.Context(), client, runtimeEnvironmentSelector(7), tt.fields)
 			if tt.wantErr != "" {
 				assert.ErrorContains(t, err, tt.wantErr)
 			} else {
 				assert.NoError(t, err)
 			}
-			assert.ElementsMatch(t, tt.want, remainingPVCs(t, client))
+			assert.ElementsMatch(t, tt.wantPVCs, remainingPVCs(t, client))
+
+			obj, err := client.Tracker().List(api.SchemeGroupVersion.WithResource("configmaps"),
+				api.SchemeGroupVersion.WithKind("ConfigMap"), "ci")
+			require.NoError(t, err)
+			cms := []string{}
+			for _, c := range obj.(*api.ConfigMapList).Items {
+				cms = append(cms, c.Name)
+			}
+			assert.ElementsMatch(t, tt.wantCMs, cms)
 		})
 	}
 }

@@ -503,6 +503,11 @@ type executor struct {
 	// only used when FF_SUSPENDABLE_ENVIRONMENTS is enabled
 	isResume                bool
 	suspendServiceDataPaths map[string]string // canonical service name → SuspendDataPath from runner config
+
+	// resumeStarted is true once Run is called, so a resume whose Prepare
+	// failed, even after its pod was created, keeps the suspended environment.
+	// A resume that fails in Run before its pod exists keeps it too.
+	resumeStarted bool
 }
 
 type podEventState struct {
@@ -818,6 +823,8 @@ func (s *executor) retrieveHelperImageConfig() helperimage.Config {
 }
 
 func (s *executor) Run(cmd common.ExecutorCommand) error {
+	s.resumeStarted = true
+
 	return s.withPullRetry(cmd.Context, func() error {
 		if s.Build.IsFeatureFlagOn(featureflags.UseLegacyKubernetesExecutionStrategy) {
 			s.BuildLogger.Debugln("Starting Kubernetes command...")
@@ -1759,10 +1766,12 @@ func (s *executor) Cleanup() {
 	defer cancel()
 
 	s.cleanupResources(ctx)
-	s.deleteSuspendRootfsPVC(ctx)
 
-	if s.usesSuspendResume() {
-		s.deleteOverlayConfigMap(ctx)
+	// The cleanup loop finds a leftover ConfigMap through its PVC, so keep
+	// the PVC when the ConfigMap delete fails. The loop removes both after
+	// the TTL.
+	if !s.usesSuspendResume() || s.deleteOverlayConfigMap(ctx) {
+		s.deleteSuspendRootfsPVC(ctx)
 	}
 
 	closeKubeClient(s.kubeClient)
@@ -1805,7 +1814,7 @@ func (s *executor) cleanupResources(ctx context.Context) {
 		}
 	}
 
-	if !s.suspended {
+	if !s.retainsSuspendedEnvironment() {
 		err := s.teardownBuildNamespace(ctx)
 		if err != nil {
 			s.BuildLogger.Errorln(fmt.Sprintf("Error tearing down namespace: %s", err.Error()))
@@ -2591,7 +2600,8 @@ func (s *executor) teardownBuildNamespace(ctx context.Context) error {
 	//nolint:gocritic
 	// kubeAPI: namespaces, delete, kubernetes.NamespacePerJob=true
 	err := s.kubeClient.CoreV1().Namespaces().Delete(ctx, s.configurationOverwrites.namespace, metav1.DeleteOptions{})
-	if err != nil {
+	// A refused resume never created this job's namespace.
+	if err != nil && !kubeerrors.IsNotFound(err) {
 		return fmt.Errorf("failed to delete namespace: %w", err)
 	}
 	return nil

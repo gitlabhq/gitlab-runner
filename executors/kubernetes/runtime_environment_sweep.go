@@ -19,6 +19,11 @@ import (
 
 var _ common.RuntimeEnvironmentSweeper = executorProvider{}
 
+// runtimeEnvironmentPVCLabel ties an overlay ConfigMap to the PVC of the
+// environment it belongs to, so releaseRuntimeEnvironment can remove it
+// without the job.
+const runtimeEnvironmentPVCLabel = common.RuntimeEnvironmentLabelPrefix + "pvc"
+
 // SweepRuntimeEnvironments removes this runner's suspended environments whose
 // PVC is sweepable at now. The PVC is created while the environment's first
 // job is prepared and survives every suspend and resume (only the pod is
@@ -74,7 +79,7 @@ func sweepRuntimeEnvironments(
 		return fmt.Errorf("listing suspended environment PVCs in namespace %q: %w", namespace, err)
 	}
 
-	errs := []error{releaseExpiredPVCs(ctx, client, pvcs.Items, now, logger)}
+	errs := []error{releaseExpiredPVCs(ctx, client, selector, pvcs.Items, now, logger)}
 	if config.Kubernetes.NamespacePerJob {
 		errs = append(errs, deleteEmptyRuntimeEnvironmentNamespaces(ctx, client, selector, logger))
 	}
@@ -102,12 +107,14 @@ func runtimeEnvironmentNamespace(config *common.KubernetesConfig) string {
 func releaseExpiredPVCs(
 	ctx context.Context,
 	client kubernetes.Interface,
+	selector string,
 	pvcs []api.PersistentVolumeClaim,
 	now time.Time,
 	logger logrus.FieldLogger,
 ) error {
 	var errs []error
 	mounted := map[string]map[string]bool{}
+	unlistable := map[string]bool{}
 	for i := range pvcs {
 		pvc := &pvcs[i]
 		expiresAt, ok := sweepablePVC(pvc, now, logger)
@@ -115,11 +122,15 @@ func releaseExpiredPVCs(
 			continue
 		}
 
+		if unlistable[pvc.Namespace] {
+			continue
+		}
 		claims, ok := mounted[pvc.Namespace]
 		if !ok {
 			var err error
 			if claims, err = mountedClaims(ctx, client, pvc.Namespace); err != nil {
 				errs = append(errs, err)
+				unlistable[pvc.Namespace] = true
 				continue
 			}
 			mounted[pvc.Namespace] = claims
@@ -136,7 +147,7 @@ func releaseExpiredPVCs(
 		}
 
 		fields := url.Values{envKeyNamespace: {pvc.Namespace}, envKeyPVC: {pvc.Name}}
-		if err := releaseRuntimeEnvironment(ctx, client, fields); err != nil {
+		if err := releaseRuntimeEnvironment(ctx, client, selector, fields); err != nil {
 			errs = append(errs, err)
 			continue
 		}
@@ -189,13 +200,18 @@ func mountedClaims(ctx context.Context, client kubernetes.Interface, ns string) 
 }
 
 // releaseRuntimeEnvironment removes what Suspend preserved, given only the
-// environment key fields: the PVC holding the overlay upper layer and the
-// builds directory. The overlay ConfigMap is per job and already deleted by
-// every job's Cleanup. A per-job namespace also outlives the job;
-// deleteEmptyRuntimeEnvironmentNamespaces removes it separately. A PVC that
-// is already gone counts as released; another manager of the same
-// registration may have removed it first.
-func releaseRuntimeEnvironment(ctx context.Context, client kubernetes.Interface, fields url.Values) error {
+// environment key fields: the PVC holding the overlay upper layer, the builds
+// directory and service data, plus any overlay ConfigMap a job failed to
+// delete in Cleanup (for example after a manager crash). ConfigMaps go first
+// so a failure keeps the PVC and the next tick retries the whole release.
+// Resources that are already gone count as released; another manager of the
+// same registration may have removed them first. ConfigMaps must also match
+// selector, so a manager never deletes another runner's ConfigMaps.
+//
+// The blueprint puts Release on SuspendableExecutor. Here it is a package
+// function the provider's sweep calls, because nothing calls an executor-level
+// Release and an executor has no client or config before Prepare.
+func releaseRuntimeEnvironment(ctx context.Context, client kubernetes.Interface, selector string, fields url.Values) error {
 	ns := fields.Get(envKeyNamespace)
 	if ns == "" {
 		return errors.New("release: environment key missing 'namespace' field")
@@ -205,11 +221,36 @@ func releaseRuntimeEnvironment(ctx context.Context, client kubernetes.Interface,
 		return errors.New("release: environment key missing 'pvc' field")
 	}
 
+	if err := deleteRuntimeEnvironmentConfigMaps(ctx, client, selector, ns, pvc); err != nil {
+		return err
+	}
+
 	//nolint:gocritic // kubeAPI annotation, not commented-out code
 	// kubeAPI: persistentvolumeclaims, delete, FF_SUSPENDABLE_ENVIRONMENTS=true
 	err := client.CoreV1().PersistentVolumeClaims(ns).Delete(ctx, pvc, metav1.DeleteOptions{})
 	if err != nil && !kubeerrors.IsNotFound(err) {
 		return fmt.Errorf("release: deleting PVC %s/%s: %w", ns, pvc, err)
+	}
+	return nil
+}
+
+func deleteRuntimeEnvironmentConfigMaps(ctx context.Context, client kubernetes.Interface, selector, ns, pvc string) error {
+	//nolint:gocritic // kubeAPI annotation, not commented-out code
+	// kubeAPI: configmaps, list, FF_SUSPENDABLE_ENVIRONMENTS=true
+	cms, err := client.CoreV1().ConfigMaps(ns).List(ctx, metav1.ListOptions{
+		LabelSelector: runtimeEnvironmentPVCLabel + "=" + pvc + "," + selector,
+	})
+	if err != nil {
+		return fmt.Errorf("release: listing overlay ConfigMaps for PVC %s/%s: %w", ns, pvc, err)
+	}
+
+	for _, cm := range cms.Items {
+		//nolint:gocritic // kubeAPI annotation, not commented-out code
+		// kubeAPI: configmaps, delete, FF_SUSPENDABLE_ENVIRONMENTS=true
+		err := client.CoreV1().ConfigMaps(ns).Delete(ctx, cm.Name, metav1.DeleteOptions{})
+		if err != nil && !kubeerrors.IsNotFound(err) {
+			return fmt.Errorf("release: deleting overlay ConfigMap %s/%s: %w", ns, cm.Name, err)
+		}
 	}
 	return nil
 }
