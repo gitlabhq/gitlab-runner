@@ -21,7 +21,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/secretsmanager v1.47.0
 	github.com/aws/aws-sdk-go-v2/service/sts v1.51.0
 	github.com/aws/smithy-go v1.28.1
-	github.com/bmatcuk/doublestar/v4 v4.10.0
+	github.com/bmatcuk/doublestar/v4 v4.10.2
 	github.com/containerd/errdefs v1.0.0
 	github.com/containerd/platforms v0.2.1
 	github.com/creack/pty v1.1.24
