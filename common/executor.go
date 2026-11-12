@@ -107,7 +107,8 @@ type SuspendableExecutor interface {
 // find and remove suspended environments past the TTL. The runner manager
 // calls it periodically for every runner with suspendable environments
 // enabled. Implementations discover environments from the backing
-// infrastructure, not from memory, so cleanup survives a manager restart.
+// infrastructure or from state they persist, never from in-memory state
+// alone, so cleanup survives a manager restart.
 type RuntimeEnvironmentSweeper interface {
 	// SweepRuntimeEnvironments removes this runner's suspended environments
 	// whose expiry stamp is sweepable at now (see RuntimeEnvironmentSweepable).

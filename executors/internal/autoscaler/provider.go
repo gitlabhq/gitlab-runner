@@ -51,6 +51,7 @@ type provider struct {
 	taskscalerNew     func(context.Context, fleetingprovider.InstanceGroup, ...taskscaler.Option) (taskscaler.Taskscaler, error)
 	fleetingRunPlugin func(string, []byte, ...fleeting.PluginOption) (fleetingPlugin, error)
 	generateUniqueID  func() (string, error)
+	dialInstance      connector.DialFn
 }
 
 type scaler struct {
@@ -90,6 +91,7 @@ func New(ep common.ExecutorProvider, cfg Config) common.ExecutorProvider {
 		generateUniqueID: func() (string, error) {
 			return helpers.GenerateRandomUUID(8)
 		},
+		dialInstance: connector.Dial,
 	}
 }
 
@@ -269,20 +271,8 @@ func (p *provider) Acquire(config *common.RunnerConfig) (common.ExecutorData, er
 
 	// reconfigure policy if the config has been reloaded
 	if refresh {
-		var schedules []taskscaler.Schedule
-		for _, schedule := range config.Autoscaler.Policy {
-			schedules = append(schedules, taskscaler.Schedule{
-				Periods:          schedule.Periods,
-				Timezone:         schedule.Timezone,
-				IdleCount:        schedule.IdleCount,
-				IdleTime:         schedule.IdleTime,
-				ScaleFactor:      schedule.ScaleFactor,
-				ScaleFactorLimit: schedule.ScaleFactorLimit,
-				PreemptiveMode:   schedule.PreemptiveModeEnabled(),
-			})
-		}
-		if err := scaler.ConfigureSchedule(schedules...); err != nil {
-			return nil, fmt.Errorf("configuring taskscaler schedules: %w", err)
+		if err := configureSchedules(scaler, config); err != nil {
+			return nil, err
 		}
 	}
 
@@ -304,6 +294,26 @@ func (p *provider) Acquire(config *common.RunnerConfig) (common.ExecutorData, er
 	logrus.WithField("key", key).Trace("Reserved capacity...")
 
 	return newAcquisitionRef(key, p.cfg.MapJobImageToVMImage), nil
+}
+
+func configureSchedules(scaler taskscaler.Taskscaler, config *common.RunnerConfig) error {
+	var schedules []taskscaler.Schedule
+	for _, schedule := range config.Autoscaler.Policy {
+		schedules = append(schedules, taskscaler.Schedule{
+			Periods:          schedule.Periods,
+			Timezone:         schedule.Timezone,
+			IdleCount:        schedule.IdleCount,
+			IdleTime:         schedule.IdleTime,
+			ScaleFactor:      schedule.ScaleFactor,
+			ScaleFactorLimit: schedule.ScaleFactorLimit,
+			PreemptiveMode:   schedule.PreemptiveModeEnabled(),
+		})
+	}
+	if err := scaler.ConfigureSchedule(schedules...); err != nil {
+		return fmt.Errorf("configuring taskscaler schedules: %w", err)
+	}
+
+	return nil
 }
 
 func (p *provider) Release(config *common.RunnerConfig, data common.ExecutorData) {
