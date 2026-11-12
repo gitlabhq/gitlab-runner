@@ -8,7 +8,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/fleeting/fleeting"
 	fleetingprovider "gitlab.com/gitlab-org/fleeting/fleeting/provider"
 	"gitlab.com/gitlab-org/fleeting/taskscaler"
@@ -365,3 +368,136 @@ type fakeFleetingPlugin struct{}
 func (f *fakeFleetingPlugin) InstanceGroup() fleetingprovider.InstanceGroup { return nil }
 
 func (f *fakeFleetingPlugin) Kill() {}
+
+func TestProvider_ScalerFor_AppliesReloadedPolicyOnce(t *testing.T) {
+	cfg := sweepTestConfig(true, false)
+	ts := mocks.NewTaskscaler(t)
+
+	p := New(common.NewMockExecutorProvider(t), Config{}).(*provider)
+	p.scalers[runnerScalerKey(cfg)] = scaler{
+		internal:       ts,
+		shutdown:       func(context.Context) {},
+		configLoadedAt: cfg.ConfigLoadedAt,
+	}
+
+	_, err := p.scalerFor(cfg)
+	require.NoError(t, err, "config unchanged: policy not applied")
+
+	cfg.ConfigLoadedAt = cfg.ConfigLoadedAt.Add(time.Minute)
+
+	ts.EXPECT().ConfigureSchedule(mock.Anything).Return(assert.AnError).Once()
+	_, err = p.scalerFor(cfg)
+	require.ErrorIs(t, err, assert.AnError)
+
+	ts.EXPECT().ConfigureSchedule(mock.Anything).Return(nil).Once()
+	_, err = p.scalerFor(cfg)
+	require.NoError(t, err, "a failed apply is retried")
+
+	_, err = p.scalerFor(cfg)
+	require.NoError(t, err, "an applied reload is not applied again")
+}
+
+func TestProvider_ScalerFor_RetriesFailedFirstApply(t *testing.T) {
+	cfg := sweepTestConfig(true, false)
+	cfg.Autoscaler.StateStorage.Dir = t.TempDir()
+	cfg.ConfigLoadedAt = time.Now()
+
+	ts := mocks.NewTaskscaler(t)
+	ts.EXPECT().ConfigureSchedule(mock.Anything).Return(assert.AnError).Once()
+	ts.EXPECT().ConfigureSchedule(mock.Anything).Return(nil).Once()
+
+	p := New(common.NewMockExecutorProvider(t), Config{}).(*provider)
+	p.taskscalerNew = mockTaskscalerNew(ts, false)
+	p.fleetingRunPlugin = mockFleetingRunPlugin(false)
+
+	_, err := p.scalerFor(cfg)
+	require.ErrorIs(t, err, assert.AnError)
+
+	_, err = p.scalerFor(cfg)
+	require.NoError(t, err, "a failed first apply is retried")
+
+	_, err = p.scalerFor(cfg)
+	require.NoError(t, err, "an applied config is not applied again")
+}
+
+func TestProvider_CollectWhileAddingScalers(t *testing.T) {
+	ts := mocks.NewTaskscaler(t)
+	ts.EXPECT().ConfigureSchedule(mock.Anything).Return(nil).Maybe()
+	ts.EXPECT().MetricsCollector().Return(nil).Maybe()
+	ts.EXPECT().FleetingMetricsCollector().Return(nil).Maybe()
+
+	p := New(common.NewMockExecutorProvider(t), Config{}).(*provider)
+	p.taskscalerNew = mockTaskscalerNew(ts, false)
+	p.fleetingRunPlugin = mockFleetingRunPlugin(false)
+	dir := t.TempDir()
+
+	done := make(chan struct{})
+	stopped := make(chan struct{})
+	go func() {
+		defer close(stopped)
+		ch := make(chan prometheus.Metric, 1)
+		for {
+			select {
+			case <-done:
+				return
+			default:
+				p.Collect(ch)
+			}
+		}
+	}()
+
+	for i := 1; i <= 50; i++ {
+		cfg := sweepTestConfig(true, false)
+		cfg.ID = int64(i)
+		cfg.Autoscaler.StateStorage.Dir = dir
+		_, err := p.scalerFor(cfg)
+		require.NoError(t, err)
+	}
+
+	close(done)
+	<-stopped
+}
+
+func TestProvider_CollectDoesNotWaitForInit(t *testing.T) {
+	ts := mocks.NewTaskscaler(t)
+	ts.EXPECT().ConfigureSchedule(mock.Anything).Return(nil).Maybe()
+	ts.EXPECT().MetricsCollector().Return(nil).Maybe()
+	ts.EXPECT().FleetingMetricsCollector().Return(nil).Maybe()
+
+	started := make(chan struct{})
+	unblock := make(chan struct{})
+	p := New(common.NewMockExecutorProvider(t), Config{}).(*provider)
+	p.fleetingRunPlugin = mockFleetingRunPlugin(false)
+	p.taskscalerNew = func(context.Context, fleetingprovider.InstanceGroup, ...taskscaler.Option) (taskscaler.Taskscaler, error) {
+		close(started)
+		<-unblock
+		return ts, nil
+	}
+
+	cfg := sweepTestConfig(true, false)
+	cfg.Autoscaler.StateStorage.Dir = t.TempDir()
+
+	initDone := make(chan error, 1)
+	go func() {
+		_, err := p.scalerFor(cfg)
+		initDone <- err
+	}()
+	<-started
+
+	collected := make(chan struct{})
+	go func() {
+		defer close(collected)
+		p.Collect(make(chan prometheus.Metric, 1))
+		p.Describe(make(chan *prometheus.Desc, 1))
+	}()
+
+	select {
+	case <-collected:
+	case <-time.After(time.Second):
+		t.Error("metrics collection waited for the taskscaler to start")
+	}
+
+	close(unblock)
+	require.NoError(t, <-initDone)
+	<-collected
+}

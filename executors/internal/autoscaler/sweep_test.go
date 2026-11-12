@@ -360,3 +360,35 @@ func TestSweepRuntimeEnvironmentsStartsTaskscaler(t *testing.T) {
 	require.NoError(t, p.SweepRuntimeEnvironments(t.Context(), cfg, now))
 	assert.Contains(t, p.scalers, runnerScalerKey(cfg))
 }
+
+func TestSweepRuntimeEnvironmentsWhenPolicyApplyFails(t *testing.T) {
+	now := time.Now()
+
+	t.Run("sweeps with the running taskscaler", func(t *testing.T) {
+		cfg := sweepTestConfig(true, false)
+		cfg.ConfigLoadedAt = now
+
+		ts := mocks.NewTaskscaler(t)
+		ts.EXPECT().ConfigureSchedule(mock.Anything).Return(assert.AnError)
+		ts.EXPECT().ExpireSuspended(now, common.RuntimeEnvironmentSweepGrace).Return(nil).Times(2)
+
+		p := New(common.NewMockExecutorProvider(t), Config{}).(*provider)
+		// an older config is applied, so the reload is applied again on each sweep
+		p.scalers[runnerScalerKey(cfg)] = scaler{internal: ts, shutdown: func(context.Context) {}, configLoadedAt: now.Add(-time.Hour)}
+
+		require.NoError(t, p.SweepRuntimeEnvironments(t.Context(), cfg, now))
+		require.NoError(t, p.SweepRuntimeEnvironments(t.Context(), cfg, now), "a bad policy does not block later sweeps")
+	})
+
+	t.Run("returns the error without a taskscaler", func(t *testing.T) {
+		cfg := sweepTestConfig(true, false)
+		cfg.Autoscaler.StateStorage.Dir = t.TempDir()
+
+		p := New(common.NewMockExecutorProvider(t), Config{}).(*provider)
+		p.taskscalerNew = mockTaskscalerNew(nil, true)
+		p.fleetingRunPlugin = mockFleetingRunPlugin(false)
+
+		err := p.SweepRuntimeEnvironments(t.Context(), cfg, now)
+		require.ErrorContains(t, err, "creating taskscaler")
+	})
+}

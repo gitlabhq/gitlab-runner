@@ -57,16 +57,10 @@ func (e *executor) Prepare(options common.ExecutorPrepareOptions) (err error) {
 
 	e.build.Log().Infoln("Preparing instance...")
 
-	// Reject suspendable jobs when state_storage is not enabled. Without it a
-	// manager restart loses the suspended slot — the environment can be neither
-	// resumed nor swept. This runs before getRunnerTaskscaler so nothing is set
-	// up first and a guard failure on resume leaves the slot suspended.
-	if options.Build.WillSuspend() &&
-		(options.Config.Autoscaler == nil || !options.Config.Autoscaler.StateStorage.Enabled) {
-		return &common.BuildError{
-			Inner:         errors.New("suspendable environments require autoscaler state_storage to be enabled"),
-			FailureReason: common.ConfigurationError,
-		}
+	// This runs before getRunnerTaskscaler so nothing is set up first and a
+	// guard failure on resume leaves the slot suspended.
+	if err := e.checkSuspendGuards(options); err != nil {
+		return err
 	}
 
 	acqRef, ok := options.Build.ExecutorData.(*acquisitionRef)
@@ -131,6 +125,57 @@ func (e *executor) Prepare(options common.ExecutorPrepareOptions) (err error) {
 	return e.Executor.Prepare(options)
 }
 
+// checkSuspendGuards rejects a job that asks to suspend when its environment
+// could not be resumed or swept later.
+func (e *executor) checkSuspendGuards(options common.ExecutorPrepareOptions) error {
+	if !options.Build.WillSuspend() {
+		return nil
+	}
+
+	// Without state_storage a manager restart loses the suspended slot — the
+	// environment can be neither resumed nor swept.
+	if options.Config.Autoscaler == nil || !options.Config.Autoscaler.StateStorage.Enabled {
+		return &common.BuildError{
+			Inner:         errors.New("suspendable environments require autoscaler state_storage to be enabled"),
+			FailureReason: common.ConfigurationError,
+		}
+	}
+
+	if e.provider.cfg.SuspendRequiresDedicatedInstance {
+		if err := checkDedicatedInstance(options.Config); err != nil {
+			return &common.BuildError{Inner: err, FailureReason: common.ConfigurationError}
+		}
+	}
+
+	return nil
+}
+
+// checkDedicatedInstance enforces what suspending a whole instance needs:
+// the shared sweep must visit it, and the instance must hold only this job.
+func checkDedicatedInstance(cfg *common.RunnerConfig) error {
+	switch {
+	// a CI variable alone would create environments the sweep never visits:
+	// it gates on the runner-level flag and skips runners without an ID
+	case !cfg.IsFeatureFlagOn(featureflags.SuspendableEnvironments):
+		return errors.New("suspendable environments require FF_SUSPENDABLE_ENVIRONMENTS to be enabled at the runner level")
+	case cfg.ID <= 0:
+		return errors.New("suspendable environments require a positive runner registration ID")
+	// zero means taskscaler's default of one
+	case cfg.Autoscaler.CapacityPerInstance > 1:
+		return errors.New("suspendable environments require capacity_per_instance = 1")
+	// zero means unlimited
+	case cfg.Autoscaler.MaxUseCount != 1:
+		return errors.New("suspendable environments require max_use_count = 1")
+	case cfg.Instance == nil || !cfg.Instance.UseCommonBuildDir:
+		return errors.New("suspendable environments require use_common_build_dir = true")
+	// the nested VM, and the job's state with it, is gone after the job
+	case cfg.Autoscaler.VMIsolation.Enabled:
+		return errors.New("suspendable environments are not supported with vm_isolation")
+	}
+
+	return nil
+}
+
 func (e *executor) prepareResume(ctx context.Context, scaler taskscaler.Taskscaler, options common.ExecutorPrepareOptions, acqRef *acquisitionRef, envKey string) error {
 	acqKey, issuerSystemID, executorFields, err := validateEnvKey(envKey, options.Config.ID)
 	if err != nil {
@@ -144,25 +189,29 @@ func (e *executor) prepareResume(ctx context.Context, scaler taskscaler.Taskscal
 		}
 	}
 
-	acq, err := scaler.Resume(ctx, acqKey)
-	// Once the sweep frees an expired slot, Resume reports it as not found
-	// rather than expired; either way the environment is gone. Slot state is
-	// per manager, so not found means gone only for a key this manager
-	// issued. A key from another manager keeps the retryable error: its
-	// environment may still exist there.
-	if errors.Is(err, taskscaler.ErrSlotExpired) ||
-		(errors.Is(err, taskscaler.ErrAcquisitionNotFound) && issuerSystemID == options.Config.GetSystemID()) {
-		return common.NewRuntimeEnvironmentUnavailableError(fmt.Errorf("resuming acquisition: %w", err))
-	}
-	if err != nil {
-		return fmt.Errorf("resuming acquisition: %w", err)
-	}
+	// A retried prepare already resumed the slot, and Resume would now refuse
+	// it as not suspended: reuse the acquisition and restore the workload again.
+	if acqRef.acq == nil {
+		acq, err := scaler.Resume(ctx, acqKey)
+		// Once the sweep frees an expired slot, Resume reports it as not found
+		// rather than expired; either way the environment is gone. Slot state is
+		// per manager, so not found means gone only for a key this manager
+		// issued. A key from another manager keeps the retryable error: its
+		// environment may still exist there.
+		if errors.Is(err, taskscaler.ErrSlotExpired) ||
+			(errors.Is(err, taskscaler.ErrAcquisitionNotFound) && issuerSystemID == options.Config.GetSystemID()) {
+			return common.NewRuntimeEnvironmentUnavailableError(fmt.Errorf("resuming acquisition: %w", err))
+		}
+		if err != nil {
+			return fmt.Errorf("resuming acquisition: %w", err)
+		}
 
-	// Resume reuses the suspended acquisition embedded in the env key;
-	// the fresh one Acquire() just reserved is unused - unreserve it.
-	scaler.Unreserve(acqRef.key)
-	acqRef.acq = acq
-	acqRef.key = acqKey
+		// Resume reuses the suspended acquisition embedded in the env key;
+		// the fresh one Acquire() just reserved is unused - unreserve it.
+		scaler.Unreserve(acqRef.key)
+		acqRef.acq = acq
+		acqRef.key = acqKey
+	}
 
 	// Inner Prepare first: establishes connections (e.g., Docker client)
 	if err := e.Executor.Prepare(options); err != nil {

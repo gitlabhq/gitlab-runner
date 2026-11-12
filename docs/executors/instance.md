@@ -556,6 +556,52 @@ concurrent = 50
       idle_time = "20m0s"
 ```
 
+## Suspend and resume job environments
+
+{{< details >}}
+
+- Status: Experiment
+
+{{< /details >}}
+
+{{< history >}}
+
+- Introduced as an [experiment](https://docs.gitlab.com/policy/development_stages_support/#experiment)
+  with a flag named `FF_SUSPENDABLE_ENVIRONMENTS` in GitLab Runner 19.0.
+- Expiry of suspended environments [introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/39468) in GitLab Runner 19.6.
+
+{{< /history >}}
+
+> [!flag]
+> The availability of this feature is controlled by a feature flag.
+> For more information, see the history.
+> This feature is available for testing, but not ready for production use.
+
+With the `FF_SUSPENDABLE_ENVIRONMENTS` [feature flag](../configuration/feature-flags.md),
+a job can suspend its environment instead of releasing it, and a later job can resume it.
+The instance executor suspends the whole instance. The instance stops with its disk
+intact, and starts again on resume.
+
+A job that asks to suspend fails at job start with a configuration error unless:
+
+- `FF_SUSPENDABLE_ENVIRONMENTS` is enabled in the runner configuration, not only as a CI/CD variable.
+- The runner has a registration ID.
+- [`[runners.autoscaler.state_storage]`](../configuration/advanced-configuration.md#the-runnersautoscalerstate_storage-section) is enabled.
+- `capacity_per_instance` is `1`.
+- `max_use_count` is `1`.
+- `[runners.instance]` sets `use_common_build_dir = true`.
+- `vm_isolation` is disabled.
+
+Changing `capacity_per_instance` or `max_use_count` takes effect only after a runner restart.
+
+A suspended environment expires after [`runtime_environment_ttl`](../configuration/advanced-configuration.md#the-runners-section).
+A job that tries to resume an expired environment fails with `runtime_environment_unavailable`.
+Shortly after the TTL, the runner deletes the instance and its disk.
+
+Environments suspended by an earlier runner version have no expiry.
+The runner does not delete their instances after the TTL.
+To reclaim their capacity, delete the instances.
+
 ## Slot-based cgroup support
 
 The Instance executor supports slot-based cgroups for improved resource isolation between concurrent jobs. When enabled, the `GITLAB_RUNNER_SLOT_CGROUP` environment variable is automatically provided to jobs, allowing you to run processes under slot-specific cgroups.
