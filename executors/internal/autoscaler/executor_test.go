@@ -6,9 +6,11 @@ import (
 	"context"
 	"fmt"
 	"net/url"
+	"reflect"
 	"testing"
 	"time"
 
+	"gitlab.com/gitlab-org/fleeting/taskscaler"
 	"gitlab.com/gitlab-org/fleeting/taskscaler/mocks"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
@@ -47,9 +49,13 @@ func TestPrepare(t *testing.T) {
 		"new acquisition": {
 			executorData: &acquisitionRef{key: acqRefKey},
 			retry:        false,
-			setupFn:      nil,
+			setupFn: func(t *testing.T, cfg *common.RunnerConfig) {
+				cfg.FeatureFlags = map[string]bool{featureflags.SuspendableEnvironments: true}
+			},
 			assertFn: func(t *testing.T, ts *mocks.Taskscaler, me *common.MockExecutor) {
-				ts.EXPECT().Acquire(mock.Anything, acqRefKey).Return(mocks.NewAcquisition(t), nil).Once()
+				// the TTL option stamps the slot's expiry; without it slots never expire
+				withTTL := mock.MatchedBy(func(opts []taskscaler.AcquireOption) bool { return len(opts) == 1 })
+				ts.EXPECT().Acquire(mock.Anything, acqRefKey, withTTL).Return(mocks.NewAcquisition(t), nil).Once()
 				me.On("Prepare", mock.Anything).Return(nil).Once()
 			},
 			checkErrFn: func(t *testing.T, err error) {
@@ -61,7 +67,7 @@ func TestPrepare(t *testing.T) {
 			retry:        true,
 			setupFn:      nil,
 			assertFn: func(t *testing.T, ts *mocks.Taskscaler, me *common.MockExecutor) {
-				ts.EXPECT().Acquire(mock.Anything, acqRefKey).Return(mocks.NewAcquisition(t), nil).Once()
+				ts.EXPECT().Acquire(mock.Anything, acqRefKey, mock.Anything).Return(mocks.NewAcquisition(t), nil).Once()
 				me.On("Prepare", mock.Anything).Return(nil).Twice()
 			},
 			checkErrFn: func(t *testing.T, err error) {
@@ -75,7 +81,7 @@ func TestPrepare(t *testing.T) {
 				cfg.Autoscaler = &common.AutoscalerConfig{InstanceAcquireTimeout: instanceAcquireTimeout}
 			},
 			assertFn: func(t *testing.T, ts *mocks.Taskscaler, me *common.MockExecutor) {
-				ts.EXPECT().Acquire(mock.Anything, acqRefKey).Return(mocks.NewAcquisition(t), context.DeadlineExceeded).Once()
+				ts.EXPECT().Acquire(mock.Anything, acqRefKey, mock.Anything).Return(mocks.NewAcquisition(t), context.DeadlineExceeded).Once()
 			},
 			checkErrFn: func(t *testing.T, err error) {
 				assert.Contains(t, err.Error(), fmt.Sprintf("unable to acquire instance within the configured timeout of %s", instanceAcquireTimeout))
@@ -86,7 +92,7 @@ func TestPrepare(t *testing.T) {
 			retry:        false,
 			setupFn:      nil,
 			assertFn: func(t *testing.T, ts *mocks.Taskscaler, me *common.MockExecutor) {
-				ts.EXPECT().Acquire(mock.Anything, acqRefKey).Return(mocks.NewAcquisition(t), assert.AnError).Once()
+				ts.EXPECT().Acquire(mock.Anything, acqRefKey, mock.Anything).Return(mocks.NewAcquisition(t), assert.AnError).Once()
 			},
 			checkErrFn: func(t *testing.T, err error) {
 				require.ErrorIs(t, err, assert.AnError)
@@ -521,6 +527,68 @@ func TestExecutor_Resume_ScalerResumeFails(t *testing.T) {
 
 	err := e.Prepare(opts)
 	require.ErrorIs(t, err, resumeErr)
+	assert.NotErrorIs(t, err, common.ErrRuntimeEnvironmentUnavailable)
+}
+
+func TestExecutor_Resume_UnavailableClassification(t *testing.T) {
+	const (
+		newKey       = "new-key-unavailable"
+		suspendedKey = "suspended-key-unavailable"
+	)
+
+	// setupResumeTest runs this manager as sys-1. ErrAcquisitionNotFound is
+	// what Resume returns once the sweep has freed the slot, ErrSlotExpired
+	// while it is expired but not yet freed. Slot state is per manager, so a
+	// key from another manager is never found here.
+	tests := map[string]struct {
+		issuer          string
+		resumeErr       error
+		wantUnavailable bool
+	}{
+		"own key, slot expired, not yet freed": {
+			issuer:          "sys-1",
+			resumeErr:       taskscaler.ErrSlotExpired,
+			wantUnavailable: true,
+		},
+		"own key, slot freed by the sweep": {
+			issuer:          "sys-1",
+			resumeErr:       taskscaler.ErrAcquisitionNotFound,
+			wantUnavailable: true,
+		},
+		"other manager's key, not found": {
+			issuer:          "other-sys",
+			resumeErr:       taskscaler.ErrAcquisitionNotFound,
+			wantUnavailable: false,
+		},
+		"own key, generic resume error": {
+			issuer:          "sys-1",
+			resumeErr:       assert.AnError,
+			wantUnavailable: false,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			e, ts, _, opts := setupResumeTest(t, "test-token-unavailable", newKey, suspendedKey)
+			opts.Build.Job.SuspendOptions.RuntimeEnvironmentKey = "101/" + tc.issuer + "/acquisition-key=" + suspendedKey
+
+			ts.EXPECT().HasCapability(mock.Anything).Return(true).Once()
+			ts.EXPECT().Resume(mock.Anything, suspendedKey).Return(nil, tc.resumeErr).Once()
+
+			err := e.Prepare(opts)
+			require.ErrorIs(t, err, tc.resumeErr)
+
+			if !tc.wantUnavailable {
+				assert.NotErrorIs(t, err, common.ErrRuntimeEnvironmentUnavailable)
+				return
+			}
+
+			assert.ErrorIs(t, err, common.ErrRuntimeEnvironmentUnavailable)
+			var buildErr *common.BuildError
+			require.ErrorAs(t, err, &buildErr)
+			assert.Equal(t, common.RuntimeEnvironmentUnavailable, buildErr.FailureReason)
+		})
+	}
 }
 
 func TestExecutor_Resume_ValidateEnvKeyRejections(t *testing.T) {
@@ -646,7 +714,7 @@ func TestExecutor_StateStorageGuard_WillSuspend_StateStorageOn_Proceeds(t *testi
 	}
 	opts.Config.Autoscaler.StateStorage.Enabled = true
 
-	ts.EXPECT().Acquire(mock.Anything, newKey).Return(mocks.NewAcquisition(t), nil).Once()
+	ts.EXPECT().Acquire(mock.Anything, newKey, mock.Anything).Return(mocks.NewAcquisition(t), nil).Once()
 	me.MockExecutor.On("Prepare", mock.Anything).Return(nil).Once()
 
 	err := e.Prepare(opts)
@@ -687,7 +755,7 @@ func TestExecutor_StateStorageGuard_FFOff_Proceeds(t *testing.T) {
 		config:   *runnerCfg,
 	}
 
-	ts.EXPECT().Acquire(mock.Anything, newKey).Return(mocks.NewAcquisition(t), nil).Once()
+	ts.EXPECT().Acquire(mock.Anything, newKey, mock.Anything).Return(mocks.NewAcquisition(t), nil).Once()
 	me.On("Prepare", mock.Anything).Return(nil).Once()
 
 	err := e.Prepare(common.ExecutorPrepareOptions{
@@ -696,4 +764,111 @@ func TestExecutor_StateStorageGuard_FFOff_Proceeds(t *testing.T) {
 		Build:   build,
 	})
 	require.NoError(t, err)
+}
+
+func TestPrepare_AcquisitionTTL(t *testing.T) {
+	const acqRefKey = "foobar"
+
+	tests := []struct {
+		name    string
+		ffOff   bool
+		setupFn func(*common.RunnerConfig)
+		wantTTL time.Duration
+	}{
+		{
+			name: "explicit 2h TTL is forwarded",
+			setupFn: func(cfg *common.RunnerConfig) {
+				ttl := 2 * time.Hour
+				cfg.RuntimeEnvironmentTTL = &ttl
+			},
+			wantTTL: 2 * time.Hour,
+		},
+		{
+			name:    "unset TTL uses DefaultRuntimeEnvironmentTTL",
+			setupFn: nil,
+			wantTTL: common.DefaultRuntimeEnvironmentTTL,
+		},
+		{
+			name:  "FF off stamps no TTL",
+			ffOff: true,
+			setupFn: func(cfg *common.RunnerConfig) {
+				ttl := 2 * time.Hour
+				cfg.RuntimeEnvironmentTTL = &ttl
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			runnerCfg := &common.RunnerConfig{}
+			runnerCfg.Token = "token"
+			runnerCfg.ID = 101
+			runnerCfg.SystemID = "sys-1"
+			runnerCfg.FeatureFlags = map[string]bool{featureflags.SuspendableEnvironments: !tc.ffOff}
+			if tc.setupFn != nil {
+				tc.setupFn(runnerCfg)
+			}
+
+			ts := mocks.NewTaskscaler(t)
+			ep := common.NewMockExecutorProvider(t)
+			me := common.NewMockExecutor(t)
+
+			p := New(ep, Config{}).(*provider)
+			p.taskscalerNew = mockTaskscalerNew(ts, false)
+			p.fleetingRunPlugin = mockFleetingRunPlugin(false)
+			p.scalers = map[string]scaler{
+				runnerScalerKey(runnerCfg): {internal: ts, shutdown: func(_ context.Context) {}},
+			}
+
+			var capturedOpts []taskscaler.AcquireOption
+			if tc.ffOff {
+				// The mock drops an empty variadic, so any option fails to match.
+				ts.EXPECT().Acquire(mock.Anything, acqRefKey).Return(mocks.NewAcquisition(t), nil).Once()
+			} else {
+				ts.EXPECT().Acquire(mock.Anything, acqRefKey, mock.MatchedBy(func(opts []taskscaler.AcquireOption) bool {
+					capturedOpts = opts
+					return len(opts) == 1
+				})).Return(mocks.NewAcquisition(t), nil).Once()
+			}
+			me.On("Prepare", mock.Anything).Return(nil).Once()
+
+			e := &executor{
+				Executor: me,
+				provider: p,
+				build: &common.Build{
+					Runner:       runnerCfg,
+					ExecutorData: &acquisitionRef{key: acqRefKey},
+				},
+				config: *runnerCfg,
+			}
+
+			err := e.Prepare(common.ExecutorPrepareOptions{
+				Config:  runnerCfg,
+				Context: t.Context(),
+				Build:   e.build,
+			})
+			require.NoError(t, err)
+
+			if tc.ffOff {
+				return
+			}
+
+			require.Len(t, capturedOpts, 1, "expected exactly one AcquireOption (WithAcquisitionTTL)")
+			want := acquireOptionState(t, taskscaler.WithAcquisitionTTL(tc.wantTTL))
+			got := acquireOptionState(t, capturedOpts[0])
+			assert.Equal(t, want, got, "AcquisitionTTL mismatch: want %v", tc.wantTTL)
+		})
+	}
+}
+
+// acquireOptionState applies opt to a freshly allocated acquireOptions value
+// (the struct is unexported in taskscaler) so two AcquireOptions can be
+// compared semantically via reflect.DeepEqual rather than as function pointers,
+// without naming the unexported fields.
+func acquireOptionState(t *testing.T, opt taskscaler.AcquireOption) any {
+	t.Helper()
+	fn := reflect.ValueOf(opt)
+	o := reflect.New(fn.Type().In(0).Elem())
+	require.Nil(t, fn.Call([]reflect.Value{o})[0].Interface(), "AcquireOption must not error")
+	return o.Interface()
 }

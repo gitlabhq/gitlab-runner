@@ -14,14 +14,14 @@ import (
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/executors"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 	"gitlab.com/gitlab-org/gitlab-runner/session/terminal"
 	"gitlab.com/gitlab-org/gitlab-runner/steps"
 )
 
 // EnvironmentReleaser is implemented by executor providers that can remove a
 // suspended environment's workload from a running instance without a job
-// attached. Nothing calls it yet: the TTL sweep needs taskscaler to expire
-// suspended slots, which a follow-up adds. Cleanup releases by label directly.
+// attached, for the TTL sweep. Cleanup releases by label directly.
 //
 // It is provider-level because docker has no connection to the instance
 // without a job.
@@ -99,7 +99,22 @@ func (e *executor) Prepare(options common.ExecutorPrepareOptions) (err error) {
 		return e.Executor.Prepare(options)
 	}
 
-	acq, err := scaler.Acquire(ctx, acqRef.key)
+	// The slot's expiry is stamped here, once, so a resume or sweep by any
+	// manager uses it rather than that manager's current TTL. Without
+	// FF_SUSPENDABLE_ENVIRONMENTS at the runner level the slot can't be
+	// suspended, so it gets no expiry.
+	//
+	// Slots suspended before expiries were stamped have none, and taskscaler
+	// never expires a slot without one, so the sweep never frees them.
+	// Their containers have no expires-at label either, so a resume is
+	// refused. This is accepted for the experimental
+	// FF_SUSPENDABLE_ENVIRONMENTS rollout.
+	var acqOpts []taskscaler.AcquireOption
+	if options.Config.IsFeatureFlagOn(featureflags.SuspendableEnvironments) {
+		acqOpts = append(acqOpts, taskscaler.WithAcquisitionTTL(options.Config.GetRuntimeEnvironmentTTL()))
+	}
+
+	acq, err := scaler.Acquire(ctx, acqRef.key, acqOpts...)
 	if err != nil {
 		// Check if the error is due to the context timeout
 		if errors.Is(err, context.DeadlineExceeded) {
@@ -117,7 +132,7 @@ func (e *executor) Prepare(options common.ExecutorPrepareOptions) (err error) {
 }
 
 func (e *executor) prepareResume(ctx context.Context, scaler taskscaler.Taskscaler, options common.ExecutorPrepareOptions, acqRef *acquisitionRef, envKey string) error {
-	acqKey, executorFields, err := validateEnvKey(envKey, options.Config.ID)
+	acqKey, issuerSystemID, executorFields, err := validateEnvKey(envKey, options.Config.ID)
 	if err != nil {
 		return err
 	}
@@ -130,6 +145,15 @@ func (e *executor) prepareResume(ctx context.Context, scaler taskscaler.Taskscal
 	}
 
 	acq, err := scaler.Resume(ctx, acqKey)
+	// Once the sweep frees an expired slot, Resume reports it as not found
+	// rather than expired; either way the environment is gone. Slot state is
+	// per manager, so not found means gone only for a key this manager
+	// issued. A key from another manager keeps the retryable error: its
+	// environment may still exist there.
+	if errors.Is(err, taskscaler.ErrSlotExpired) ||
+		(errors.Is(err, taskscaler.ErrAcquisitionNotFound) && issuerSystemID == options.Config.GetSystemID()) {
+		return common.NewRuntimeEnvironmentUnavailableError(fmt.Errorf("resuming acquisition: %w", err))
+	}
 	if err != nil {
 		return fmt.Errorf("resuming acquisition: %w", err)
 	}
@@ -221,20 +245,22 @@ func (e *executor) TerminalConnect() (terminal.Conn, error) {
 // validateEnvKey accepts a key issued by any manager of this runner's
 // registration. It does not check the system ID: that changes when a manager
 // moves to another machine, and the runner ID is what scopes an environment.
-func validateEnvKey(envKey string, runnerID int64) (string, url.Values, error) {
+// It returns the issuing manager's system ID so the caller can tell whether
+// this manager's slot state should hold the key.
+func validateEnvKey(envKey string, runnerID int64) (string, string, url.Values, error) {
 	key, err := common.ParseRuntimeEnvironmentKey(envKey)
 	if err != nil {
-		return "", nil, err
+		return "", "", nil, err
 	}
 
 	if key.RunnerID != runnerID {
-		return "", nil, errors.New("environment key was not issued by this runner")
+		return "", "", nil, errors.New("environment key was not issued by this runner")
 	}
 
 	data, executorFields, err := parseEnvKeyFields(key.Fields)
 	if err != nil {
-		return "", nil, fmt.Errorf("environment key fields: %w", err)
+		return "", "", nil, fmt.Errorf("environment key fields: %w", err)
 	}
 
-	return data.acqKey, executorFields, nil
+	return data.acqKey, key.SystemID, executorFields, nil
 }

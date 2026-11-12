@@ -20,8 +20,8 @@ var _ autoscaler.EnvironmentReleaser = executorProvider{}
 
 // ReleaseEnvironment removes all docker objects (containers, networks, volumes)
 // belonging to the environment identified by acquisitionKey from the instance
-// reached through conn. It is a no-op when vm_isolation is enabled because the
-// nested VM is torn down at tunnel close, not by label-based removal.
+// reached through conn. It is a no-op when vm_isolation is enabled: see the
+// comment on that check.
 //
 // Release is provider-level because docker has no connection to the instance
 // without a job.
@@ -35,8 +35,10 @@ func (p executorProvider) ReleaseEnvironment(
 		return errors.New("release environment: docker config is nil")
 	}
 
-	// vm_isolation tears down the nested VM when the tunnel closes; docker
-	// objects inside it are gone with the VM and cannot be listed via labels.
+	// Suspend is refused under vm_isolation, so this is reached only when
+	// vm_isolation is turned on (config reload or restart) while docker
+	// environments are suspended. That is unsupported, and it leaves the
+	// stopped containers, networks and volumes on the host.
 	if cfg.Autoscaler != nil && cfg.Autoscaler.VMIsolation.Enabled {
 		return nil
 	}
