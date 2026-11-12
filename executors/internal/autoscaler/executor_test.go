@@ -467,6 +467,32 @@ func TestExecutor_Resume_UnreservesNewKey(t *testing.T) {
 	require.NoError(t, err)
 }
 
+// A prepare retried after a successful Resume must reuse the resumed
+// acquisition: Resume would now refuse the slot as not suspended.
+func TestExecutor_Resume_RetriedPrepareReusesAcquisition(t *testing.T) {
+	const (
+		newKey       = "new-key-retry"
+		suspendedKey = "suspended-key-retry"
+	)
+
+	e, ts, me, opts := setupResumeTest(t, "test-token-retry", newKey, suspendedKey)
+
+	mockAcq := mocks.NewAcquisition(t)
+	ts.EXPECT().HasCapability(mock.Anything).Return(true).Twice()
+	ts.EXPECT().Resume(mock.Anything, suspendedKey).Return(mockAcq, nil).Once()
+	ts.EXPECT().Unreserve(newKey).Once()
+	me.MockExecutor.On("Prepare", mock.Anything).Return(fmt.Errorf("dial failed")).Once()
+	me.MockExecutor.On("Prepare", mock.Anything).Return(nil).Once()
+	me.MockSuspendableExecutor.On("Resume", mock.Anything, mock.Anything).Return(nil).Once()
+
+	require.Error(t, e.Prepare(opts))
+	require.NoError(t, e.Prepare(opts))
+
+	acqRef := opts.Build.ExecutorData.(*acquisitionRef)
+	assert.Equal(t, suspendedKey, acqRef.key)
+	assert.Same(t, mockAcq, acqRef.acq)
+}
+
 func TestExecutor_Resume_InnerPrepareFails_ReturnsError(t *testing.T) {
 	const (
 		newKey       = "new-key-prep-fail"
@@ -569,11 +595,12 @@ func TestExecutor_Resume_UnavailableClassification(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+			// No Prepare expectation on the inner executor; a call fails the test.
 			e, ts, _, opts := setupResumeTest(t, "test-token-unavailable", newKey, suspendedKey)
 			opts.Build.Job.SuspendOptions.RuntimeEnvironmentKey = "101/" + tc.issuer + "/acquisition-key=" + suspendedKey
 
 			ts.EXPECT().HasCapability(mock.Anything).Return(true).Once()
-			ts.EXPECT().Resume(mock.Anything, suspendedKey).Return(nil, tc.resumeErr).Once()
+			ts.EXPECT().Resume(mock.Anything, suspendedKey).Return(nil, fmt.Errorf("wrapped: %w", tc.resumeErr)).Once()
 
 			err := e.Prepare(opts)
 			require.ErrorIs(t, err, tc.resumeErr)
@@ -871,4 +898,72 @@ func acquireOptionState(t *testing.T, opt taskscaler.AcquireOption) any {
 	o := reflect.New(fn.Type().In(0).Elem())
 	require.Nil(t, fn.Call([]reflect.Value{o})[0].Interface(), "AcquireOption must not error")
 	return o.Interface()
+}
+
+func TestExecutor_DedicatedInstanceGuard(t *testing.T) {
+	const (
+		newKey       = "new-key-dedicated"
+		suspendedKey = "suspended-key-dedicated"
+	)
+
+	tests := map[string]struct {
+		notDedicated bool // the executor doesn't require a dedicated instance
+		resume       bool // the job resumes and asks to suspend again
+		noSuspend    bool // the job doesn't ask to suspend
+		modify       func(cfg *common.RunnerConfig)
+		wantErr      string
+	}{
+		"valid":                         {},
+		"default capacity_per_instance": {modify: func(cfg *common.RunnerConfig) { cfg.Autoscaler.CapacityPerInstance = 0 }},
+		"runner-level FF off":           {modify: func(cfg *common.RunnerConfig) { cfg.FeatureFlags = nil }, wantErr: "FF_SUSPENDABLE_ENVIRONMENTS"},
+		"no runner ID":                  {modify: func(cfg *common.RunnerConfig) { cfg.ID = 0 }, wantErr: "positive runner registration ID"},
+		"capacity_per_instance above 1": {modify: func(cfg *common.RunnerConfig) { cfg.Autoscaler.CapacityPerInstance = 2 }, wantErr: "capacity_per_instance = 1"},
+		"unlimited max_use_count":       {modify: func(cfg *common.RunnerConfig) { cfg.Autoscaler.MaxUseCount = 0 }, wantErr: "max_use_count = 1"},
+		"max_use_count above 1":         {modify: func(cfg *common.RunnerConfig) { cfg.Autoscaler.MaxUseCount = 2 }, wantErr: "max_use_count = 1"},
+		"use_common_build_dir off":      {modify: func(cfg *common.RunnerConfig) { cfg.Instance.UseCommonBuildDir = false }, wantErr: "use_common_build_dir = true"},
+		"no instance section":           {modify: func(cfg *common.RunnerConfig) { cfg.Instance = nil }, wantErr: "use_common_build_dir = true"},
+		"vm_isolation":                  {modify: func(cfg *common.RunnerConfig) { cfg.Autoscaler.VMIsolation.Enabled = true }, wantErr: "vm_isolation"},
+		"resume fails before Resume":    {resume: true, modify: func(cfg *common.RunnerConfig) { cfg.Autoscaler.MaxUseCount = 0 }, wantErr: "max_use_count = 1"},
+		"job not suspending is exempt":  {noSuspend: true, modify: func(cfg *common.RunnerConfig) { cfg.Autoscaler.MaxUseCount = 0 }},
+		"other executors are exempt":    {notDedicated: true, modify: func(cfg *common.RunnerConfig) { cfg.Autoscaler.MaxUseCount = 0 }},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			e, ts, me, opts := setupResumeTest(t, "test-token-dedicated-"+name, newKey, suspendedKey)
+			e.provider.cfg.SuspendRequiresDedicatedInstance = !tt.notDedicated
+
+			if !tt.resume {
+				opts.Build.Job.SuspendOptions.RuntimeEnvironmentKey = ""
+			}
+			opts.Build.Job.SuspendOptions.SuspendOnSuccess = !tt.noSuspend
+
+			// a copy, so the job keeps its feature flag when a row turns off
+			// the runner-level one, as a CI variable would
+			cfg := *opts.Config
+			opts.Config = &cfg
+			opts.Config.FeatureFlags = map[string]bool{featureflags.SuspendableEnvironments: true}
+			opts.Config.Autoscaler = &common.AutoscalerConfig{MaxUseCount: 1, CapacityPerInstance: 1}
+			opts.Config.Autoscaler.StateStorage.Enabled = true
+			opts.Config.Instance = &common.InstanceConfig{UseCommonBuildDir: true}
+			if tt.modify != nil {
+				tt.modify(opts.Config)
+			}
+
+			if tt.wantErr != "" {
+				// no Acquire or Resume expectations: the guard must fail first
+				err := e.Prepare(opts)
+				var buildErr *common.BuildError
+				require.ErrorAs(t, err, &buildErr)
+				assert.Equal(t, common.ConfigurationError, buildErr.FailureReason)
+				assert.Contains(t, err.Error(), tt.wantErr)
+				return
+			}
+
+			ts.EXPECT().Acquire(mock.Anything, newKey, mock.Anything).Return(mocks.NewAcquisition(t), nil).Once()
+			me.MockExecutor.On("Prepare", mock.Anything).Return(nil).Once()
+
+			require.NoError(t, e.Prepare(opts))
+		})
+	}
 }

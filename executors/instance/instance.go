@@ -141,6 +141,7 @@ func NewProvider(runnerCommandPath string) common.ExecutorProvider {
 		FeaturesUpdater:  featuresUpdater,
 		DefaultShellName: options.Shell.Shell,
 	}, autoscaler.Config{
-		MapJobImageToVMImage: true,
+		MapJobImageToVMImage:             true,
+		SuspendRequiresDedicatedInstance: true,
 	})
 }

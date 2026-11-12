@@ -34,20 +34,18 @@ func (p *provider) SweepRuntimeEnvironments(ctx context.Context, config *common.
 		return nil
 	}
 
+	logger := config.Log()
+
 	// Initialize the taskscaler, so that a restarted manager restores and
 	// sweeps its suspended slots before any job arrives.
-	ts, refresh, err := p.init(config)
+	ts, err := p.scalerFor(config)
 	if err != nil {
-		return fmt.Errorf("initializing taskscaler: %w", err)
-	}
-
-	// init reports a reload on every call after one, not just once; apply
-	// the policy as Acquire does. ConfigureSchedule replaces the policy,
-	// so re-applying it is harmless.
-	if refresh {
-		if err := configureSchedules(ts, config); err != nil {
+		// expiring slots doesn't need the policy, so sweep with the
+		// taskscaler that is already running
+		if ts = p.getRunnerTaskscaler(config); ts == nil {
 			return err
 		}
+		logger.WithError(err).Warningln("Failed to apply the autoscaler policy; sweeping anyway")
 	}
 
 	return p.sweepExpired(ctx, config, ts, now)

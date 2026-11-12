@@ -44,8 +44,13 @@ type provider struct {
 	common.ExecutorProvider
 	cfg Config
 
-	mu      sync.Mutex
-	scalers map[string]scaler
+	mu sync.Mutex
+	// scalersMu guards scalers for Describe and Collect, so a metrics
+	// scrape does not wait for mu while init starts a taskscaler or
+	// Shutdown stops them. Writers hold mu and take scalersMu only around
+	// the map write; readers that hold mu need not take it.
+	scalersMu sync.RWMutex
+	scalers   map[string]scaler
 
 	// Testing hooks
 	taskscalerNew     func(context.Context, fleetingprovider.InstanceGroup, ...taskscaler.Option) (taskscaler.Taskscaler, error)
@@ -72,6 +77,11 @@ type Config struct {
 	//   container is used, inside the nested VM, on the host. We *don't* want
 	//   to map the job image to the VM image.
 	MapJobImageToVMImage bool
+
+	// SuspendRequiresDedicatedInstance makes a job that asks to suspend fail
+	// at job start unless each instance runs one job, once, from a common
+	// build directory. The instance executor suspends the whole instance.
+	SuspendRequiresDedicatedInstance bool
 }
 
 func New(ep common.ExecutorProvider, cfg Config) common.ExecutorProvider {
@@ -109,7 +119,9 @@ func (p *provider) Shutdown(ctx context.Context, _ *common.Config) {
 			sc.shutdown(ctx)
 		}(s)
 
+		p.scalersMu.Lock()
 		delete(p.scalers, key)
+		p.scalersMu.Unlock()
 	}
 
 	wg.Wait()
@@ -126,9 +138,9 @@ func (p *provider) init(config *common.RunnerConfig) (taskscaler.Taskscaler, boo
 
 	s, ok := p.scalers[runnerScalerKey(config)]
 	if ok {
-		// detect if the config has been reloaded
+		// detect if the config has been reloaded; scalerFor records it once
+		// the policy is applied
 		refresh := s.configLoadedAt != config.ConfigLoadedAt
-		s.configLoadedAt = config.ConfigLoadedAt
 		return s.internal, refresh, nil
 	}
 
@@ -254,26 +266,51 @@ func (p *provider) init(config *common.RunnerConfig) (taskscaler.Taskscaler, boo
 			ts.Shutdown(ctx)
 			runner.Kill()
 		},
-		configLoadedAt: config.ConfigLoadedAt,
 	}
 
+	p.scalersMu.Lock()
 	p.scalers[runnerScalerKey(config)] = s
+	p.scalersMu.Unlock()
 
 	return s.internal, true, nil
 }
 
-//nolint:gocognit
-func (p *provider) Acquire(config *common.RunnerConfig) (common.ExecutorData, error) {
-	scaler, refresh, err := p.init(config)
+// scalerFor returns the runner's taskscaler with the config's policy
+// applied. The config is recorded as applied only once configureSchedules
+// succeeds, so a failed apply is retried on the next call.
+func (p *provider) scalerFor(config *common.RunnerConfig) (taskscaler.Taskscaler, error) {
+	ts, refresh, err := p.init(config)
 	if err != nil {
 		return nil, fmt.Errorf("initializing taskscaler: %w", err)
 	}
 
-	// reconfigure policy if the config has been reloaded
-	if refresh {
-		if err := configureSchedules(scaler, config); err != nil {
-			return nil, err
-		}
+	if !refresh {
+		return ts, nil
+	}
+
+	if err := configureSchedules(ts, config); err != nil {
+		return nil, err
+	}
+
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	// scalers holds values, so write the update back
+	if s, ok := p.scalers[runnerScalerKey(config)]; ok {
+		s.configLoadedAt = config.ConfigLoadedAt
+		p.scalersMu.Lock()
+		p.scalers[runnerScalerKey(config)] = s
+		p.scalersMu.Unlock()
+	}
+
+	return ts, nil
+}
+
+//nolint:gocognit
+func (p *provider) Acquire(config *common.RunnerConfig) (common.ExecutorData, error) {
+	scaler, err := p.scalerFor(config)
+	if err != nil {
+		return nil, err
 	}
 
 	// generate key for acquisition
@@ -368,6 +405,9 @@ func runnerScalerKey(config *common.RunnerConfig) string {
 }
 
 func (p *provider) Describe(ch chan<- *prometheus.Desc) {
+	p.scalersMu.RLock()
+	defer p.scalersMu.RUnlock()
+
 	for _, scaler := range p.scalers {
 		c, ok := scaler.internal.MetricsCollector().(prometheus.Collector)
 		if ok {
@@ -382,6 +422,9 @@ func (p *provider) Describe(ch chan<- *prometheus.Desc) {
 }
 
 func (p *provider) Collect(ch chan<- prometheus.Metric) {
+	p.scalersMu.RLock()
+	defer p.scalersMu.RUnlock()
+
 	for _, scaler := range p.scalers {
 		c, ok := scaler.internal.MetricsCollector().(prometheus.Collector)
 		if ok {
