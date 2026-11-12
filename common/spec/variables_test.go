@@ -44,6 +44,52 @@ func TestPublicAndInternalVariables(t *testing.T) {
 	assert.Contains(t, public, v3)
 }
 
+func TestPublicOrInternalOverrides(t *testing.T) {
+	tests := map[string]struct {
+		variables Variables
+		expected  Variables
+	}{
+		"public entry overridden by non-public entry is dropped": {
+			variables: Variables{
+				{Key: "OPTS", Value: "yaml", Public: true},
+				{Key: "OPTS", Value: "project"},
+			},
+			expected: nil,
+		},
+		"non-public entry overridden by public entry keeps the public entry": {
+			variables: Variables{
+				{Key: "OPTS", Value: "project"},
+				{Key: "OPTS", Value: "yaml", Public: true},
+			},
+			expected: Variables{{Key: "OPTS", Value: "yaml", Public: true}},
+		},
+		"internal override keeps all public or internal entries": {
+			variables: Variables{
+				{Key: "OPTS", Value: "yaml", Public: true},
+				{Key: "OPTS", Value: "runner", Internal: true},
+			},
+			expected: Variables{
+				{Key: "OPTS", Value: "yaml", Public: true},
+				{Key: "OPTS", Value: "runner", Internal: true},
+			},
+		},
+		"other keys are unaffected": {
+			variables: Variables{
+				{Key: "OPTS", Value: "yaml", Public: true},
+				{Key: "OTHER", Value: "other", Public: true},
+				{Key: "OPTS", Value: "project"},
+			},
+			expected: Variables{{Key: "OTHER", Value: "other", Public: true}},
+		},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			assert.Equal(t, tt.expected, tt.variables.PublicOrInternal())
+		})
+	}
+}
+
 func TestMaskedVariables(t *testing.T) {
 	v1 := Variable{Key: "key", Value: "key_value"}
 	v2 := Variable{Key: "masked", Value: "masked_value", Masked: true}
