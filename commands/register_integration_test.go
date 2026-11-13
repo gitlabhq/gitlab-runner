@@ -935,6 +935,7 @@ func TestUnregisterOnFailure(t *testing.T) {
 		token                 string
 		leaveRunner           bool
 		registrationFails     bool
+		saveFails             bool
 		expectsLeftRegistered bool
 	}{
 		"ui created runner, verification succeeds, runner left registered": {
@@ -973,10 +974,39 @@ func TestUnregisterOnFailure(t *testing.T) {
 			registrationFails:     true,
 			expectsLeftRegistered: true,
 		},
+		// https://gitlab.com/gitlab-org/gitlab-runner/-/issues/40195
+		"ui created runner, config save fails, LeaveRunner is false, runner machine is unregistered": {
+			token:                 "glrt-test-runner-token",
+			leaveRunner:           false,
+			saveFails:             true,
+			expectsLeftRegistered: false,
+		},
+		"ui created runner, config save fails, LeaveRunner is true, runner machine left registered": {
+			token:                 "glrt-test-runner-token",
+			leaveRunner:           true,
+			saveFails:             true,
+			expectsLeftRegistered: true,
+		},
+		"config save fails, LeaveRunner is false, runner is unregistered": {
+			token:                 "test-runner-token",
+			leaveRunner:           false,
+			saveFails:             true,
+			expectsLeftRegistered: false,
+		},
+		"config save fails, LeaveRunner is true, runner left registered": {
+			token:                 "test-runner-token",
+			leaveRunner:           true,
+			saveFails:             true,
+			expectsLeftRegistered: true,
+		},
 	}
 
 	for testName, testCase := range tests {
 		t.Run(testName, func(t *testing.T) {
+			if testCase.saveFails && runtime.GOOS != "linux" {
+				t.Skip("relies on a config directory under /proc that cannot be created")
+			}
+
 			runnerUICreated := strings.HasPrefix(testCase.token, "glrt-")
 			network := common.NewMockNetwork(t)
 
@@ -1014,17 +1044,25 @@ func TestUnregisterOnFailure(t *testing.T) {
 				arguments = append(arguments, "--leave-runner")
 			}
 
-			arguments, cleanTempFile := useTempConfigFile(t, arguments)
-			defer cleanTempFile()
+			if testCase.saveFails {
+				// loading treats the missing file as an empty config, but its
+				// directory cannot be created when saving
+				arguments = append(arguments, "--config", "/proc/self/nonexistent/config.toml")
+			} else {
+				var cleanTempFile func()
+				arguments, cleanTempFile = useTempConfigFile(t, arguments)
+				defer cleanTempFile()
+			}
 
 			answers := []string{"https://gitlab.com/", testCase.token, "description"}
 			if !runnerUICreated {
 				answers = append(answers, "", "")
 			}
-			if testCase.registrationFails {
-				defer func() { _ = recover() }()
-			} else {
+			if !testCase.registrationFails {
 				answers = append(answers, "custom") // should not result in more answers required
+			}
+			if testCase.registrationFails || testCase.saveFails {
+				defer func() { _ = recover() }()
 			}
 			cmd := commands.NewRegisterCommandForTest(
 				bufio.NewReader(strings.NewReader(strings.Join(answers, "\n")+"\n")),
@@ -1043,7 +1081,7 @@ func TestUnregisterOnFailure(t *testing.T) {
 
 			err := app.Run(append([]string{"runner", "register"}, arguments...))
 
-			assert.False(t, testCase.registrationFails)
+			assert.False(t, testCase.registrationFails || testCase.saveFails)
 			assert.NoError(t, err)
 		})
 	}

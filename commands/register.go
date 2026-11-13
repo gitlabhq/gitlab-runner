@@ -456,9 +456,7 @@ func (s *RegisterCommand) Execute(context *cli.Context) {
 		logrus.Panicln(err)
 	}
 
-	if err := cfg.Save(); err != nil {
-		logrus.Panicln(err)
-	}
+	s.saveConfig(cfg)
 
 	config := cfg.Config()
 	if config.Concurrent < s.Limit {
@@ -484,6 +482,20 @@ func (s *RegisterCommand) Execute(context *cli.Context) {
 	logrus.Printf("Configuration (with the authentication token) was saved in %q", s.ConfigFile)
 }
 
+// saveConfig saves the configuration with the new runner. The runner is already
+// registered with GitLab at this point, so unless --leave-runner is set, it is
+// unregistered again if the configuration cannot be saved: its token would
+// otherwise be stored nowhere.
+func (s *RegisterCommand) saveConfig(cfg *configfile.ConfigFile) {
+	if !s.LeaveRunner {
+		defer s.unregisterRunnerOnPanic()
+	}
+
+	if err := cfg.Save(); err != nil {
+		logrus.Panicln(err)
+	}
+}
+
 func (s *RegisterCommand) unregisterRunnerFunc() func() {
 	signals := make(chan os.Signal, 1)
 	signal.Notify(signals, os.Interrupt)
@@ -494,16 +506,19 @@ func (s *RegisterCommand) unregisterRunnerFunc() func() {
 		logrus.Fatalf("RECEIVED SIGNAL: %v", signal)
 	}()
 
-	return func() {
-		// De-register runner on panic
-		if r := recover(); r != nil {
-			if s.registered {
-				s.unregisterRunner()
-			}
+	return s.unregisterRunnerOnPanic
+}
 
-			// pass panic to next defer
-			panic(r)
+// unregisterRunnerOnPanic de-registers the runner on panic and passes the panic on.
+// It must be deferred directly so that recover() takes effect.
+func (s *RegisterCommand) unregisterRunnerOnPanic() {
+	if r := recover(); r != nil {
+		if s.registered {
+			s.unregisterRunner()
 		}
+
+		// pass panic to next defer
+		panic(r)
 	}
 }
 
