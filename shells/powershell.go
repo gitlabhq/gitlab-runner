@@ -42,7 +42,9 @@ echo "$start_json"
 	pwshCPUInfoScript = `& {
   $model = $null
   $cpuKey = 'HKLM:\HARDWARE\DESCRIPTION\System\CentralProcessor\0'
-  try { $model = (Get-ItemProperty -LiteralPath $cpuKey -ErrorAction Stop).ProcessorNameString } catch {}
+  # Read only this value: Get-ItemProperty reads them all, and on some machines one unrelated value
+  # fails to convert, which -ErrorAction Stop would turn into a lost model.
+  try { $model = Get-ItemPropertyValue -LiteralPath $cpuKey -Name ProcessorNameString -ErrorAction Stop } catch {}
   if (-not $model) {
     try {
       $match = Select-String -LiteralPath '/proc/cpuinfo' -Pattern '^model name\s*:\s*(.*)$' -ErrorAction Stop |

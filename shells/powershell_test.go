@@ -1328,6 +1328,26 @@ func TestPowershell_IfFileReadable(t *testing.T) {
 	}
 }
 
+// pwshCPUKeyLiteral is the registry key literal in pwshCPUInfoScript. The CPU info tests
+// point the script at fixtures by rewriting it.
+const pwshCPUKeyLiteral = `'HKLM:\HARDWARE\DESCRIPTION\System\CentralProcessor\0'`
+
+// runPwshCPUInfoScript runs the script the way the job script does, with errors stopping
+// it, and returns the line it printed.
+func runPwshCPUInfoScript(t *testing.T, pwsh, script string) string {
+	t.Helper()
+
+	var stderr strings.Builder
+	cmd := exec.Command(pwsh, "-NoProfile", "-NonInteractive", "-Command",
+		`$ErrorActionPreference = "Stop"`+"\n"+script+"\n")
+	cmd.Stderr = &stderr
+	out, err := cmd.Output()
+	require.NoError(t, err)
+	assert.Empty(t, stderr.String(), "the probe must not write to stderr")
+
+	return strings.TrimRight(string(out), "\r\n")
+}
+
 func TestPowershell_CPUInfoMessage(t *testing.T) {
 	pwsh, err := exec.LookPath(SNPwsh)
 	if err != nil {
@@ -1337,7 +1357,7 @@ func TestPowershell_CPUInfoMessage(t *testing.T) {
 	// The test points the script at fixtures by rewriting these literals. Pointing it at a
 	// missing registry key makes it fall back to the cpuinfo fixture on Windows as well.
 	const (
-		cpuKey      = `'HKLM:\HARDWARE\DESCRIPTION\System\CentralProcessor\0'`
+		cpuKey      = pwshCPUKeyLiteral
 		missingKey  = `'HKLM:\SOFTWARE\GitLab\gitlab-runner-test\missing'`
 		cpuinfoPath = "'/proc/cpuinfo'"
 	)
@@ -1377,16 +1397,7 @@ func TestPowershell_CPUInfoMessage(t *testing.T) {
 				script = strings.Replace(script, cpuKey, missingKey, 1)
 			}
 
-			// Run the message the way the job script does: with errors stopping the script.
-			var stderr strings.Builder
-			cmd := exec.Command(pwsh, "-NoProfile", "-NonInteractive", "-Command",
-				`$ErrorActionPreference = "Stop"`+"\n"+script+"\n")
-			cmd.Stderr = &stderr
-			out, err := cmd.Output()
-			require.NoError(t, err)
-			assert.Empty(t, stderr.String(), "the probe must not write to stderr")
-
-			line := strings.TrimRight(string(out), "\r\n")
+			line := runPwshCPUInfoScript(t, pwsh, script)
 			if tc.windowsOnly {
 				assert.NotEqual(t, "Running on CPU: unknown", line)
 				assert.True(t, strings.HasPrefix(line, "Running on CPU: "), "unexpected line: %q", line)
