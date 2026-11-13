@@ -86,7 +86,7 @@ func TestPrepare(t *testing.T) {
 
 	require.NoError(t, os.WriteFile(
 		knownHostsFilePath,
-		[]byte(fmt.Sprintf("[%s]:%s %s\n", host, server.Port(), sshHelpers.TestSSHKeyPair.PublicKey)),
+		fmt.Appendf(nil, "[%s]:%s %s\n", host, server.Port(), sshHelpers.TestSSHKeyPair.PublicKey),
 		0o644,
 	))
 
