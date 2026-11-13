@@ -1799,6 +1799,20 @@ func TestGetAllVariables_FeatureFlagFromRunnerEnvironment(t *testing.T) {
 			jobVariables:    spec.Variables{{Key: testFF, Value: "true"}},
 			expectedFFValue: "true",
 		},
+		"TOML disables the flag the runner environment enables": {
+			runnerFeatureFlags: map[string]bool{testFF: false},
+			environment:        []string{testFF + "=true"},
+			expectedFFValue:    "false",
+		},
+		"job variable disables the flag the runner environment enables": {
+			environment:     []string{testFF + "=true"},
+			jobVariables:    spec.Variables{{Key: testFF, Value: "false"}},
+			expectedFFValue: "false",
+		},
+		"runner environment value that is not a boolean": {
+			environment:     []string{testFF + "=yes"},
+			expectedFFValue: "false",
+		},
 	}
 
 	for name, tc := range tests {
@@ -1823,6 +1837,107 @@ func TestGetAllVariables_FeatureFlagFromRunnerEnvironment(t *testing.T) {
 			assert.Equal(t, tc.expectedFFValue, matching[0].Value)
 			assert.Equal(t, strconv.FormatBool(build.IsFeatureFlagOn(testFF)), matching[0].Value,
 				"the job environment should match IsFeatureFlagOn")
+		})
+	}
+}
+
+func TestGetAllVariables_FeatureFlagNotABooleanUsesDefault(t *testing.T) {
+	testFF := featureflags.UseDirectDownload // defaults to true
+
+	build := &Build{
+		Runner: &RunnerConfig{
+			RunnerSettings: RunnerSettings{
+				Environment: []string{testFF + "=yes"},
+			},
+		},
+	}
+
+	matching := variablesWithKey(build.GetAllVariables(), testFF)
+	require.Len(t, matching, 1)
+	assert.Equal(t, "true", matching[0].Value)
+	assert.True(t, build.IsFeatureFlagOn(testFF))
+	assert.Contains(t, errors.Join(build.Settings().Errors...).Error(),
+		testFF+": could not parse feature flag, expected bool, using default value: true")
+}
+
+func TestGetAllVariables_FeatureFlagFromSecrets(t *testing.T) {
+	testFF := featureflags.NetworkPerBuild
+
+	tests := map[string]struct {
+		runnerFeatureFlags map[string]bool
+		expectedFFValue    string
+	}{
+		"secret enables the flag": {
+			expectedFFValue: "true",
+		},
+		"TOML disables the flag a secret enables": {
+			runnerFeatureFlags: map[string]bool{testFF: false},
+			expectedFFValue:    "false",
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			build := &Build{
+				Runner: &RunnerConfig{
+					RunnerSettings: RunnerSettings{
+						FeatureFlags: tc.runnerFeatureFlags,
+					},
+				},
+				secretsVariables: spec.Variables{{Key: testFF, Value: "true"}},
+			}
+
+			// A secret named like a feature flag is not defined again after the
+			// resolved value, so the job sees the value IsFeatureFlagOn reports.
+			matching := variablesWithKey(build.GetAllVariables(), testFF)
+			require.Len(t, matching, 1, "the feature flag should be defined once")
+			assert.Equal(t, tc.expectedFFValue, matching[0].Value)
+			assert.Equal(t, strconv.FormatBool(build.IsFeatureFlagOn(testFF)), matching[0].Value,
+				"the job environment should match IsFeatureFlagOn")
+		})
+	}
+}
+
+func TestGetAllVariables_FeatureFlagFromSecretAndJobVariable(t *testing.T) {
+	testFF := featureflags.NetworkPerBuild
+
+	build := &Build{
+		Runner:           &RunnerConfig{},
+		Job:              spec.Job{Variables: spec.Variables{{Key: testFF, Value: "false"}}},
+		secretsVariables: spec.Variables{{Key: testFF, Value: "true"}},
+	}
+
+	// A secret takes precedence over a job variable with the same name.
+	matching := variablesWithKey(build.GetAllVariables(), testFF)
+	require.Len(t, matching, 1, "the feature flag should be defined once")
+	assert.Equal(t, "true", matching[0].Value)
+	assert.Equal(t, strconv.FormatBool(build.IsFeatureFlagOn(testFF)), matching[0].Value)
+}
+
+func TestSettings_FeatureFlagErrorOmitsMaskedValue(t *testing.T) {
+	testFF := featureflags.NetworkPerBuild
+	const value = "hunter2-secret"
+	masked := spec.Variables{{Key: testFF, Value: value, Masked: true}}
+
+	tests := map[string]*Build{
+		"masked secret": {
+			Runner:           &RunnerConfig{},
+			secretsVariables: masked,
+		},
+		"masked job variable": {
+			Runner: &RunnerConfig{},
+			Job:    spec.Job{Variables: masked},
+		},
+	}
+
+	for name, build := range tests {
+		t.Run(name, func(t *testing.T) {
+			// GetAllVariables leaves out a variable named like a feature flag, so
+			// its value is not masked in the job log, where these errors are printed.
+			output := errors.Join(build.Settings().Errors...).Error()
+			assert.Contains(t, output, testFF+": could not parse feature flag, expected bool")
+			assert.NotContains(t, output, value)
+			assert.False(t, build.IsFeatureFlagOn(testFF))
 		})
 	}
 }

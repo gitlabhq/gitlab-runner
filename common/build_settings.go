@@ -294,7 +294,7 @@ func populateFeatureFlags(b *Build, variables spec.Variables) []error {
 		raw := variables.Get(ff.Name)
 		val, err := strconv.ParseBool(raw)
 		if err != nil {
-			errs = append(errs, fmt.Errorf("%v: could not parse feature flag, expected bool, got %v", ff.Name, raw))
+			errs = append(errs, fmt.Errorf("%v: could not parse feature flag, expected bool, using default value: %v", ff.Name, ff.DefaultValue))
 		} else {
 			b.buildSettings.FeatureFlags[ff.Name] = val
 		}
