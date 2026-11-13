@@ -47,6 +47,8 @@
   - "docs/development/_index.md"
   - "go.mod"
   - "mise.toml"
+  - "scripts/vagrant/provision/base.ps1"
+  - "scripts/check-go-version-consistency"
 
 ##############
 # Conditions #
