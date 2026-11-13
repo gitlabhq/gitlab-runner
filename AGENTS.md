@@ -82,6 +82,7 @@ After making changes, always run these in order before pushing. All must pass:
 - `go vet ./...` — must pass clean
 - `go test -race ./... -count=1 -timeout 30m` — fix any failures your changes introduced; `-race` adds ~10× overhead so the timeout must be generous
 - `make lint` — runs golangci-lint via the Makefile (version is pinned in `GOLANGLINT_VERSION` in the Makefile; always use `make lint` rather than calling the binary directly so the pinned version is used)
+- If you change the Go version, run `scripts/check-go-version-consistency`.
 
 Do not log `CI_JOB_TOKEN`, API tokens, or any secret value to stdout. If you need to
 diagnose an authentication failure, log the HTTP status code and response body only.

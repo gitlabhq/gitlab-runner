@@ -1,5 +1,4 @@
 variables:
-  # renovate: datasource=docker depName=golang allowedVersions=/1\.26\..+/
   RUBY_VERSION: "4.0.9"
   GO_VERSION: "1.26.10"
   GOLANGLINT_VERSION: "2.14.0"
@@ -27,7 +26,6 @@ variables:
   # only the default branch pushes the Go cache, see workflow rules
   GO_CACHE_POLICY: pull
   GO111MODULE: "on"
-  # renovate: datasource=docker depName=redhat/ubi9-micro versioning=redhat allowedVersions=/9\.4-[0-9]+/
   PACKAGES_ITERATION: "1"
   ZSTD_VERSION: "1.5.7"
   ZSTD_WINDOWS_URL: https://github.com/facebook/zstd/releases/download/v${ZSTD_VERSION}/zstd-v${ZSTD_VERSION}-win64.zip

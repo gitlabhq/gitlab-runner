@@ -16,7 +16,7 @@ check() {
     local file=$2
     local pattern=$3
 
-    if ! grep -qF "${pattern}" "${file}"; then
+    if ! grep -qF -- "${pattern}" "${file}"; then
         echo "✖ ${description}: expected to find '${pattern}' in ${file}"
         ((ERRORS++))
     fi
@@ -26,12 +26,14 @@ check "mise.toml golang version" mise.toml "golang = \"${GO_VERSION}\""
 check "go.mod go directive" go.mod "go ${GO_VERSION}"
 check "docs/development/_index.md Go version" docs/development/_index.md "${GO_VERSION}"
 check ".gitlab/duo/agent-config.yml runner-linters image tag" .gitlab/duo/agent-config.yml "${GOLANGLINT_VERSION}-go${GO_VERSION}"
+check "scripts/vagrant/provision/base.ps1 Go version" scripts/vagrant/provision/base.ps1 "\$goVersion = \"${GO_VERSION}\""
+check "mise.toml golangci-lint version" mise.toml "golangci-lint = \"${GOLANGLINT_VERSION}\""
 
 if [ "${ERRORS}" -ne 0 ]; then
-    echo "✖ ${ERRORS} Go version mismatch(es) found. Update the file(s) above to match GO_VERSION=${GO_VERSION} (from .gitlab/ci/_common.gitlab-ci.yml)."
+    echo "✖ ${ERRORS} version mismatch(es) found. Update the file(s) above to match GO_VERSION=${GO_VERSION} and GOLANGLINT_VERSION=${GOLANGLINT_VERSION} (from .gitlab/ci/_common.gitlab-ci.yml)."
     echo "  Run 'scripts/check-go-version-consistency' locally to re-check."
     exit 1
 else
-    echo "✔ All Go version references match GO_VERSION=${GO_VERSION}"
+    echo "✔ All version references match GO_VERSION=${GO_VERSION} and GOLANGLINT_VERSION=${GOLANGLINT_VERSION}"
     exit 0
 fi
