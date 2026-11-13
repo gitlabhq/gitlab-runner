@@ -13,6 +13,7 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
+	"syscall"
 	"testing"
 	"testing/synctest"
 	"time"
@@ -25,6 +26,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"gitlab.com/gitlab-org/gitlab-runner/commands/internal/configfile"
+	"gitlab.com/gitlab-org/gitlab-runner/commands/internal/process_state"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
 	"gitlab.com/gitlab-org/gitlab-runner/executors"
@@ -449,6 +451,7 @@ func TestRunCommand_doJobRequest(t *testing.T) {
 	tests := map[string]struct {
 		requestJob             func(ctx context.Context)
 		passSignal             func(c *RunCommand)
+		timeout                time.Duration
 		expectedContextTimeout bool
 	}{
 		"requestJob returns immediately": {
@@ -461,10 +464,25 @@ func TestRunCommand_doJobRequest(t *testing.T) {
 			passSignal:             func(_ *RunCommand) {},
 			expectedContextTimeout: true,
 		},
-		"requestJob interrupted by interrupt signal": {
+		"requestJob kept open through graceful shutdown": {
 			requestJob: waitForContext,
 			passSignal: func(c *RunCommand) {
-				c.runInterruptSignal <- os.Interrupt
+				c.runInterruptSignal <- syscall.SIGQUIT
+			},
+			expectedContextTimeout: true,
+		},
+		"requestJob cancelled when graceful shutdown wait expires": {
+			requestJob: waitForContext,
+			passSignal: func(c *RunCommand) {
+				c.runInterruptSignal <- syscall.SIGQUIT
+			},
+			timeout:                2 * gracefulJobRequestWait,
+			expectedContextTimeout: false,
+		},
+		"requestJob cancelled by forceful shutdown": {
+			requestJob: waitForContext,
+			passSignal: func(c *RunCommand) {
+				close(c.forcefulShutdown)
 			},
 			expectedContextTimeout: false,
 		},
@@ -495,11 +513,16 @@ func TestRunCommand_doJobRequest(t *testing.T) {
 
 				c := &RunCommand{
 					network:            network,
-					runInterruptSignal: make(chan os.Signal),
+					runInterruptSignal: make(chan os.Signal, 1),
 					runFinished:        make(chan bool),
+					forcefulShutdown:   make(chan struct{}),
 				}
 
-				ctx, cancelFn := context.WithTimeout(t.Context(), 1*time.Second)
+				timeout := tt.timeout
+				if timeout == 0 {
+					timeout = 1 * time.Second
+				}
+				ctx, cancelFn := context.WithTimeout(t.Context(), timeout)
 				defer cancelFn()
 
 				go tt.passSignal(c)
@@ -514,6 +537,91 @@ func TestRunCommand_doJobRequest(t *testing.T) {
 				}
 				assert.NoError(t, ctx.Err())
 			})
+		})
+	}
+}
+
+func TestRunCommand_handleForcefulShutdown_CancelsOpenJobRequest(t *testing.T) {
+	runner := new(common.RunnerConfig)
+
+	requestOpen := make(chan struct{})
+	network := common.NewMockNetwork(t)
+	network.On("RequestJob", mock.Anything, *runner, mock.Anything).
+		Run(func(args mock.Arguments) {
+			ctx, ok := args.Get(0).(context.Context)
+			require.True(t, ok)
+
+			close(requestOpen)
+			<-ctx.Done()
+		}).
+		Return(nil, false).
+		Once()
+
+	c := &RunCommand{
+		network:             network,
+		buildsHelper:        newBuildsHelper(),
+		processStateTracker: process_state.NewTracker(),
+		configfile: configfile.New("", configfile.WithExistingConfig(
+			&common.Config{},
+		), configfile.WithSystemID(common.UnknownSystemID)),
+		runInterruptSignal: make(chan os.Signal, 1),
+		runFinished:        make(chan bool),
+		forcefulShutdown:   make(chan struct{}),
+		stopSignals:        make(chan os.Signal),
+		abortBuilds:        make(chan os.Signal),
+	}
+
+	requestDone := make(chan struct{})
+	go func() {
+		defer close(requestDone)
+		_, _ = c.doJobRequest(t.Context(), runner, nil)
+	}()
+	<-requestOpen
+
+	shutdownErr := make(chan error, 1)
+	go func() { shutdownErr <- c.handleForcefulShutdown() }()
+
+	select {
+	case <-requestDone:
+	case <-time.After(5 * time.Second):
+		t.Fatal("handleForcefulShutdown did not cancel the open job request")
+	}
+
+	// End the shutdown with runFinished: a stop signal would make it write
+	// mr.stopSignal while abortAllBuilds reads it.
+	close(c.runFinished)
+	assert.NoError(t, <-shutdownErr)
+}
+
+func TestRunCommand_requeueRunner(t *testing.T) {
+	tests := map[string]struct {
+		stopSignal       os.Signal
+		expectedRequeued bool
+	}{
+		"requeued while running": {
+			stopSignal:       nil,
+			expectedRequeued: true,
+		},
+		"not requeued after stop signal": {
+			stopSignal:       syscall.SIGQUIT,
+			expectedRequeued: false,
+		},
+	}
+
+	for tn, tt := range tests {
+		t.Run(tn, func(t *testing.T) {
+			c := &RunCommand{
+				buildsHelper: newBuildsHelper(),
+				configfile: configfile.New("", configfile.WithExistingConfig(
+					&common.Config{},
+				), configfile.WithSystemID(common.UnknownSystemID)),
+				stopSignal: tt.stopSignal,
+			}
+			runners := make(chan *common.RunnerConfig, 1)
+
+			c.requeueRunner(new(common.RunnerConfig), runners)
+
+			assert.Equal(t, tt.expectedRequeued, len(runners) == 1)
 		})
 	}
 }

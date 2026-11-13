@@ -119,7 +119,7 @@ following commands support the following signals:
 |---------------------|---------------------|--------|
 | `register`          | `SIGINT`            | Cancel runner registration and delete if it was already registered. |
 | `run`, `run-single` | `SIGINT`, `SIGTERM` | Abort all running builds and exit as soon as possible. Use twice to exit now (**forceful shutdown**). |
-| `run`, `run-single` | `SIGQUIT`           | Stop accepting new builds. Exit as soon as the running builds finish (**graceful shutdown**). |
+| `run`, `run-single` | `SIGQUIT`           | Stop accepting new builds. Exit as soon as the running builds finish (**graceful shutdown**). With `run`, the runner waits up to 60 seconds for an open job request before it exits. |
 | `run`               | `SIGHUP`            | Force to reload configuration file. |
 
 For example, to force a reload of a runner's configuration file, run:

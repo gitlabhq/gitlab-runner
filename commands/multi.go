@@ -60,6 +60,12 @@ const (
 	workerProcessingFailureJobFailure     = "job_failure"
 )
 
+// gracefulJobRequestWait bounds how long a graceful shutdown waits for an
+// already open job request before cancelling it. It covers the default
+// long polling duration of 50 seconds; a response that takes longer is
+// given up on so that a slow or unreachable GitLab cannot stall the exit.
+const gracefulJobRequestWait = 60 * time.Second
+
 var (
 	concurrentDesc = prometheus.NewDesc(
 		"gitlab_runner_concurrent",
@@ -154,6 +160,12 @@ type RunCommand struct {
 	// runFinished is used to notify that run() did finish
 	runFinished chan bool
 
+	// forcefulShutdown is closed when the forceful shutdown starts, so that
+	// open requests for new jobs are cancelled right away instead of being
+	// given the graceful shutdown wait.
+	forcefulShutdown     chan struct{}
+	forcefulShutdownOnce sync.Once
+
 	currentWorkers       int
 	reloadConfigInterval time.Duration
 
@@ -228,6 +240,7 @@ func (mr *RunCommand) Start(_ service.Service) error {
 	mr.reloadSignal = make(chan os.Signal, 1)
 	mr.configReloaded = make(chan int, 1)
 	mr.runFinished = make(chan bool, 1)
+	mr.forcefulShutdown = make(chan struct{})
 	mr.stopSignals = make(chan os.Signal, 1)
 	mr.abortRun, mr.abortRunCancel = context.WithCancel(context.Background())
 
@@ -1542,24 +1555,49 @@ func (mr *RunCommand) executorSupportsNativeSteps(runnerConfig *common.RunnerCon
 }
 
 // doJobRequest will execute the request for a new job, respecting an interruption
-// caused by interrupt signals or process execution finalization
+// caused by interrupt signals or process execution finalization.
+//
+// A graceful shutdown gives an already open request gracefulJobRequestWait to
+// complete before cancelling it. GitLab transitions a job to running before
+// the response reaches the runner, so cancelling a request right away can
+// orphan a job that was just assigned to it. A forceful shutdown cancels the
+// request immediately.
 func (mr *RunCommand) doJobRequest(
 	ctx context.Context,
 	runner *common.RunnerConfig,
 	sessionInfo *common.SessionInfo,
 ) (*spec.Job, bool) {
-	// Terminate opened requests to GitLab when interrupt signal
-	// is broadcast.
 	ctx, cancelFn := context.WithCancel(ctx)
 	defer cancelFn()
 
 	go func() {
-		select {
-		case <-mr.runInterruptSignal:
-			cancelFn()
-		case <-mr.runFinished:
-			cancelFn()
-		case <-ctx.Done():
+		interrupt := mr.runInterruptSignal
+		var deadline <-chan time.Time
+		var timer *time.Timer
+		defer func() {
+			if timer != nil {
+				timer.Stop()
+			}
+		}()
+
+		for {
+			select {
+			case <-interrupt:
+				interrupt = nil
+				timer = time.NewTimer(gracefulJobRequestWait)
+				deadline = timer.C
+			case <-deadline:
+				cancelFn()
+				return
+			case <-mr.forcefulShutdown:
+				cancelFn()
+				return
+			case <-mr.runFinished:
+				cancelFn()
+				return
+			case <-ctx.Done():
+				return
+			}
 		}
 	}()
 
@@ -1571,6 +1609,13 @@ func (mr *RunCommand) doJobRequest(
 // method just exits without blocking.
 func (mr *RunCommand) requeueRunner(runner *common.RunnerConfig, runners chan *common.RunnerConfig) {
 	runnerLog := mr.log().WithField("runner", runner.ShortDescription()).WithField("runner_name", runner.Name)
+
+	// After a stop signal, an idle worker that hasn't stopped yet would pick
+	// the runner up and open a new job request.
+	if mr.stopSignal != nil {
+		runnerLog.Debugln("Not requeueing the runner, stop signal received")
+		return
+	}
 
 	select {
 	case runners <- runner:
@@ -1796,6 +1841,7 @@ func (mr *RunCommand) handleGracefulShutdown() error {
 // process execution.
 func (mr *RunCommand) handleForcefulShutdown() error {
 	mr.processStateTracker.SetForcefulShutdown()
+	mr.forcefulShutdownOnce.Do(func() { close(mr.forcefulShutdown) })
 
 	mr.log().
 		WithField("shutdown-timeout", mr.configfile.Config().GetShutdownTimeout()).
