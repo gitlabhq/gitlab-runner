@@ -2591,3 +2591,93 @@ func TestRunCommand_checkConfig_LogsLoadError(t *testing.T) {
 	require.True(t, ok, "load error must be an error field, not message text: %v", entry.Data)
 	assert.Error(t, loggedErr)
 }
+
+func TestRunCommand_processRunner_LogsJobURL(t *testing.T) {
+	hook, cleanup := test.NewHook()
+	defer cleanup()
+
+	origLevel := logrus.GetLevel()
+	origOut := logrus.StandardLogger().Out
+	logrus.SetLevel(logrus.DebugLevel)
+	logrus.SetOutput(io.Discard)
+	t.Cleanup(func() {
+		logrus.SetLevel(origLevel)
+		logrus.SetOutput(origOut)
+	})
+
+	const (
+		expectedJobURL  = "https://gitlab.example.com/group/project/-/jobs/42"
+		expectedRepoURL = "https://gitlab.example.com/group/project.git"
+	)
+
+	cfg := common.RunnerConfig{
+		RequestConcurrency: 1,
+		RunnerSettings: common.RunnerSettings{
+			Executor: "multi-runner-job-url",
+		},
+	}
+
+	mJobTrace := common.NewMockLightJobTrace(t)
+	mJobTrace.On("SetFailuresCollector", mock.Anything)
+	mJobTrace.On("IsStdout").Return(false)
+	mJobTrace.On("SetCancelFunc", mock.Anything)
+	mJobTrace.On("SetAbortFunc", mock.Anything)
+	mJobTrace.On("SetDebugModeEnabled", mock.Anything)
+	mJobTrace.On("Success").Return(nil)
+
+	mNetwork := common.NewMockNetwork(t)
+	mNetwork.On("RequestJob", mock.Anything, mock.Anything, mock.Anything).Return(&spec.Job{
+		ID:      42,
+		JobInfo: spec.JobInfo{Name: "test-job"},
+		GitInfo: spec.GitInfo{RepoURL: "https://user:pass@gitlab.example.com/group/project.git"},
+		Steps: []spec.Step{
+			{Name: "script", Script: spec.StepScript{"echo"}, Timeout: 15},
+		},
+	}, true)
+	mNetwork.On("UpdateJob", mock.Anything, mock.Anything, mock.Anything).
+		Return(common.UpdateJobResult{State: common.UpdateSucceeded})
+	mNetwork.On("ProcessJob", mock.Anything, mock.MatchedBy(func(c *common.JobCredentials) bool {
+		return c.ID == 42 && c.JobURL == expectedJobURL
+	})).Return(mJobTrace, nil)
+
+	e := common.NewMockExecutor(t)
+	e.On("Prepare", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+	e.On("Cleanup").Maybe()
+	e.On("Shell").Return(&common.ShellScriptInfo{Shell: "script-shell"})
+	e.On("Finish", mock.Anything).Maybe()
+	e.On("Run", mock.Anything).Return(nil)
+
+	p := common.NewMockExecutorProvider(t)
+	p.On("Acquire", mock.Anything).Return(nil, nil)
+	p.On("Release", mock.Anything, mock.Anything).Return(nil).Maybe()
+	p.On("GetFeatures", mock.Anything).Return(nil)
+	p.On("Create").Return(e)
+
+	cmd := RunCommand{
+		network:           mNetwork,
+		executorProviders: executors.NewProviderRegistry(map[string]common.ExecutorProvider{"multi-runner-job-url": p}),
+		buildsHelper:      newBuildsHelper(),
+		configfile: configfile.New("", configfile.WithExistingConfig(
+			&common.Config{User: "git"},
+		), configfile.WithSystemID(common.UnknownSystemID)),
+	}
+	cmd.buildsHelper.getRunnerCounter(&cfg).adaptiveConcurrencyLimit = 100
+
+	require.NoError(t, cmd.processRunner(0, &cfg, make(chan *common.RunnerConfig)))
+
+	for _, message := range []string{"Added job to processing list", "Removed job from processing list"} {
+		var found *logrus.Entry
+		for _, entry := range hook.AllEntries() {
+			if entry.Message == message {
+				found = entry
+				break
+			}
+		}
+
+		require.NotNil(t, found, "missing log entry %q", message)
+		assert.EqualValues(t, 42, found.Data["job"], message)
+		assert.Equal(t, expectedJobURL, found.Data["job_url"], message)
+		assert.Equal(t, "test-job", found.Data["job_name"], message)
+		assert.Equal(t, expectedRepoURL, found.Data["repo_url"], message)
+	}
+}

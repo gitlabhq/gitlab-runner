@@ -325,6 +325,22 @@ func (b *Build) FailureReason() spec.JobFailureReason {
 }
 
 func (b *Build) Log() *logrus.Entry {
+	l := b.Runner.Log().WithFields(b.LogFields())
+
+	// this is only set after the prepare stage has run
+	if b.Hostname != "" {
+		l = l.WithField("name", b.Hostname)
+	}
+
+	// executor-specific log fields
+	for k, v := range GetExecutorLogFields(b.ExecutorData) {
+		l = l.WithField(k, v)
+	}
+
+	return l
+}
+
+func (b *Build) LogFields() logrus.Fields {
 	fields := logrus.Fields{
 		"job":               b.ID,
 		"job_name":          b.JobInfo.Name,
@@ -340,26 +356,22 @@ func (b *Build) Log() *logrus.Entry {
 		"runner_uuid":       b.RunnerInfo.UUID,
 	}
 	log.AddDeprecatedField(fields, "organization_id", b.JobInfo.OrganizationID)
-	l := b.Runner.Log().WithFields(fields)
+
+	// Builds without a repo URL (the boot-verify canary) have no GitLab job
+	// behind them, so there is no meaningful URL to log.
+	if b.GitInfo.RepoURL != "" {
+		fields["job_url"] = b.JobURL()
+	}
 
 	if b.JobInfo.ScopedUserID != nil {
-		l = l.WithField("gitlab_scoped_user_id", *b.JobInfo.ScopedUserID)
+		fields["gitlab_scoped_user_id"] = *b.JobInfo.ScopedUserID
 	}
+
 	if b.GitInfo.Protected != nil {
-		l = l.WithField("ref_protected", *b.GitInfo.Protected)
+		fields["ref_protected"] = *b.GitInfo.Protected
 	}
 
-	// this is only set after the prepare stage has run
-	if b.Hostname != "" {
-		l = l.WithField("name", b.Hostname)
-	}
-
-	// executor-specific log fields
-	for k, v := range GetExecutorLogFields(b.ExecutorData) {
-		l = l.WithField(k, v)
-	}
-
-	return l
+	return fields
 }
 
 // ProjectUniqueShortName returns a unique name for the current build.
@@ -1110,6 +1122,7 @@ func (b *Build) executeUploadReferees(ctx context.Context, startTime, endTime ti
 
 	jobCredentials := JobCredentials{
 		ID:          b.Job.ID,
+		JobURL:      b.Job.JobURL(),
 		Token:       b.Job.Token,
 		URL:         b.Runner.RunnerCredentials.GetAPIURL(),
 		TLSCAFile:   b.Runner.RunnerCredentials.TLSCAFile,

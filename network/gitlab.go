@@ -694,6 +694,7 @@ func (n *GitLabClient) RequestJob(
 	case http.StatusCreated:
 		logger.WithFields(logrus.Fields{
 			"job":      response.ID,
+			"job_url":  response.JobURL(),
 			"job_name": response.JobInfo.Name,
 			"repo_url": response.RepoCleanURL(),
 		}).Println("Checking for jobs...", "received")
@@ -752,6 +753,7 @@ func (n *GitLabClient) UpdateJob(
 
 	log := config.Log().WithFields(logrus.Fields{
 		"job":                 jobInfo.ID,
+		"job_url":             jobCredentials.JobURL,
 		"checksum":            request.Output.Checksum,
 		"bytesize":            request.Output.Bytesize,
 		correlationIDLogField: correlationID,
@@ -840,7 +842,11 @@ func (n *GitLabClient) PatchTrace(
 ) common.PatchTraceResult {
 	id := jobCredentials.ID
 
-	baseLog := config.Log().WithField("job", id)
+	baseLog := config.Log().WithFields(logrus.Fields{
+		"job":     id,
+		"job_url": jobCredentials.JobURL,
+	})
+
 	if len(content) == 0 {
 		baseLog.Info("Appending trace to coordinator...", "skipped due to empty patch")
 		return common.NewPatchTraceResult(startOffset, common.PatchSucceeded, 0)
@@ -1514,6 +1520,7 @@ func (n *GitLabClient) ProcessJob(
 		"runner":      config.ShortDescription(),
 		"runner_name": config.Name,
 		"job":         jobCredentials.ID,
+		"job_url":     jobCredentials.JobURL,
 	})
 
 	trace, err := newJobTrace(n, config, jobCredentials, l)

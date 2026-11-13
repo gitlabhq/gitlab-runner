@@ -326,7 +326,11 @@ type JobTraceOutput struct {
 }
 
 type JobCredentials struct {
-	ID          int64  `long:"id" env:"CI_JOB_ID" description:"The build ID to download and upload artifacts for"`
+	ID int64 `long:"id" env:"CI_JOB_ID" description:"The build ID to download and upload artifacts for"`
+	// JobURL is used only for logging and is populated by the runner from the job
+	// response. It deliberately has no long/env/description tags: those would expose it
+	// as a CLI flag of the artifact and cache helper commands, which don't need it.
+	JobURL      string
 	Token       string `long:"token" env:"CI_JOB_TOKEN" required:"true" description:"Build token"`
 	URL         string `long:"url" env:"CI_SERVER_URL" required:"true" description:"GitLab CI URL"`
 	TLSCAFile   string `long:"tls-ca-file" env:"CI_SERVER_TLS_CA_FILE" description:"File containing the certificates to verify the peer when using HTTPS"`

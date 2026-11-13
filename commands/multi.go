@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 	"net"
 	"net/http"
 	"net/http/pprof"
@@ -1343,32 +1344,15 @@ func (mr *RunCommand) processBuildOnRunner(
 	mr.buildsHelper.addBuild(build)
 
 	fields := logrus.Fields{
-		"runner_uuid":           build.RunnerInfo.UUID,
 		"runner":                runner.ShortDescription(),
 		"runner_name":           runner.Name,
-		"job":                   build.ID,
-		"job_stage":             build.JobInfo.Stage,
-		"ref":                   build.GitInfo.Ref,
-		"job_tags":              build.JobInfo.TagList,
-		"pipeline_id":           build.JobInfo.PipelineID,
-		"project":               build.JobInfo.ProjectID,
-		"project_full_path":     build.JobInfo.ProjectFullPath,
-		"namespace_id":          build.JobInfo.NamespaceID,
-		"root_namespace_id":     build.JobInfo.RootNamespaceID,
-		"gitlab_user_id":        build.JobInfo.UserID,
 		"repo_url":              build.RepoCleanURL(),
 		"time_in_queue_seconds": build.JobInfo.TimeInQueueSeconds,
 		"queue_size":            build.JobInfo.QueueSize,
 		"queue_depth":           build.JobInfo.QueueDepth,
 	}
-	log.AddDeprecatedField(fields, "organization_id", build.JobInfo.OrganizationID)
 
-	if build.JobInfo.ScopedUserID != nil {
-		fields["gitlab_scoped_user_id"] = *build.JobInfo.ScopedUserID
-	}
-	if build.GitInfo.Protected != nil {
-		fields["ref_protected"] = *build.GitInfo.Protected
-	}
+	maps.Copy(fields, build.LogFields())
 
 	mr.log().WithFields(fields).Infoln("Added job to processing list")
 	defer mr.finishBuild(runner, build, fields)
@@ -1498,8 +1482,9 @@ func (mr *RunCommand) requestJob(
 
 	// Make sure to always close output
 	jobCredentials := &common.JobCredentials{
-		ID:    jobData.ID,
-		Token: jobData.Token,
+		ID:     jobData.ID,
+		JobURL: jobData.JobURL(),
+		Token:  jobData.Token,
 	}
 
 	trace, err := mr.network.ProcessJob(*runner, jobCredentials)

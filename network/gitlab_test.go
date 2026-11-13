@@ -1374,7 +1374,7 @@ func TestGitLabClient_RequestJob(t *testing.T) {
 			expected: expected{
 				responseOK: true,
 			},
-			expectedLog: `level=info msg="Checking for jobs... received" correlation_id=foobar job=10 job_name=test-job repo_url="https://gitlab.example.com/test/test-project.git" runner=valid`,
+			expectedLog: `level=info msg="Checking for jobs... received" correlation_id=foobar job=10 job_name=test-job job_url="https://gitlab.example.com/test/test-project/-/jobs/10" repo_url="https://gitlab.example.com/test/test-project.git" runner=valid`,
 		},
 		{
 			name:      "no jobs token",
@@ -1411,7 +1411,7 @@ func TestGitLabClient_RequestJob(t *testing.T) {
 			expected: expected{
 				responseOK: true,
 			},
-			expectedLog: `level=info msg="Checking for jobs... received" correlation_id=foobar job=10 job_name=test-job repo_url="https://gitlab.example.com/test/test-project.git" runner=valid`,
+			expectedLog: `level=info msg="Checking for jobs... received" correlation_id=foobar job=10 job_name=test-job job_url="https://gitlab.example.com/test/test-project/-/jobs/10" repo_url="https://gitlab.example.com/test/test-project.git" runner=valid`,
 		},
 		{
 			name:      "service unavailable",
@@ -1747,7 +1747,8 @@ func TestUpdateJobAsKeepAlive(t *testing.T) {
 	}
 
 	jobCredentials := &JobCredentials{
-		Token: "token",
+		JobURL: "https://gitlab.example.com/group/project/-/jobs/10",
+		Token:  "token",
 	}
 
 	c := NewGitLabClient()
@@ -1776,6 +1777,7 @@ func TestUpdateJobAsKeepAlive(t *testing.T) {
 						"code":            200,
 						"correlation_id":  "foobar",
 						"job":             int64(10),
+						"job_url":         "https://gitlab.example.com/group/project/-/jobs/10",
 						"job-status":      "",
 						"update-interval": time.Duration(0),
 					},
@@ -1799,6 +1801,7 @@ func TestUpdateJobAsKeepAlive(t *testing.T) {
 						"code":            200,
 						"correlation_id":  "foobar",
 						"job":             int64(11),
+						"job_url":         "https://gitlab.example.com/group/project/-/jobs/10",
 						"job-status":      "canceled",
 						"status":          "200 OK",
 						"update-interval": time.Duration(0),
@@ -1823,6 +1826,7 @@ func TestUpdateJobAsKeepAlive(t *testing.T) {
 						"code":            200,
 						"correlation_id":  "foobar",
 						"job":             int64(12),
+						"job_url":         "https://gitlab.example.com/group/project/-/jobs/10",
 						"job-status":      "failed",
 						"status":          "200 OK",
 						"update-interval": time.Duration(0),
@@ -1847,6 +1851,7 @@ func TestUpdateJobAsKeepAlive(t *testing.T) {
 						"code":            200,
 						"correlation_id":  "foobar",
 						"job":             int64(13),
+						"job_url":         "https://gitlab.example.com/group/project/-/jobs/10",
 						"job-status":      "canceling",
 						"update-interval": time.Duration(0),
 					},
@@ -4138,4 +4143,64 @@ func TestDownloadArtifactsFallbackCantConnect(t *testing.T) {
 	assert.Equal(t, fallbackID, entry.Data[correlationIDLogField], "log line carries the no-redirect request's correlation ID instead of the fallback's")
 	_, hasStatus := entry.Data[fields.HTTPStatusCode]
 	assert.False(t, hasStatus, "transport error line carries a status code from the no-redirect response: %v", entry.Data)
+}
+
+func TestPatchTrace_LogsJobURL(t *testing.T) {
+	const jobURL = "https://gitlab.example.com/group/project/-/jobs/1"
+
+	handler := func(w http.ResponseWriter, r *http.Request, body []byte, offset, limit int) {
+		w.Header().Add("Range", fmt.Sprintf("0-%d", offset+len(body)))
+		w.WriteHeader(http.StatusAccepted)
+	}
+
+	server, client, config := getPatchServer(t, handler)
+	defer server.Close()
+
+	logger, hook := test.NewNullLogger()
+	config.Logger = logger
+
+	tests := map[string]struct {
+		content []byte
+	}{
+		"patch sent":       {content: patchTraceContent},
+		"empty patch skip": {content: nil},
+	}
+
+	for tn, tc := range tests {
+		t.Run(tn, func(t *testing.T) {
+			hook.Reset()
+
+			client.PatchTrace(
+				config,
+				&JobCredentials{ID: 1, JobURL: jobURL, Token: patchToken},
+				tc.content, 0, false,
+			)
+
+			entries := hook.AllEntries()
+			require.NotEmpty(t, entries)
+			for _, entry := range entries {
+				assert.EqualValues(t, 1, entry.Data["job"], entry.Message)
+				assert.Equal(t, jobURL, entry.Data["job_url"], entry.Message)
+			}
+		})
+	}
+}
+
+func TestProcessJob_TraceLoggerHasJobURL(t *testing.T) {
+	const jobURL = "https://gitlab.example.com/group/project/-/jobs/10"
+
+	trace, err := NewGitLabClient().ProcessJob(
+		RunnerConfig{},
+		&JobCredentials{ID: 10, JobURL: jobURL, Token: "token"},
+	)
+	require.NoError(t, err)
+	t.Cleanup(trace.Finish)
+
+	jobTrace, ok := trace.(*clientJobTrace)
+	require.True(t, ok)
+
+	entry, ok := jobTrace.log.(*logrus.Entry)
+	require.True(t, ok)
+	assert.EqualValues(t, 10, entry.Data["job"])
+	assert.Equal(t, jobURL, entry.Data["job_url"])
 }
