@@ -68,7 +68,7 @@ linters:
       disable:
         - any
         - atomictypes
-        - fmtappendf
+        - errorsastype
         - forvar
         - mapsloop
         - newexpr
