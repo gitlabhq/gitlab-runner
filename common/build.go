@@ -2131,7 +2131,7 @@ func withoutFeatureFlags(variables spec.Variables) spec.Variables {
 // 2. Base variables that come before job variables (excluding feature flags set in the runner's
 // environment, which are already part of the resolved values)
 // 3. Job variables (excluding feature flags to prevent overriding resolved values)
-// 4. Base variables that come after job variables
+// 4. Base variables that come after job variables (excluding feature flags, for example from secrets)
 func (b *Build) GetAllVariables() spec.Variables {
 	if b.allVariables != nil {
 		return b.allVariables
@@ -2150,7 +2150,7 @@ func (b *Build) GetAllVariables() spec.Variables {
 	variables = append(variables, b.getResolvedFeatureFlags()...)
 	variables = append(variables, withoutFeatureFlags(b.getBaseVariablesBeforeJob())...)
 	variables = append(variables, withoutFeatureFlags(b.Variables)...)
-	variables = append(variables, b.getBaseVariablesAfterJob()...)
+	variables = append(variables, withoutFeatureFlags(b.getBaseVariablesAfterJob())...)
 
 	b.allVariables = variables.Expand()
 

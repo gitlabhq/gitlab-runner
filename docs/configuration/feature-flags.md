@@ -167,9 +167,11 @@ they don't deal with how the job is executed.
 ## Feature flag precedence
 
 For a feature flag that changes how a job runs, GitLab Runner checks these
-places for the value, in this order, and uses the first value found:
+places for the value, in this order, and uses the first value found. If that
+value is empty or not a boolean, GitLab Runner uses the default value:
 
 1. The `[runners.feature_flags]` section of the runner configuration.
+1. A secret defined with the `secrets` keyword in the job.
 1. A CI/CD variable, for example one defined in the pipeline configuration.
 1. The `environment` setting of the runner configuration.
 1. The default value of the feature flag.

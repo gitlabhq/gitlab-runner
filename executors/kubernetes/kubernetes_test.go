@@ -7297,12 +7297,12 @@ func TestSetupBuildPod(t *testing.T) {
 		"passes the resolved value of a feature flag set in the runner environment": {
 			RunnerConfig: common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
-					Environment: []string{featureflags.UseFastzip + "=false"},
+					Environment: []string{featureflags.UseFastzip + "=true"},
 				},
 			},
 			// A job variable takes precedence over the runner environment.
 			Variables: []spec.Variable{
-				{Key: featureflags.UseFastzip, Value: "true", Public: true},
+				{Key: featureflags.UseFastzip, Value: "false", Public: true},
 			},
 			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
 				require.NotEmpty(t, pod.Spec.Containers)
@@ -7314,7 +7314,7 @@ func TestSetupBuildPod(t *testing.T) {
 						values = append(values, env.Value)
 					}
 				}
-				assert.Equal(t, []string{"true"}, values)
+				assert.Equal(t, []string{"false"}, values)
 			},
 		},
 		"add custom podSpec": {
