@@ -10,11 +10,11 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
-	"gitlab.com/gitlab-org/gitlab-runner/helpers/process"
 
 	"gitlab.com/gitlab-org/gitlab-runner/commands/internal/configfile"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/executors"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/process"
 )
 
 type RunSingleCommand struct {
@@ -107,8 +107,9 @@ func (r *RunSingleCommand) processBuild(data common.ExecutorData, abortSignal ch
 	}
 
 	jobCredentials := &common.JobCredentials{
-		ID:    jobData.ID,
-		Token: jobData.Token,
+		ID:     jobData.ID,
+		JobURL: jobData.JobURL(),
+		Token:  jobData.Token,
 	}
 
 	trace, err := r.network.ProcessJob(r.RunnerConfig, jobCredentials)

@@ -6653,7 +6653,11 @@ func TestExecuteUploadReferees_UsesManagerCredentials(t *testing.T) {
 
 	var uploaded JobCredentials
 	build := &Build{
-		Job: spec.Job{ID: 42, Token: "job-token"},
+		Job: spec.Job{
+			ID:      42,
+			Token:   "job-token",
+			GitInfo: spec.GitInfo{RepoURL: "https://gitlab.example.com/group/project.git"},
+		},
 		Runner: &RunnerConfig{
 			RunnerCredentials: RunnerCredentials{
 				URL:         "https://gitlab.example.com",
@@ -6675,6 +6679,7 @@ func TestExecuteUploadReferees_UsesManagerCredentials(t *testing.T) {
 
 	assert.Equal(t, JobCredentials{
 		ID:          42,
+		JobURL:      "https://gitlab.example.com/group/project/-/jobs/42",
 		Token:       "job-token",
 		URL:         "https://api.internal.example.com",
 		TLSCAFile:   "/etc/ca.pem",
@@ -6682,4 +6687,86 @@ func TestExecuteUploadReferees_UsesManagerCredentials(t *testing.T) {
 		TLSKeyFile:  "/etc/key.pem",
 		AllowHTTP2:  &allowHTTP2,
 	}, uploaded)
+}
+
+func TestBuild_LogFields(t *testing.T) {
+	protected := true
+	scopedUserID := int64(7)
+
+	tests := map[string]struct {
+		prepare        func(b *Build)
+		expectedFields map[string]any
+		absentFields   []string
+	}{
+		"job identity fields": {
+			prepare: func(_ *Build) {},
+			expectedFields: map[string]any{
+				"job":     int64(42),
+				"job_url": "https://gitlab.example.com/group/project/-/jobs/42",
+			},
+			absentFields: []string{"ref_protected", "gitlab_scoped_user_id"},
+		},
+		"no repo url": {
+			prepare: func(b *Build) {
+				b.GitInfo.RepoURL = ""
+			},
+			expectedFields: map[string]any{
+				"job": int64(42),
+			},
+			absentFields: []string{"job_url"},
+		},
+		"optional fields set": {
+			prepare: func(b *Build) {
+				b.GitInfo.Protected = &protected
+				b.JobInfo.ScopedUserID = &scopedUserID
+			},
+			expectedFields: map[string]any{
+				"ref_protected":         true,
+				"gitlab_scoped_user_id": int64(7),
+			},
+		},
+	}
+
+	for tn, tc := range tests {
+		t.Run(tn, func(t *testing.T) {
+			build := &Build{
+				Job: spec.Job{
+					ID:      42,
+					GitInfo: spec.GitInfo{RepoURL: "https://user:pass@gitlab.example.com/group/project.git"},
+				},
+				Runner: &RunnerConfig{},
+			}
+			tc.prepare(build)
+
+			fields := build.LogFields()
+			for k, v := range tc.expectedFields {
+				assert.Equal(t, v, fields[k], k)
+			}
+			for _, k := range tc.absentFields {
+				assert.NotContains(t, fields, k)
+			}
+
+			logged := build.Log().Data
+			assert.Equal(t, fields["job"], logged["job"])
+			assert.Equal(t, fields["job_url"], logged["job_url"])
+			for _, k := range tc.absentFields {
+				assert.NotContains(t, logged, k)
+			}
+		})
+	}
+}
+
+func TestBuild_Log_JobURLAlongsideJob(t *testing.T) {
+	build := &Build{
+		Job: spec.Job{
+			ID:      42,
+			GitInfo: spec.GitInfo{RepoURL: "https://gitlab.example.com/group/project.git"},
+		},
+		Runner:   &RunnerConfig{},
+		Hostname: "build-host",
+	}
+
+	data := build.Log().Data
+	assert.Equal(t, "https://gitlab.example.com/group/project/-/jobs/42", data["job_url"])
+	assert.Equal(t, "build-host", data["name"])
 }

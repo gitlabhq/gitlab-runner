@@ -313,3 +313,40 @@ func TestRunSingleCommand_processBuild_UpdateAbortStillFinishesWithoutFinalState
 	network.AssertExpectations(t)
 	mockTrace.AssertExpectations(t)
 }
+
+func TestRunSingleCommand_processBuild_PassesJobURLToProcessJob(t *testing.T) {
+	runner := &common.RunnerConfig{
+		RunnerCredentials: common.RunnerCredentials{
+			Token: "test-token",
+		},
+	}
+
+	jobData := &spec.Job{
+		ID:      123,
+		Token:   "job-token",
+		GitInfo: spec.GitInfo{RepoURL: "https://user:pass@gitlab.example.com/group/project.git"},
+	}
+
+	p := common.NewMockExecutorProvider(t)
+	network := common.NewMockNetwork(t)
+	mockTrace := common.NewMockJobTrace(t)
+	mockTrace.On("SetDebugModeEnabled", false).Return()
+	mockTrace.On("Finish").Return()
+
+	network.On("RequestJob", mock.Anything, *runner, mock.Anything).Return(jobData, true)
+	network.On("ProcessJob", *runner, mock.MatchedBy(func(c *common.JobCredentials) bool {
+		return c.ID == 123 && c.JobURL == "https://gitlab.example.com/group/project/-/jobs/123"
+	})).Return(mockTrace, nil)
+	network.On("UpdateJob", *runner, mock.Anything, mock.Anything).
+		Return(common.UpdateJobResult{State: common.UpdateAbort})
+
+	cmd := &RunSingleCommand{
+		RunnerConfig: *runner,
+		network:      network,
+	}
+
+	err := cmd.processBuild(common.NewMockExecutorData(t), make(chan os.Signal), p)
+	assert.NoError(t, err)
+
+	network.AssertExpectations(t)
+}
