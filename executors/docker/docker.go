@@ -880,12 +880,12 @@ func (e *executor) createBuildNetwork() error {
 }
 
 func (e *executor) cleanupNetwork(ctx context.Context) error {
-	if e.networksManager == nil {
-		return errNetworksManagerUndefined
-	}
-
 	if e.networkMode.UserDefined() == "" {
 		return nil
+	}
+
+	if e.networksManager == nil {
+		return errNetworksManagerUndefined
 	}
 
 	inspectResponse, err := e.networksManager.Inspect(ctx)

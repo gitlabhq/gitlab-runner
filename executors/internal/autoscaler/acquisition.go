@@ -37,6 +37,11 @@ type acquisitionRef struct {
 	key string
 	acq taskscaler.Acquisition
 
+	// replace is set when the current acquisition's instance was found
+	// unreachable; the next Prepare attempt must call taskscaler.Replace so
+	// the runner gets a different instance without giving up its capacity claim.
+	replace bool
+
 	mapJobImageToVMImage bool
 
 	// test hooks
@@ -97,10 +102,20 @@ func (ref *acquisitionRef) Prepare(
 
 	info, err := ref.acq.InstanceConnectInfo(dialCtx)
 	if cause := context.Cause(dialCtx); cause != nil {
-		return nil, buildErrorFromContextCause(cause)
+		// Benign race: if the job context is cancelled right after taskscaler
+		// cancelled dialCtx, ctx.Err() may still be nil here and we return
+		// instanceUnavailableError instead of a BuildError. The retry loop
+		// sees the cancelled job context on its next attempt, so at most one
+		// extra attempt happens.
+		if ctx.Err() == nil {
+			// dialCtx was cancelled by taskscaler (instance removed), not by the job
+			return nil, &instanceUnavailableError{err: cause}
+		}
+		return nil, buildErrorFromContextCause(context.Cause(ctx))
 	}
 	if err != nil {
-		return nil, fmt.Errorf("getting instance connect info: %w", err)
+		ref.acq.HealthFailure()
+		return nil, &instanceUnavailableError{err: fmt.Errorf("getting instance connect info: %w", err)}
 	}
 
 	useExternalAddr := true
@@ -129,10 +144,11 @@ func (ref *acquisitionRef) Prepare(
 	}
 
 	logger.Println(fmt.Sprintf("Dialing instance %s...", strings.Join(ident, ", ")))
-	fleetingDialer, err := dialWithCancelCheck(dialCtx, ref.dialAcquisitionInstance, info, fleetingDialOpts)
+	fleetingDialer, err := dialWithCancelCheck(dialCtx, ctx, ref.dialAcquisitionInstance, info, fleetingDialOpts)
 	if err != nil {
-		return nil, err
+		return nil, ref.classifyDialError(err)
 	}
+	ref.acq.HealthSuccess()
 	logger.Println(fmt.Sprintf("Instance %s connected", info.ID))
 
 	// if nesting is disabled, return a client for the host instance, for example VM Isolation and VM tunnel not needed
@@ -280,30 +296,97 @@ func (ref *acquisitionRef) createTunneledDialer(
 		},
 	}
 
-	ctx, cancel := ref.acq.WithContext(ctx)
+	dialCtx, cancel := ref.acq.WithContext(ctx)
 	defer cancel()
 
-	return dialWithCancelCheck(ctx, ref.dialTunnel, info, options)
+	return dialWithCancelCheck(dialCtx, ctx, ref.dialTunnel, info, options)
 }
 
-// dialWithCancelCheck maps context cancellation to a BuildError with an
-// accurate failure reason. The dial can succeed concurrently with
-// cancellation, in which case the client must be closed, not dropped.
+// classifyDialError determines whether a dial error is an instance failure that
+// should trigger HealthFailure and instanceUnavailableError wrapping, or a plain
+// error to return as-is. It must only be called when err != nil.
+func (ref *acquisitionRef) classifyDialError(err error) error {
+	if _, ok := errors.AsType[*common.BuildError](err); ok {
+		return err
+	}
+	// taskscaler cancelled the dial (instance removed); already wrapped as
+	// instanceUnavailableError — no HealthFailure needed, taskscaler already knows.
+	if isInstanceUnavailable(err) {
+		return err
+	}
+	// ErrConnectInfoExpired means the connect-info token expired before the dial
+	// completed — a config/timing error, not an instance failure.
+	if errors.Is(err, connector.ErrConnectInfoExpired) {
+		return err
+	}
+	// Only a TCP-level connection failure counts as an instance failure:
+	// *net.OpError{Op:"dial"} covers connection refused, no route to host, and
+	// connect-phase timeouts (net.Dialer.DialContext wraps context.DeadlineExceeded
+	// as Op:"dial", so no separate DeadlineExceeded case is needed).
+	// Errors with Op "read" or "write" mean TCP connected successfully — the host
+	// is alive; the failure is in the SSH handshake (auth, key mismatch, or a
+	// read-phase i/o timeout after TCP accept) and must not penalise health state.
+	// Note: a wrong protocol_port (connection refused) is indistinguishable from a
+	// dead host at the network level; a later HealthSuccess from a good connection
+	// resets the failure count.
+	if opErr, ok := errors.AsType[*net.OpError](err); ok && opErr.Op == "dial" {
+		ref.acq.HealthFailure()
+		return &instanceUnavailableError{err: err}
+	}
+	// SSH auth failures, host-key mismatches, key-parse errors, handshake
+	// read/write timeouts, and other non-dial errors are not instance failures.
+	return err
+}
+
+// dialWithCancelCheck maps context cancellation to either an instanceUnavailableError
+// (taskscaler removed the instance) or a BuildError (job was cancelled or timed out).
+// When the dial itself succeeds concurrently with cancellation the client is closed.
 func dialWithCancelCheck(
-	ctx context.Context,
+	dialCtx context.Context,
+	parentCtx context.Context,
 	dial connector.DialFn,
 	info fleetingprovider.ConnectInfo,
 	options connector.DialOptions,
 ) (connector.Client, error) {
-	client, err := dial(ctx, info, options)
-	if cause := context.Cause(ctx); cause != nil {
+	client, err := dial(dialCtx, info, options)
+	if cause := context.Cause(dialCtx); cause != nil {
 		if client != nil {
 			client.Close()
 		}
-		return nil, buildErrorFromContextCause(cause)
+		// Benign race: if the job context is cancelled right after taskscaler
+		// cancelled dialCtx, parentCtx.Err() may still be nil here and we
+		// return instanceUnavailableError instead of a BuildError. The retry
+		// loop sees the cancelled job context on its next attempt, so at most
+		// one extra attempt happens.
+		if parentCtx.Err() == nil {
+			// dialCtx was cancelled by taskscaler (instance removed), not by the job
+			return nil, &instanceUnavailableError{err: cause}
+		}
+		return nil, buildErrorFromContextCause(context.Cause(parentCtx))
 	}
 
 	return client, err
+}
+
+// instanceUnavailableError marks a Prepare failure caused by the acquired
+// instance itself (its connect info could not be fetched or it could not be
+// dialed). Retrying the same acquisition cannot succeed, so the autoscaler
+// executor drops it and acquires another instance on the next attempt.
+type instanceUnavailableError struct {
+	err error
+}
+
+func (e *instanceUnavailableError) Error() string {
+	return e.err.Error()
+}
+
+func (e *instanceUnavailableError) Unwrap() error {
+	return e.err
+}
+
+func isInstanceUnavailable(err error) bool {
+	var e *instanceUnavailableError
+	return errors.As(err, &e)
 }
 
 // buildErrorFromContextCause maps a context cancellation cause to the

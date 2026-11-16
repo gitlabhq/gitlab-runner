@@ -2003,10 +2003,12 @@ func TestDockerCreateNetwork(t *testing.T) {
 	testErr := errors.New("test-err")
 
 	tests := map[string]networksTestCase{
+		// e.g. Prepare failed to connect to the docker daemon before creating it:
+		// no network was created, so cleanup has nothing to report (#39145)
 		"networks manager not created": {
 			networkPerBuild:    "false",
 			expectedBuildError: errNetworksManagerUndefined,
-			expectedCleanError: errNetworksManagerUndefined,
+			expectedCleanError: nil,
 		},
 		"network not created": {
 			createNetworkManager: true,

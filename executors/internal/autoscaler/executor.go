@@ -88,9 +88,8 @@ func (e *executor) Prepare(options common.ExecutorPrepareOptions) (err error) {
 		return e.prepareResume(ctx, scaler, options, acqRef, envKey)
 	}
 
-	// If we already have an acquisition just retry preparing it
 	if acqRef.acq != nil {
-		return e.Executor.Prepare(options)
+		return e.retryAcquired(ctx, scaler, acqRef, options)
 	}
 
 	// The slot's expiry is stamped here, once, so a resume or sweep by any
@@ -122,7 +121,81 @@ func (e *executor) Prepare(options common.ExecutorPrepareOptions) (err error) {
 
 	acqRef.acq = acq
 
-	return e.Executor.Prepare(options)
+	return e.prepareAcquired(acqRef, options)
+}
+
+// retryAcquired retries preparing on an existing acquisition, first replacing
+// it if it was flagged as unavailable.
+func (e *executor) retryAcquired(
+	ctx context.Context,
+	scaler taskscaler.Taskscaler,
+	acqRef *acquisitionRef,
+	options common.ExecutorPrepareOptions,
+) error {
+	if acqRef.replace {
+		if err := e.replaceUnavailable(ctx, scaler, acqRef, options); err != nil {
+			return err
+		}
+	}
+	return e.prepareAcquired(acqRef, options)
+}
+
+// replaceUnavailable swaps the acquisition flagged as unavailable for one on a
+// different instance.
+//
+// Messages go to the job log (and, through it, the runner log) so a user can
+// see why their job moved to another instance.
+func (e *executor) replaceUnavailable(
+	ctx context.Context,
+	scaler taskscaler.Taskscaler,
+	acqRef *acquisitionRef,
+	options common.ExecutorPrepareOptions,
+) error {
+	oldID := acqRef.acq.InstanceID()
+	newAcq, err := scaler.Replace(ctx, acqRef.key)
+	if err != nil {
+		// Replace failed, for example it timed out or the runner is shutting
+		// down. There is no reservation left: re-reserve so the next attempt
+		// can Acquire a fresh instance.
+		acqRef.acq = nil
+		acqRef.replace = false
+		if errors.Is(err, taskscaler.ErrNoReplacementCapacity) {
+			options.BuildLogger.Warningln("No capacity to replace unavailable instance", oldID)
+		}
+		if rerr := scaler.Reserve(acqRef.key); rerr != nil {
+			// the next attempt's Acquire fails with "reservation not found";
+			// say why
+			options.BuildLogger.Warningln("Reserving capacity after failing to replace instance", oldID+":", rerr)
+		}
+		return fmt.Errorf("replacing unavailable instance: %w", err)
+	}
+
+	acqRef.acq = newAcq
+	acqRef.replace = false
+
+	newID := newAcq.InstanceID()
+	if oldID == newID {
+		options.BuildLogger.Warningln("No other instance available; retrying unavailable instance", newID)
+		return nil
+	}
+
+	options.BuildLogger.Infoln("Replaced unavailable instance", oldID, "with instance", newID)
+
+	return nil
+}
+
+// prepareAcquired prepares the inner executor on the current acquisition. If
+// the acquired instance itself is unavailable, it sets the replace flag so the
+// next attempt calls taskscaler.Replace to get a different instance without
+// giving up the capacity claim.
+func (e *executor) prepareAcquired(acqRef *acquisitionRef, options common.ExecutorPrepareOptions) error {
+	err := e.Executor.Prepare(options)
+	if err == nil || !isInstanceUnavailable(err) {
+		return err
+	}
+
+	acqRef.replace = true
+	return err
 }
 
 // checkSuspendGuards rejects a job that asks to suspend when its environment
