@@ -421,7 +421,7 @@ This approach allows developers to optimize resource usage per job while maintai
 | `service_account_overwrite_allowed`           | Go regular expression that the value of the `KUBERNETES_SERVICE_ACCOUNT_OVERWRITE` variable must match. It matches any part of the value unless you anchor it with `^` and `$`. When empty, it disables the service account overwrite feature. For more information, see [regular expressions in overwrite settings](#regular-expressions-in-overwrite-settings) and [overwrite the Kubernetes default service account](#overwrite-the-kubernetes-default-service-account). |
 | `services`                                    | List of [services](https://docs.gitlab.com/ci/services/) attached to the build container using the [sidecar pattern](https://learn.microsoft.com/en-us/azure/architecture/patterns/sidecar). Read more about [using services](#define-a-list-of-services). |
 | `use_service_account_image_pull_secrets`      | When enabled, the pod created by the executor lacks `imagePullSecrets`. This causes the pod to be created using the [`imagePullSecrets` from the service account](https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/#add-image-pull-secret-to-service-account), if set. |
-| `suspend_pvc_size`                            | Size of the PVC created for suspendable job environments. The PVC stores the overlayfs upper layer, the builds directory, and any service container data directories configured with `suspend_data_path`. Defaults to `20Gi`. |
+| `suspend_pvc_size`                            | Experiment. Size of the persistent volume claim (PVC) that stores a suspended job environment. Defaults to `20Gi`. For more information, see [suspend and resume job environments](#suspend-and-resume-job-environments). |
 | `suspend_pvc_storage_class`                   | `StorageClass` name for the PVC created by `suspend_pvc_size`. When empty, the PVC uses the cluster's default `StorageClass`. |
 | `terminationGracePeriodSeconds`               | Duration after the processes running in the pod are sent a termination signal and the time when the processes are forcibly halted with a kill signal. [Deprecated in favour of `cleanup_grace_period_seconds` and `pod_termination_grace_period_seconds`](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/28165). |
 | `volumes`                                     | Configured through the configuration file, the list of volumes that is mounted in the build container. [Read more about using volumes](#configure-volume-types). |
@@ -433,59 +433,6 @@ This approach allows developers to optimize resource usage per job while maintai
 | `scripts_base_dir`                            | Base directory to be prepended to the generated path to store build scripts. For more information, see [Change the base directory for build logs and scripts](#change-the-base-directory-for-build-logs-and-scripts). |
 | `print_pod_warning_events`                    | Controls whether the runner prints Kubernetes warning messages for the job pod, both while the pod starts (for example, scheduling failures) and when retrieving warning events after a job fails. Enabled by default. The job-failure event retrieval requires a service account with at least [`events: list` permissions](#configure-runner-api-permissions). |
 | `pod_disruption_budget`                       | When enabled, a [`PodDisruptionBudget`](https://kubernetes.io/docs/tasks/run-application/configure-pdb/) is created for each job pod to prevent eviction during voluntary disruptions such as node drains and cluster upgrades. Disabled by default. Requires a service account with [`poddisruptionbudgets` permissions](#configure-runner-api-permissions). |
-
-### Suspended environment cleanup
-
-When `FF_SUSPENDABLE_ENVIRONMENTS` is enabled in `[runners.feature_flags]`, each runner manager
-runs a cleanup loop every 10 minutes. The loop removes suspended environments 10 minutes after
-they expire. A job that tries to resume an expired environment fails with the
-`runtime_environment_unavailable` failure reason.
-
-When the first job of an environment is prepared, the runner creates the environment's PVC and
-labels it `environment.runner.gitlab.com/expires-at` with the expiry: the current time plus
-[`runtime_environment_ttl`](../../configuration/advanced-configuration.md#the-runners-section),
-which defaults to 7 days. Suspend and resume don't change the label, and changing
-`runtime_environment_ttl` affects only environments created afterward. A PVC without a valid
-label cannot be resumed, and the cleanup loop leaves it in place.
-
-The cleanup loop:
-
-- Lists the PVC objects labeled `environment.runner.gitlab.com/runner-id=<runner ID>`. With
-  `namespace_per_job`, it lists them in all namespaces. Otherwise, it lists them in the configured
-  `namespace` only.
-- Skips a PVC that is mounted by a pod that is pending or running, so a job that runs past the expiry
-  finishes on intact storage.
-- Deletes the PVC and any overlay ConfigMap left behind for it.
-- With `namespace_per_job`, deletes labeled job namespaces that no longer contain a PVC.
-
-All runner managers of a registration share the runner ID, so any of them can clean up an
-environment. Each environment carries its own expiry, so runner managers of a registration
-can use different `runtime_environment_ttl` values.
-
-The cleanup loop and resume need these permissions, which are included in the table in
-[Configure runner API permissions](#configure-runner-api-permissions):
-
-- `get` on `persistentvolumeclaims` to check the expiry of an environment before it resumes. Without
-  it, resumes fail.
-- `list` and `delete` on `persistentvolumeclaims`, `list` and `delete` on `configmaps`, and `list`
-  on `pods` for the cleanup loop.
-- With `namespace_per_job`, the job needs `patch` on `namespaces` to label its namespace, and the
-  cleanup loop needs `list` and `delete` on `namespaces` and the permissions above in every
-  namespace. Grant them with a `ClusterRole` and `ClusterRoleBinding` instead of a `Role`.
-
-If the runner lacks the cleanup permissions, suspend and resume still work, but expired
-environments are not removed and the runner logs the error on every cleanup run.
-
-Restrictions:
-
-- The runner configuration must enable `FF_SUSPENDABLE_ENVIRONMENTS` in `[runners.feature_flags]`.
-  Setting the feature flag as a CI/CD variable or in `[runners] environment` does not count.
-  A job that asks to suspend without the flag in `[runners.feature_flags]` fails with a
-  configuration error, because the cleanup loop would never remove its environment.
-- A job that asks to suspend must run in the configured `namespace`, or use `namespace_per_job`.
-  Namespace overwrites are not supported for jobs that suspend.
-- Runners that connect to different GitLab instances must not share a namespace, or a cluster when
-  `namespace_per_job` is enabled. Runner IDs are unique only in one GitLab instance.
 
 ### Configuration example
 
@@ -2007,7 +1954,7 @@ The `host_users` setting controls the `hostUsers` field of the pod specification
 The runner always sets `hostUsers` to `false`, regardless of the `host_users` setting, when:
 
 - A security context of the build, service, helper, or init-permissions container sets `proc_mount = "unmasked"`. Kubernetes requires user namespaces for an unmasked `/proc`.
-- The job uses suspend and resume, which requires the [`FF_SUSPENDABLE_ENVIRONMENTS` feature flag](../../configuration/feature-flags.md).
+- The job uses [suspend and resume](#suspend-and-resume-job-environments).
 
 If you set `host_users = true` or a job sets `KUBERNETES_HOST_USERS` to `true` in these cases,
 the runner logs a warning in the job log and uses `false`.
@@ -2052,6 +1999,135 @@ job:
 > If `host_users_overwrite_allowed` is `true`, a job can set `KUBERNETES_HOST_USERS` to `true`
 > to turn off the user namespace isolation that `host_users = false` provides.
 > Set `host_users_overwrite_allowed` to `true` only if you trust the users who can run jobs on the runner.
+
+## Suspend and resume job environments
+
+{{< details >}}
+
+- Status: Experiment
+
+{{< /details >}}
+
+{{< history >}}
+
+- [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/39464) as an
+  [experiment](https://docs.gitlab.com/policy/development_stages_support/#experiment)
+  with a flag named `FF_SUSPENDABLE_ENVIRONMENTS` in GitLab Runner 19.4. Disabled by default.
+- Expiry of suspended environments [introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/39469) in GitLab Runner 19.6.
+
+{{< /history >}}
+
+> [!flag]
+> The availability of this feature is controlled by a feature flag.
+> For more information, see the history.
+> This feature is available for testing, but not ready for production use.
+
+Use suspend and resume to keep the state of a job environment for a later job.
+A resumed job starts with the build directory, file system changes, and service data
+of the suspended job, and skips fetching sources.
+The runner keeps the environment on a persistent volume claim (PVC) and deletes the pod,
+so running processes stop when the job suspends.
+
+Prerequisites:
+
+- The `[[runners]]` entry has `id` set. `gitlab-runner register` sets `id` automatically.
+- The runner service account has the permissions marked `FF_SUSPENDABLE_ENVIRONMENTS=true` in
+  [configure runner API permissions](#configure-runner-api-permissions).
+- The build container runs as root, and `cap_drop` does not drop `SYS_ADMIN` or `ALL`.
+  Service containers that set `entrypoint` or `command` have the same requirement.
+- The node allows `mount` and `pivot_root` in the container. With AppArmor, set
+  `app_armor_profile.type = "Unconfined"`. With SELinux, set `selinux_type = "spc_t"`.
+- The cluster supports [user namespaces](#user-namespaces).
+- No volume is mounted at the build directory, `/gl_persist`, or `/runner-overlay-init`.
+- `FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY` and `FF_CONCRETE` are off.
+- The container runtime is `runc`. Kata Containers is not supported.
+  For more information, see [issue 39611](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/39611).
+- Jobs that suspend run in the configured `namespace`, or the runner uses `namespace_per_job`.
+  In addition:
+
+  - Jobs that suspend cannot overwrite the namespace.
+  - With `namespace_per_job`, a `ClusterRole` and `ClusterRoleBinding` grant the runner permissions,
+    instead of a `Role`. For more information, see [suspended environment cleanup](#suspended-environment-cleanup).
+  - Runners that connect to different GitLab instances do not share a namespace. With `namespace_per_job`,
+    they do not share a cluster. Runner IDs are unique only in one GitLab instance.
+
+To turn on suspend and resume, set the feature flag in `[runners.feature_flags]` of the runner
+configuration. A CI/CD variable or `[runners] environment` entry does not count. If the flag is not
+in `[runners.feature_flags]`, a job that asks to suspend fails at start with a configuration error.
+For example:
+
+```toml
+[[runners]]
+  id = <your_runner_id>
+  executor = "kubernetes"
+  [runners.feature_flags]
+    FF_SUSPENDABLE_ENVIRONMENTS = true
+  [runners.kubernetes]
+    # Required on nodes that use AppArmor
+    [runners.kubernetes.build_container_security_context.app_armor_profile]
+      type = "Unconfined"
+```
+
+Optional settings:
+
+- Set `suspend_pvc_size` and `suspend_pvc_storage_class` to change the size or storage class of the PVC.
+- Set [`suspend_data_path`](#define-a-list-of-services) to keep the data of a service that does not set
+  `entrypoint` or `command`.
+
+Jobs that suspend or resume:
+
+- Never use a shared build directory, so other jobs cannot change a suspended environment.
+- Run only the entrypoint set with `image:entrypoint` when `FF_KUBERNETES_HONOR_ENTRYPOINT` is on.
+  For more information, see [container entrypoint known issues](#container-entrypoint-known-issues).
+
+For the same feature on other executors, see the [instance executor](../instance.md#suspend-and-resume-job-environments)
+and the [Docker Autoscaler executor](../docker_autoscaler.md#suspend-and-resume-job-environments).
+
+### Suspended environment cleanup
+
+When `FF_SUSPENDABLE_ENVIRONMENTS` is enabled in `[runners.feature_flags]`, each runner manager
+runs a cleanup loop when it starts and every 10 minutes after that. The loop removes suspended
+environments 10 minutes after they expire. A job that tries to resume an expired environment fails with the
+`runtime_environment_unavailable` failure reason.
+
+When the first job of an environment is prepared, the runner creates the environment's PVC and
+labels it `environment.runner.gitlab.com/expires-at` with the expiry. The expiry is the current
+time plus [`runtime_environment_ttl`](../../configuration/advanced-configuration.md#the-runners-section),
+which defaults to 7 days. Suspend and resume don't change the label. Changing
+`runtime_environment_ttl` affects only environments created afterward. The runner cannot resume a
+PVC without a valid label, and the cleanup loop leaves it in place.
+
+The PVC of an environment suspended by an earlier runner version has no label.
+The runner cannot resume the environment and does not delete its PVC.
+To reclaim the storage, delete the PVC.
+
+The cleanup loop:
+
+- Lists the PVC objects labeled `environment.runner.gitlab.com/runner-id=<runner ID>`. With
+  `namespace_per_job`, it lists them in all namespaces. Otherwise, it lists them in the configured
+  `namespace` only.
+- Skips a PVC that a pod mounts, unless the pod has succeeded or failed. A job that runs past
+  the expiry finishes on intact storage.
+- Deletes the PVC and any overlay `ConfigMap` left behind for it.
+- With `namespace_per_job`, deletes labeled job namespaces that no longer contain a PVC.
+
+All runner managers of a registration share the runner ID, so any of them can clean up an
+environment. Each environment carries its own expiry, so runner managers of a registration
+can use different `runtime_environment_ttl` values.
+
+The cleanup loop and resume need these permissions, which are included in the table in
+[configure runner API permissions](#configure-runner-api-permissions):
+
+- `get` on `namespaces` and `persistentvolumeclaims` to check that an environment exists and has
+  not expired before it resumes. Without them, resumes fail.
+- `list` and `delete` on `persistentvolumeclaims`, `list` and `delete` on `configmaps`, and `list`
+  on `pods` for the cleanup loop.
+- With `namespace_per_job`, the job needs `patch` on `namespaces` to label its namespace, and the
+  cleanup loop needs `list` and `delete` on `namespaces` and the previous permissions in every
+  namespace. Grant them with a `ClusterRole` and `ClusterRoleBinding` instead of a `Role`.
+
+If the runner lacks the cleanup permissions, suspend and resume still work, but the runner
+does not remove expired environments and logs the error on every cleanup run.
 
 ## Operating system, architecture, and Windows kernel version
 
@@ -3012,6 +3088,10 @@ The container entry point has the following known issues:
   any setup changes before running script commands:
   - [CI/CD variables defined in the settings](https://docs.gitlab.com/ci/variables/#define-a-cicd-variable-in-the-ui).
   - [Masked CI/CD variables](https://docs.gitlab.com/ci/variables/#mask-a-cicd-variable).
+- When `FF_KUBERNETES_HONOR_ENTRYPOINT` is set and the job uses
+  [suspend and resume](#suspend-and-resume-job-environments), the build container
+  runs only an entrypoint set with [`image:entrypoint`](https://docs.gitlab.com/ci/yaml/#imageentrypoint)
+  in `.gitlab-ci.yml`. An `ENTRYPOINT` defined in the image does not run.
 
 Before GitLab Runner 17.4:
 
