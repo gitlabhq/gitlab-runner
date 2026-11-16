@@ -15,6 +15,7 @@ type options struct {
 	loginShell                       bool
 	artifactUploadTimeout            time.Duration
 	artifactResponseHeaderTimeout    time.Duration
+	artifactDirectDownload           *bool
 	cacheArchiveFormat               string
 	cacheMaxUploadArchiveSize        int64
 	cacheRedactURL                   bool
@@ -233,6 +234,16 @@ func WithArtifactTimeouts(upload, responseHeader time.Duration) Option {
 	return func(o *options) error {
 		o.artifactUploadTimeout = upload
 		o.artifactResponseHeaderTimeout = responseHeader
+		return nil
+	}
+}
+
+// WithArtifactDirectDownload sets whether artifact downloads ask GitLab for a
+// direct download. When it isn't set, the helper falls back to
+// FF_USE_DIRECT_DOWNLOAD from its environment.
+func WithArtifactDirectDownload(direct bool) Option {
+	return func(o *options) error {
+		o.artifactDirectDownload = &direct
 		return nil
 	}
 }

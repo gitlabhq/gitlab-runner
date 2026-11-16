@@ -113,6 +113,7 @@ func stagesToConcreteStep(ctx context.Context, executor Executor) ([]schema.Step
 			build.Runner.Artifact.GetUploadTimeout(),
 			build.Runner.Artifact.GetResponseHeaderTimeout(),
 		),
+		builder.WithArtifactDirectDownload(build.Settings().ArtifactDirectDownload),
 		builder.WithPreBuildScript([]string{info.PreBuildScript}),
 		builder.WithPostBuildScript([]string{info.PostBuildScript}),
 		builder.WithPreCloneScript(func() []string {

@@ -109,17 +109,20 @@ var flags = []FeatureFlag{
 	{
 		Name:            UseDirectDownload,
 		DefaultValue:    true,
-		Deprecated:      false,
-		ToBeRemovedWith: "",
-		Description: "When set to `true`, Runner sends `direct_download=true` and `download_mode=direct` on the first artifact download attempt. " +
-			"This asks GitLab to redirect artifact downloads to object storage, such as S3, instead of proxying the artifact bytes through GitLab. " +
-			"GitLab honors direct mode only when the administrator allows it; otherwise, GitLab uses the configured `proxy_download` mode. " +
-			"On retries, Runner omits both parameters and uses the configured download mode. " +
+		Deprecated:      true,
+		ToBeRemovedWith: "19.9",
+		Description: "When set to `true`, runner sends `direct_download=true` and `download_mode=direct` on the first artifact download attempt. " +
+			"This action asks GitLab to redirect artifact downloads to object storage, such as AWS S3, instead of proxying the artifact bytes through GitLab. " +
+			"GitLab honors direct mode only when the administrator allows it. Otherwise, GitLab uses the configured `proxy_download` mode. " +
+			"On retries, runner omits both parameters and uses the configured download mode. " +
 			"If a network error causes a retry, GitLab can proxy the retry when `proxy_download` is enabled. " +
-			"HTTP 401 and 403 responses are not retried. " +
-			"Direct downloads might fail if Runner cannot validate the Object Storage TLS certificate. " +
-			"See [Allow client override for proxy download](https://docs.gitlab.com/administration/object_storage/#allow-client-override-for-proxy-download) " +
-			"and [Self-signed certificates or custom Certification Authorities](tls-self-signed.md).",
+			"HTTP `401` and `403` responses are not retried. " +
+			"Direct downloads might fail if runner cannot validate the Object Storage TLS certificate. " +
+			"See [allow client override for proxy download](https://docs.gitlab.com/administration/object_storage/#allow-client-override-for-proxy-download) " +
+			"and [self-signed certificates or custom Certification Authorities](tls-self-signed.md). " +
+			"Deprecated. Use [`direct_download`](advanced-configuration.md#the-runnersartifact-section) in `[runners.artifact]` " +
+			"or the `ARTIFACT_DIRECT_DOWNLOAD` CI/CD variable instead. " +
+			"This flag was deprecated in GitLab Runner 19.6 and is planned for removal in GitLab Runner 19.9.",
 	},
 	{
 		Name:            UseFastzip,

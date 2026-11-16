@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/urfave/cli"
+	clihelpers "gitlab.com/gitlab-org/golang-cli-helpers"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
@@ -179,5 +180,33 @@ func Test_URFavArgParsing(t *testing.T) {
 	if err != nil {
 		assert.NotContains(t, err.Error(), "WARNING: Missing build ID (--id)")
 		assert.NotContains(t, err.Error(), "FATAL: Incomplete arguments ")
+	}
+}
+
+// The runner passes --direct-download=<bool>, which must override
+// FF_USE_DIRECT_DOWNLOAD, still exported into the job environment.
+func TestArtifactsDownloaderDirectDownloadFlag(t *testing.T) {
+	tests := map[string]struct {
+		env      string
+		args     []string
+		expected bool
+	}{
+		"env only":            {env: "true", expected: true},
+		"flag false over env": {env: "true", args: []string{"--direct-download=false"}, expected: false},
+		"flag true over env":  {env: "false", args: []string{"--direct-download=true"}, expected: true},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Setenv("FF_USE_DIRECT_DOWNLOAD", tc.env)
+
+			cmd := &ArtifactsDownloaderCommand{}
+			app := cli.NewApp()
+			app.Flags = clihelpers.GetFlagsFromStruct(cmd)
+			app.Action = func(*cli.Context) {}
+
+			require.NoError(t, app.Run(append([]string{"helper"}, tc.args...)))
+			assert.Equal(t, tc.expected, cmd.DirectDownload)
+		})
 	}
 }

@@ -20,6 +20,9 @@ type ArtifactDownload struct {
 	// FF_USE_EXPONENTIAL_BACKOFF_STAGE_RETRY. See GetSources for
 	// detail; the same schedule applies to artifact download retries.
 	UseExponentialBackoffStageRetry bool `json:"use_exponential_backoff_stage_retry,omitempty"`
+	// DirectDownload is nil when the runner didn't set it, so the helper
+	// falls back to FF_USE_DIRECT_DOWNLOAD from its environment.
+	DirectDownload *bool `json:"direct_download,omitempty"`
 }
 
 func (s ArtifactDownload) Run(ctx context.Context, e *env.Env) error {
@@ -28,12 +31,7 @@ func (s ArtifactDownload) Run(ctx context.Context, e *env.Env) error {
 		return nil
 	}
 
-	args := []string{
-		"artifacts-downloader",
-		"--url", e.BaseURL,
-		"--token", s.Token,
-		"--id", strconv.FormatInt(s.ID, 10),
-	}
+	args := s.args(e.BaseURL)
 
 	attempts := max(s.DownloadAttempts, 1)
 
@@ -56,4 +54,18 @@ func (s ArtifactDownload) Run(ctx context.Context, e *env.Env) error {
 	}
 
 	return fmt.Errorf("downloading artifacts for %s (%d): %w", s.ArtifactName, s.ID, err)
+}
+
+func (s ArtifactDownload) args(baseURL string) []string {
+	args := []string{
+		"artifacts-downloader",
+		"--url", baseURL,
+		"--token", s.Token,
+		"--id", strconv.FormatInt(s.ID, 10),
+	}
+	if s.DirectDownload != nil {
+		args = append(args, "--direct-download="+strconv.FormatBool(*s.DirectDownload))
+	}
+
+	return args
 }
