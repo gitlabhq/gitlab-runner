@@ -1923,8 +1923,8 @@ job:
 
 ### Parallel artifact downloads (direct download)
 
-By default, when [`direct_download`](https://docs.gitlab.com/ci/jobs/job_artifacts/#download-job-artifacts)
-returns a redirect to object storage, the runner downloads artifacts with a single HTTP GET stream.
+By default, when GitLab [redirects an artifact download](https://docs.gitlab.com/ci/jobs/job_artifacts/#download-job-artifacts)
+to object storage, the runner downloads artifacts with a single HTTP GET stream.
 
 Enable the `FF_USE_PARALLEL_ARTIFACT_TRANSFER` [feature flag](feature-flags.md) to allow parallel HTTP Range GETs when the
 object storage backend supports `206 Partial Content` with a `Content-Range` total. Chunk size and concurrency are fixed
@@ -2555,10 +2555,13 @@ For more details, see [issue 38330](https://gitlab.com/gitlab-org/gitlab-runner/
 {{< history >}}
 
 - [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5900) in GitLab Runner 18.10.
+- `direct_download` [introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/7816) in GitLab Runner 19.6.
 
 {{< /history >}}
 
-The following parameters control the HTTP timeouts used when the runner uploads job artifacts.
+The following parameters control how the runner uploads and downloads job artifacts.
+
+The timeouts apply to artifact uploads.
 In environments with slow networks, large artifacts, or high-latency storage backends,
 the default 1-hour upload timeout may be insufficient. You might want to reduce it to fail faster.
 
@@ -2568,6 +2571,7 @@ Set `upload_timeout` to a value appropriate for your largest expected artifact s
 |---------------------------|----------|-------------|
 | `upload_timeout`          | duration | Optional. Maximum time for the entire artifact upload operation. Default: `1h`. |
 | `response_header_timeout` | duration | Optional. Maximum time to wait for server response headers after the upload body is sent. Default: `10m`. |
+| `direct_download`         | boolean  | Optional. When `true`, the runner asks GitLab to redirect artifact downloads to object storage on the first attempt. Set to `false` to always download artifacts through GitLab, for example when the runner can't reach object storage. If neither this parameter nor `FF_USE_DIRECT_DOWNLOAD` in `[runners.feature_flags]` is set, jobs can use the `ARTIFACT_DIRECT_DOWNLOAD` CI/CD variable. Replaces the deprecated `FF_USE_DIRECT_DOWNLOAD` [feature flag](feature-flags.md). Default: `true`. |
 
 Example:
 

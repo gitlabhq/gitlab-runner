@@ -60,6 +60,7 @@ type BuildSettings struct {
 
 	GetSourcesAttempts         int
 	ArtifactDownloadAttempts   int
+	ArtifactDirectDownload     bool
 	RestoreCacheAttempts       int
 	ExecutorJobSectionAttempts int
 	SecretsRetrievalAttempts   int
@@ -108,6 +109,7 @@ func (b *Build) initSettings() {
 	}
 
 	errs = append(errs, populateFeatureFlags(b, variablesForResolution)...)
+	errs = append(errs, b.resolveArtifactDirectDownload(variablesForResolution)...)
 
 	b.buildSettings.Errors = slices.DeleteFunc(errs, func(err error) bool {
 		return err == nil
@@ -184,6 +186,72 @@ func validateVariables(variables spec.Variables, b *Build, defaultGitStategy Git
 
 		validate(variables, "DOCKER_AUTH_CONFIG", &b.buildSettings.DockerAuthConfig, ""),
 	}
+}
+
+// resolveArtifactDirectDownload sets whether artifact downloads ask GitLab for a
+// direct download from object storage. As with feature flags, config.toml takes
+// precedence over job variables:
+//
+//  1. direct_download in [runners.artifact]
+//  2. FF_USE_DIRECT_DOWNLOAD in [runners.feature_flags]
+//  3. the ARTIFACT_DIRECT_DOWNLOAD variable
+//  4. FF_USE_DIRECT_DOWNLOAD as a variable, or its default
+//
+// It must run after populateFeatureFlags. While FF_USE_DIRECT_DOWNLOAD is
+// deprecated, every job where it resolves to false gets a warning.
+func (b *Build) resolveArtifactDirectDownload(variables spec.Variables) []error {
+	const (
+		flag   = featureflags.UseDirectDownload
+		jobVar = "ARTIFACT_DIRECT_DOWNLOAD"
+	)
+
+	var errs []error
+
+	flagValue := b.buildSettings.FeatureFlags[flag]
+
+	var setting *bool
+	var flagInConfig bool
+	if b.Runner != nil {
+		setting = b.Runner.Artifact.DirectDownload
+		_, flagInConfig = b.Runner.FeatureFlags[flag]
+	}
+
+	var jobVarValue *bool
+	if raw := variables.Value(jobVar); raw != "" {
+		v, err := strconv.ParseBool(raw)
+		if err != nil {
+			errs = append(errs, fmt.Errorf("%s: expected bool got %q, ignoring", jobVar, raw))
+		} else {
+			jobVarValue = &v
+		}
+	}
+
+	var overriddenBy string
+	switch {
+	case setting != nil:
+		b.buildSettings.ArtifactDirectDownload = *setting
+		overriddenBy = "direct_download is set in [runners.artifact]"
+	case flagInConfig:
+		b.buildSettings.ArtifactDirectDownload = flagValue
+	case jobVarValue != nil:
+		b.buildSettings.ArtifactDirectDownload = *jobVarValue
+		overriddenBy = jobVar + " is set"
+	default:
+		b.buildSettings.ArtifactDirectDownload = flagValue
+	}
+
+	// Export the resolved value as the flag, for helpers that only read FF_USE_DIRECT_DOWNLOAD.
+	b.buildSettings.FeatureFlags[flag] = b.buildSettings.ArtifactDirectDownload
+
+	if flagValue {
+		return errs
+	}
+
+	if overriddenBy != "" {
+		return append(errs, fmt.Errorf("%s: ignored because %s. The flag is deprecated and will be removed in 19.9", flag, overriddenBy))
+	}
+
+	return append(errs, fmt.Errorf("%s: deprecated and will be removed in 19.9. Use direct_download in [runners.artifact] or the %s variable instead", flag, jobVar))
 }
 
 func validate[T any](variables spec.Variables, name string, value *T, def T) error {

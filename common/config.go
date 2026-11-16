@@ -1477,6 +1477,9 @@ type RunnerCredentials struct {
 type ArtifactConfig struct {
 	UploadTimeout         *time.Duration `toml:"upload_timeout,omitempty" json:"upload_timeout,omitempty"`
 	ResponseHeaderTimeout *time.Duration `toml:"response_header_timeout,omitempty" json:"response_header_timeout,omitempty"`
+	// DirectDownload is nil when unset, so FF_USE_DIRECT_DOWNLOAD and
+	// ARTIFACT_DIRECT_DOWNLOAD still apply. See Build.resolveArtifactDirectDownload.
+	DirectDownload *bool `toml:"direct_download,omitempty" json:"direct_download,omitempty"`
 }
 
 func (a ArtifactConfig) GetUploadTimeout() time.Duration {

@@ -457,6 +457,7 @@ func (b *AbstractShell) downloadArtifacts(w ShellWriter, job spec.Dependency, in
 		job.Token,
 		"--id",
 		strconv.FormatInt(job.ID, 10),
+		"--direct-download=" + strconv.FormatBool(info.Build.Settings().ArtifactDirectDownload),
 	}
 
 	w.Noticef("Downloading artifacts for %s (%d)...", job.Name, job.ID)

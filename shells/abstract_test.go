@@ -454,6 +454,7 @@ func TestArtifactsHelperCommandsIgnoreAPIURL(t *testing.T) {
 		"--url", gitlabURL,
 		"--token", "dep-token",
 		"--id", "999",
+		"--direct-download=true",
 	).Once()
 
 	shell.downloadArtifacts(mockWriter, spec.Dependency{ID: 999, Name: "build", Token: "dep-token"}, info)

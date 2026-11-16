@@ -1178,6 +1178,24 @@ func TestBuild_ArtifactDownloads(t *testing.T) {
 		config := buildConfig(t, job, newTestVars(t, nil))
 		assert.Empty(t, config.ArtifactExtract)
 	})
+
+	t.Run("direct download", func(t *testing.T) {
+		job := baseJob()
+		job.Dependencies = []spec.Dependency{
+			{ID: 456, Name: "build-job", ArtifactsFile: spec.DependencyArtifactsFile{Filename: "artifacts.zip"}},
+		}
+
+		config := buildConfig(t, job, newTestVars(t, nil))
+		require.Len(t, config.ArtifactExtract, 1)
+		assert.Nil(t, config.ArtifactExtract[0].DirectDownload, "not set without the option")
+
+		for _, direct := range []bool{true, false} {
+			config := buildConfig(t, job, newTestVars(t, nil), WithArtifactDirectDownload(direct))
+			require.Len(t, config.ArtifactExtract, 1)
+			require.NotNil(t, config.ArtifactExtract[0].DirectDownload)
+			assert.Equal(t, direct, *config.ArtifactExtract[0].DirectDownload)
+		}
+	})
 }
 
 func TestBuild_ArtifactUploads(t *testing.T) {

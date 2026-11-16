@@ -417,6 +417,7 @@ func (b *builder) buildArtifactDownloads() []stages.ArtifactDownload {
 			DownloadAttempts:                variables.DefaultIntClamp(b.variables, "ARTIFACT_DOWNLOAD_ATTEMPTS", 1, 1, 10),
 			Concurrency:                     variables.DefaultIntClamp(b.variables, "FASTZIP_EXTRACTOR_CONCURRENCY", 0, 0, 128),
 			UseExponentialBackoffStageRetry: b.isFeatureFlagOn(featureflags.UseExponentialBackoffStageRetry),
+			DirectDownload:                  b.opts.artifactDirectDownload,
 		})
 	}
 
