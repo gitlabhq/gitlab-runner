@@ -311,6 +311,8 @@ concurrent = 10
 
 With the `FF_SUSPENDABLE_ENVIRONMENTS` [feature flag](../configuration/feature-flags.md),
 a job can suspend its environment instead of releasing it, and a later job can resume it.
+When a job suspends, the runner keeps the job containers, networks, and volumes on the instance.
+A resumed job reuses them.
 
 A job that asks to suspend fails at job start with a configuration error unless:
 
@@ -320,9 +322,27 @@ A job that asks to suspend fails at job start with a configuration error unless:
 - `vm_isolation` is disabled.
 - `FF_USE_DOCKER_AUTOSCALER_DIAL_STDIO`, if used, is set in the runner configuration, not as a CI/CD variable.
 
+The following example shows only the settings for suspend and resume:
+
+```toml
+[[runners]]
+  id = <your_runner_id>
+  executor = "docker-autoscaler"
+  [runners.feature_flags]
+    FF_SUSPENDABLE_ENVIRONMENTS = true
+  [runners.autoscaler.state_storage]
+    enabled = true
+```
+
 A suspended environment expires after [`runtime_environment_ttl`](../configuration/advanced-configuration.md#the-runners-section).
 A job that tries to resume an expired environment fails with `runtime_environment_unavailable`.
 Shortly after the TTL, the runner removes the job containers, networks, and volumes. Cache volumes are kept.
+
+Environments suspended by an earlier runner version have no expiry, and the runner cannot resume them.
+The runner does not remove them after the TTL.
+
+For the same feature on other executors, see the [instance executor](instance.md#suspend-and-resume-job-environments)
+and the [Kubernetes executor](kubernetes/_index.md#suspend-and-resume-job-environments).
 
 ## Slot-based cgroup support
 

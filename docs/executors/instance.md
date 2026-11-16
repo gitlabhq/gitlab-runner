@@ -567,7 +567,7 @@ concurrent = 50
 {{< history >}}
 
 - Introduced as an [experiment](https://docs.gitlab.com/policy/development_stages_support/#experiment)
-  with a flag named `FF_SUSPENDABLE_ENVIRONMENTS` in GitLab Runner 19.0.
+  with a flag named `FF_SUSPENDABLE_ENVIRONMENTS` in GitLab Runner 19.4.
 - Expiry of suspended environments [introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/39468) in GitLab Runner 19.6.
 
 {{< /history >}}
@@ -594,6 +594,23 @@ A job that asks to suspend fails at job start with a configuration error unless:
 
 Changing `capacity_per_instance` or `max_use_count` takes effect only after a runner restart.
 
+The following example shows only the settings for suspend and resume:
+
+```toml
+[[runners]]
+  id = <your_runner_id>
+  executor = "instance"
+  [runners.feature_flags]
+    FF_SUSPENDABLE_ENVIRONMENTS = true
+  [runners.instance]
+    use_common_build_dir = true
+  [runners.autoscaler]
+    capacity_per_instance = 1
+    max_use_count = 1
+    [runners.autoscaler.state_storage]
+      enabled = true
+```
+
 A suspended environment expires after [`runtime_environment_ttl`](../configuration/advanced-configuration.md#the-runners-section).
 A job that tries to resume an expired environment fails with `runtime_environment_unavailable`.
 Shortly after the TTL, the runner deletes the instance and its disk.
@@ -601,6 +618,9 @@ Shortly after the TTL, the runner deletes the instance and its disk.
 Environments suspended by an earlier runner version have no expiry.
 The runner does not delete their instances after the TTL.
 To reclaim their capacity, delete the instances.
+
+For the same feature on other executors, see the [Docker Autoscaler executor](docker_autoscaler.md#suspend-and-resume-job-environments)
+and the [Kubernetes executor](kubernetes/_index.md#suspend-and-resume-job-environments).
 
 ## Slot-based cgroup support
 
