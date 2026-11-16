@@ -4,6 +4,7 @@ package autoscaler
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/url"
 	"reflect"
@@ -13,11 +14,14 @@ import (
 	"gitlab.com/gitlab-org/fleeting/taskscaler"
 	"gitlab.com/gitlab-org/fleeting/taskscaler/mocks"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/common/buildlogger"
 	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 	"gitlab.com/gitlab-org/gitlab-runner/session/terminal"
 	"gitlab.com/gitlab-org/gitlab-runner/steps"
 
+	"github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus/hooks/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -62,13 +66,16 @@ func TestPrepare(t *testing.T) {
 				require.NoError(t, err)
 			},
 		},
-		"retry acquisition should Prepare twice": {
+		// instance-level failures drop the acquisition instead; see
+		// TestPrepareRetryDropsUnavailableInstance
+		"retry after a non-instance failure reuses the acquisition": {
 			executorData: &acquisitionRef{key: acqRefKey},
 			retry:        true,
 			setupFn:      nil,
 			assertFn: func(t *testing.T, ts *mocks.Taskscaler, me *common.MockExecutor) {
 				ts.EXPECT().Acquire(mock.Anything, acqRefKey, mock.Anything).Return(mocks.NewAcquisition(t), nil).Once()
-				me.On("Prepare", mock.Anything).Return(nil).Twice()
+				me.On("Prepare", mock.Anything).Return(assert.AnError).Once()
+				me.On("Prepare", mock.Anything).Return(nil).Once()
 			},
 			checkErrFn: func(t *testing.T, err error) {
 				require.NoError(t, err)
@@ -150,6 +157,163 @@ func TestPrepare(t *testing.T) {
 				})
 
 				tc.checkErrFn(t, err)
+			}
+		})
+	}
+}
+
+func TestPrepareRetryReplacesUnavailableInstance(t *testing.T) {
+	const acqRefKey = "foobar"
+
+	instanceErr := &instanceUnavailableError{err: assert.AnError}
+
+	tests := map[string]struct {
+		setup     func(ts *mocks.Taskscaler, me *common.MockExecutor, dead, fresh *mocks.Acquisition)
+		checkErrs func(t *testing.T, first, second error)
+		expectAcq func(dead, fresh *mocks.Acquisition) taskscaler.Acquisition
+		// wantLog is a message expected in the job log, if any
+		wantLog string
+	}{
+		"next attempt calls Replace and prepares on the new acquisition": {
+			setup: func(ts *mocks.Taskscaler, me *common.MockExecutor, dead, fresh *mocks.Acquisition) {
+				dead.EXPECT().InstanceID().Return("old-id").Maybe()
+				fresh.EXPECT().InstanceID().Return("new-id").Maybe()
+				ts.EXPECT().Acquire(mock.Anything, acqRefKey).Return(dead, nil).Once()
+				ts.EXPECT().Replace(mock.Anything, acqRefKey).Return(fresh, nil).Once()
+				me.On("Prepare", mock.Anything).Return(instanceErr).Once()
+				me.On("Prepare", mock.Anything).Return(nil).Once()
+			},
+			checkErrs: func(t *testing.T, first, second error) {
+				require.ErrorIs(t, first, assert.AnError)
+				require.NoError(t, second)
+			},
+			expectAcq: func(_, fresh *mocks.Acquisition) taskscaler.Acquisition { return fresh },
+			wantLog:   "Replaced unavailable instance old-id with instance new-id",
+		},
+		"Replace error reserves for next Acquire and returns a retriable non-BuildError": {
+			setup: func(ts *mocks.Taskscaler, me *common.MockExecutor, dead, _ *mocks.Acquisition) {
+				dead.EXPECT().InstanceID().Return("old-id").Maybe()
+				ts.EXPECT().Acquire(mock.Anything, acqRefKey).Return(dead, nil).Once()
+				ts.EXPECT().Replace(mock.Anything, acqRefKey).Return(nil, assert.AnError).Once()
+				// Replace clears the reservation; re-reserve so the next Acquire works.
+				ts.EXPECT().Reserve(acqRefKey).Return(nil).Once()
+				me.On("Prepare", mock.Anything).Return(instanceErr).Once()
+				// second Prepare call returns the Replace error immediately — no inner Prepare
+			},
+			checkErrs: func(t *testing.T, first, second error) {
+				require.ErrorIs(t, first, assert.AnError)
+				require.ErrorIs(t, second, assert.AnError)
+				var buildErr *common.BuildError
+				assert.False(t, errors.As(second, &buildErr), "Replace error must stay retriable, got BuildError")
+			},
+			expectAcq: func(_, _ *mocks.Acquisition) taskscaler.Acquisition { return nil },
+		},
+		"Reserve error after a failed Replace is logged": {
+			setup: func(ts *mocks.Taskscaler, me *common.MockExecutor, dead, _ *mocks.Acquisition) {
+				dead.EXPECT().InstanceID().Return("old-id").Maybe()
+				ts.EXPECT().Acquire(mock.Anything, acqRefKey).Return(dead, nil).Once()
+				ts.EXPECT().Replace(mock.Anything, acqRefKey).Return(nil, assert.AnError).Once()
+				ts.EXPECT().Reserve(acqRefKey).Return(taskscaler.ErrNoCapacity).Once()
+				me.On("Prepare", mock.Anything).Return(instanceErr).Once()
+			},
+			checkErrs: func(t *testing.T, first, second error) {
+				require.ErrorIs(t, first, assert.AnError)
+				require.ErrorIs(t, second, assert.AnError)
+			},
+			expectAcq: func(_, _ *mocks.Acquisition) taskscaler.Acquisition { return nil },
+			wantLog:   "Reserving capacity after failing to replace instance old-id: no capacity",
+		},
+		"non-instance error does not call Replace; same acquisition reused": {
+			setup: func(ts *mocks.Taskscaler, me *common.MockExecutor, dead, _ *mocks.Acquisition) {
+				ts.EXPECT().Acquire(mock.Anything, acqRefKey).Return(dead, nil).Once()
+				me.On("Prepare", mock.Anything).Return(assert.AnError).Once()
+				me.On("Prepare", mock.Anything).Return(nil).Once()
+			},
+			checkErrs: func(t *testing.T, first, second error) {
+				require.ErrorIs(t, first, assert.AnError)
+				require.NoError(t, second)
+			},
+			expectAcq: func(dead, _ *mocks.Acquisition) taskscaler.Acquisition { return dead },
+		},
+		"Replace returns the same instance when no other capacity exists": {
+			setup: func(ts *mocks.Taskscaler, me *common.MockExecutor, dead, fresh *mocks.Acquisition) {
+				// Both return the same ID: taskscaler fell back to the same instance.
+				dead.EXPECT().InstanceID().Return("same-id").Maybe()
+				fresh.EXPECT().InstanceID().Return("same-id").Maybe()
+				ts.EXPECT().Acquire(mock.Anything, acqRefKey).Return(dead, nil).Once()
+				ts.EXPECT().Replace(mock.Anything, acqRefKey).Return(fresh, nil).Once()
+				me.On("Prepare", mock.Anything).Return(instanceErr).Once()
+				me.On("Prepare", mock.Anything).Return(nil).Once()
+			},
+			checkErrs: func(t *testing.T, first, second error) {
+				require.ErrorIs(t, first, assert.AnError)
+				require.NoError(t, second)
+			},
+			expectAcq: func(_, fresh *mocks.Acquisition) taskscaler.Acquisition { return fresh },
+			wantLog:   "No other instance available; retrying unavailable instance same-id",
+		},
+		"ErrNoReplacementCapacity logs warning and returns retriable non-BuildError": {
+			setup: func(ts *mocks.Taskscaler, me *common.MockExecutor, dead, _ *mocks.Acquisition) {
+				dead.EXPECT().InstanceID().Return("old-id").Maybe()
+				ts.EXPECT().Acquire(mock.Anything, acqRefKey).Return(dead, nil).Once()
+				ts.EXPECT().Replace(mock.Anything, acqRefKey).
+					Return(nil, taskscaler.ErrNoReplacementCapacity).Once()
+				ts.EXPECT().Reserve(acqRefKey).Return(nil).Once()
+				me.On("Prepare", mock.Anything).Return(instanceErr).Once()
+			},
+			checkErrs: func(t *testing.T, first, second error) {
+				require.ErrorIs(t, first, assert.AnError)
+				require.ErrorIs(t, second, taskscaler.ErrNoReplacementCapacity)
+				var buildErr *common.BuildError
+				assert.False(t, errors.As(second, &buildErr),
+					"ErrNoReplacementCapacity must stay retriable, not a BuildError")
+			},
+			expectAcq: func(_, _ *mocks.Acquisition) taskscaler.Acquisition { return nil },
+			wantLog:   "No capacity to replace unavailable instance old-id",
+		},
+	}
+
+	for tn, tc := range tests {
+		t.Run(tn, func(t *testing.T) {
+			logger, hook := test.NewNullLogger()
+			bl := buildlogger.New(nil, logrus.NewEntry(logger), buildlogger.Options{})
+
+			runnerCfg := &common.RunnerConfig{}
+			runnerCfg.Token = "abcdefgh"
+			runnerCfg.ID = 101
+			runnerCfg.SystemID = "sys-1"
+
+			ts := mocks.NewTaskscaler(t)
+			me := common.NewMockExecutor(t)
+			dead, fresh := mocks.NewAcquisition(t), mocks.NewAcquisition(t)
+			tc.setup(ts, me, dead, fresh)
+
+			p := New(common.NewMockExecutorProvider(t), Config{}).(*provider)
+			p.scalers = map[string]scaler{
+				runnerScalerKey(runnerCfg): {internal: ts, shutdown: func(_ context.Context) {}},
+			}
+
+			acqRef := &acquisitionRef{key: acqRefKey}
+			build := &common.Build{Runner: runnerCfg, ExecutorData: acqRef}
+			opts := common.ExecutorPrepareOptions{Config: runnerCfg, Context: t.Context(), Build: build, BuildLogger: bl}
+
+			// each build retry creates a new executor sharing the acquisitionRef
+			first := (&executor{Executor: me, provider: p}).Prepare(opts)
+			second := (&executor{Executor: me, provider: p}).Prepare(opts)
+
+			tc.checkErrs(t, first, second)
+			if tc.wantLog != "" {
+				var msgs []string
+				for _, e := range hook.AllEntries() {
+					msgs = append(msgs, e.Message)
+				}
+				assert.Contains(t, msgs, tc.wantLog)
+			}
+			want := tc.expectAcq(dead, fresh)
+			if want == nil {
+				assert.Nil(t, acqRef.acq)
+			} else {
+				assert.Same(t, want, acqRef.acq)
 			}
 		})
 	}

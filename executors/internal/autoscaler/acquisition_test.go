@@ -4,8 +4,10 @@ package autoscaler
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
+	"net"
 	"testing"
 	"time"
 
@@ -47,6 +49,28 @@ func TestAcquisitionRef_Prepare(t *testing.T) {
 	testTunnelClient := fleetingmocks.NewClient(t)
 	testVariableValue := "test-variable-value"
 
+	// netDialErr is a realistic network dial error: connection refused on a TCP dial.
+	// It implements net.Error so the autoscaler treats it as an instance-level failure.
+	netDialErr := &net.OpError{Op: "dial", Net: "tcp", Err: errors.New("connection refused")}
+
+	// expiredConnectInfoErr simulates fleeting's ErrConnectInfoExpired shape: the
+	// connect-info token expired, which is a config/timing error, not an instance failure.
+	expiredConnectInfoErr := fmt.Errorf("%w: %w", context.DeadlineExceeded, connector.ErrConnectInfoExpired)
+
+	// sshAuthErr simulates a failed SSH authentication attempt. It is deliberately
+	// not a net.Error so it is classified as a config error, not an instance failure.
+	sshAuthErr := errors.New("ssh: handshake failed: ssh: unable to authenticate, attempted methods [none], no supported methods remain")
+
+	// keyParseErr simulates ssh.ParsePrivateKey failing on a bad key. Same class.
+	keyParseErr := errors.New("ssh: cannot decode encrypted private keys")
+
+	// sshHandshakeReadTimeoutErr simulates a handshake i/o timeout: TCP connected
+	// (Op "read") but the SSH negotiation timed out. The host is alive, so this
+	// must NOT trigger HealthFailure. This matches the actual error x/crypto/ssh
+	// returns when conn.SetDeadline fires during NewClientConn.
+	sshHandshakeReadTimeoutErr := fmt.Errorf("ssh: handshake failed: %w",
+		&net.OpError{Op: "read", Net: "tcp", Err: errors.New("i/o timeout")})
+
 	testCases := map[string]struct {
 		doNotSetAcq        bool
 		vmIsolationEnabled bool
@@ -74,19 +98,80 @@ func TestAcquisitionRef_Prepare(t *testing.T) {
 		expectedNestingConnCloseCall bool
 		expectedNestingImage         string
 		expectedError                error
+
+		// expectHealthFailure is true when the dial/connect-info failure should be
+		// reported to taskscaler via HealthFailure (i.e. the instance is unreachable).
+		expectHealthFailure bool
+		// expectInstanceUnavailable is true when the returned error should be wrapped
+		// as an instanceUnavailableError, causing the executor to drop the acquisition.
+		expectInstanceUnavailable bool
 	}{
 		"ref.acq is not set": {
 			doNotSetAcq:   true,
 			expectedError: errRefAcqNotSet,
 		},
-		"Error when getting InstanceConnectInfo": {
-			instanceConnectInfoErr: assert.AnError,
-			expectedError:          assert.AnError,
+		"ConnectInfo error": {
+			instanceConnectInfoErr:    assert.AnError,
+			expectedError:             assert.AnError,
+			expectHealthFailure:       true,
+			expectInstanceUnavailable: true,
 		},
-		"Error when dialing preparing instance dialer": {
+		// net.OpError from a TCP dial is an instance-level failure: the host is unreachable.
+		"net.OpError dial error": {
 			dialAcquisitionInstanceCallExpected: true,
-			dialAcquisitionInstanceErr:          assert.AnError,
-			expectedError:                       assert.AnError,
+			dialAcquisitionInstanceErr:          netDialErr,
+			expectedError:                       netDialErr,
+			expectHealthFailure:                 true,
+			expectInstanceUnavailable:           true,
+		},
+		// net.Dialer.DialContext wraps a connect-phase deadline as *net.OpError{Op:"dial"},
+		// so a dial timeout is an instance failure. fleeting further wraps the OpError with
+		// a retry-count prefix; errors.AsType still finds the inner *net.OpError.
+		"dial-phase context.DeadlineExceeded (connect timeout)": {
+			dialAcquisitionInstanceCallExpected: true,
+			dialAcquisitionInstanceErr: fmt.Errorf("after retrying 0 times during 5s timeout: %w",
+				&net.OpError{Op: "dial", Net: "tcp", Err: context.DeadlineExceeded}),
+			expectedError:             context.DeadlineExceeded,
+			expectHealthFailure:       true,
+			expectInstanceUnavailable: true,
+		},
+		// SSH auth failure is a config error, not an instance failure: do not call
+		// HealthFailure and do not wrap as instanceUnavailableError.
+		"SSH auth error": {
+			dialAcquisitionInstanceCallExpected: true,
+			dialAcquisitionInstanceErr:          sshAuthErr,
+			expectedError:                       sshAuthErr,
+			expectHealthFailure:                 false,
+			expectInstanceUnavailable:           false,
+		},
+		// SSH handshake i/o timeout: TCP connected (Op "read"), host is alive.
+		// fleeting's ssh.go retries "handshake failed" errors until ioTimeout runs
+		// out, after which the last attempt fails with a read-phase OpError.
+		// This must NOT trigger HealthFailure — the instance accepted TCP.
+		"SSH handshake read timeout": {
+			dialAcquisitionInstanceCallExpected: true,
+			dialAcquisitionInstanceErr:          sshHandshakeReadTimeoutErr,
+			expectedError:                       sshHandshakeReadTimeoutErr,
+			expectHealthFailure:                 false,
+			expectInstanceUnavailable:           false,
+		},
+		// Key parse failure is a config error, not an instance failure.
+		"key parse error": {
+			dialAcquisitionInstanceCallExpected: true,
+			dialAcquisitionInstanceErr:          keyParseErr,
+			expectedError:                       keyParseErr,
+			expectHealthFailure:                 false,
+			expectInstanceUnavailable:           false,
+		},
+		// ErrConnectInfoExpired is a config/timing error; the underlying TCP error must
+		// not be mistaken for an unreachable host. Check the ErrConnectInfoExpired branch
+		// before the net.Error branch so the order in production code is exercised.
+		"expired connect info error": {
+			dialAcquisitionInstanceCallExpected: true,
+			dialAcquisitionInstanceErr:          expiredConnectInfoErr,
+			expectedError:                       connector.ErrConnectInfoExpired,
+			expectHealthFailure:                 false,
+			expectInstanceUnavailable:           false,
 		},
 		"No error and VM isolation disabled": {
 			dialAcquisitionInstanceCallExpected: true,
@@ -247,6 +332,13 @@ func TestAcquisitionRef_Prepare(t *testing.T) {
 			if setAcq {
 				acq.EXPECT().WithContext(ctx).Return(ctx, cancel)
 				acq.EXPECT().InstanceConnectInfo(mock.Anything).Return(fleetingprovider.ConnectInfo{}, tc.instanceConnectInfoErr).Once()
+				if tc.expectHealthFailure {
+					acq.EXPECT().HealthFailure().Return().Once()
+				}
+				// a successful dial proves the instance is reachable
+				if tc.dialAcquisitionInstanceCallExpected && tc.dialAcquisitionInstanceErr == nil {
+					acq.EXPECT().HealthSuccess().Return().Once()
+				}
 				if tc.vmIsolationEnabled && tc.mockNestingClientCreate {
 					acq.EXPECT().Slot().Return(testSlot).Once()
 				}
@@ -259,6 +351,7 @@ func TestAcquisitionRef_Prepare(t *testing.T) {
 			if tc.expectedError != nil {
 				assert.Nil(t, c)
 				assert.ErrorIs(t, err, tc.expectedError)
+				assert.Equal(t, tc.expectInstanceUnavailable, isInstanceUnavailable(err))
 				return
 			}
 
@@ -512,6 +605,7 @@ func TestAcquisitionRef_Prepare_SlotCgroupEnvironmentVariable(t *testing.T) {
 			acq := mocks.NewAcquisition(t)
 			acq.EXPECT().WithContext(ctx).Return(ctx, cancel)
 			acq.EXPECT().InstanceConnectInfo(mock.Anything).Return(fleetingprovider.ConnectInfo{}, nil).Once()
+			acq.EXPECT().HealthSuccess().Return().Once()
 			// Slot() is called when UseSlotCgroups is true, regardless of slot value
 			if tt.useSlotCgroups {
 				acq.EXPECT().Slot().Return(tt.slot).Once()
@@ -574,7 +668,11 @@ func TestAcquisitionRef_Prepare_SlotCgroupEnvironmentVariable(t *testing.T) {
 	}
 }
 
-func TestAcquisitionRef_PrepareClosesClientOnCancelledDial(t *testing.T) {
+// TestAcquisitionRef_PrepareTaskscalerCancelledDial checks that when taskscaler
+// cancels the dial context (because the instance was removed) while the job is
+// still alive, Prepare returns an instanceUnavailableError so the retry loop
+// can try a different instance. It also verifies the connected client is closed.
+func TestAcquisitionRef_PrepareTaskscalerCancelledDial(t *testing.T) {
 	dialCtx, cancelDial := context.WithCancelCause(t.Context())
 
 	acq := mocks.NewAcquisition(t)
@@ -587,21 +685,140 @@ func TestAcquisitionRef_PrepareClosesClientOnCancelledDial(t *testing.T) {
 	ref := newAcquisitionRef("test-key", false)
 	ref.acq = acq
 	ref.dialAcquisitionInstance = func(_ context.Context, _ fleetingprovider.ConnectInfo, _ connector.DialOptions) (connector.Client, error) {
-		// the acquisition is cancelled whilst the dial is in flight, but the
-		// dial still succeeds and returns a connected client
-		cancelDial(context.Canceled)
+		// taskscaler removes the instance mid-dial; dialCtx is cancelled but
+		// the dial still succeeds and returns a connected client
+		cancelDial(errors.New("instance externally removed"))
 		return fleetingDialer, nil
 	}
 
 	logger, _ := test.NewNullLogger()
 	bl := buildlogger.New(nil, logrus.NewEntry(logger), buildlogger.Options{})
 
+	// job context is still alive: the cancel came from taskscaler, not the job
 	c, err := ref.Prepare(t.Context(), bl, executorPrepareOptions("", "", "", ""))
+
+	assert.Nil(t, c)
+	assert.True(t, isInstanceUnavailable(err), "expected instanceUnavailableError, got %v", err)
+}
+
+// TestAcquisitionRef_PrepareJobCancelledAfterTaskscalerCancel checks that when
+// taskscaler cancels dialCtx (instance removed) AND the job is also cancelled,
+// Prepare returns a BuildError attributed to the job cancellation, not the
+// taskscaler cause. This distinguishes context.Cause(parentCtx) from
+// context.Cause(dialCtx).
+func TestAcquisitionRef_PrepareJobCancelledAfterTaskscalerCancel(t *testing.T) {
+	jobCtx, cancelJob := context.WithCancelCause(t.Context())
+	// dialCtx is independent of jobCtx so we can cancel them in a controlled order
+	dialCtx, cancelDial := context.WithCancelCause(t.Context())
+
+	acq := mocks.NewAcquisition(t)
+	acq.EXPECT().WithContext(mock.Anything).Return(dialCtx, func() {}).Once()
+	acq.EXPECT().InstanceConnectInfo(mock.Anything).Return(fleetingprovider.ConnectInfo{}, nil).Once()
+
+	fleetingDialer := fleetingmocks.NewClient(t)
+	fleetingDialer.EXPECT().Close().Return(nil).Once()
+
+	ref := newAcquisitionRef("test-key", false)
+	ref.acq = acq
+	ref.dialAcquisitionInstance = func(_ context.Context, _ fleetingprovider.ConnectInfo, _ connector.DialOptions) (connector.Client, error) {
+		// taskscaler cancels dialCtx first; then the job is also cancelled
+		cancelDial(errors.New("instance externally removed"))
+		cancelJob(context.Canceled)
+		return fleetingDialer, nil
+	}
+
+	logger, _ := test.NewNullLogger()
+	bl := buildlogger.New(nil, logrus.NewEntry(logger), buildlogger.Options{})
+
+	c, err := ref.Prepare(jobCtx, bl, executorPrepareOptions("", "", "", ""))
+
+	assert.Nil(t, c)
+	var buildErr *common.BuildError
+	require.ErrorAs(t, err, &buildErr)
+	// must reflect the job cancellation, not the taskscaler cause
+	assert.Equal(t, common.JobCanceled, buildErr.FailureReason)
+}
+
+// TestAcquisitionRef_PrepareTaskscalerCancelledConnectInfo checks that when
+// taskscaler cancels dialCtx while InstanceConnectInfo is in flight and the
+// job context is still alive, Prepare returns an instanceUnavailableError —
+// not a BuildError — and does not call HealthFailure (taskscaler already knows).
+func TestAcquisitionRef_PrepareTaskscalerCancelledConnectInfo(t *testing.T) {
+	tsCause := errors.New("instance removed by taskscaler")
+	dialCtx, cancelDial := context.WithCancelCause(t.Context())
+
+	acq := mocks.NewAcquisition(t)
+	acq.EXPECT().WithContext(mock.Anything).Return(dialCtx, func() {}).Once()
+	// InstanceConnectInfo cancels dialCtx mid-flight; HealthFailure must NOT be
+	// called — taskscaler already knows the instance is gone.
+	// Deliberately no HealthFailure EXPECT: an unexpected call fails the test.
+	acq.EXPECT().InstanceConnectInfo(mock.Anything).
+		RunAndReturn(func(_ context.Context) (fleetingprovider.ConnectInfo, error) {
+			cancelDial(tsCause)
+			return fleetingprovider.ConnectInfo{}, context.Canceled
+		}).Once()
+
+	ref := newAcquisitionRef("test-key", false)
+	ref.acq = acq
+	// dialAcquisitionInstance must not be reached — the early return in Prepare
+	// happens before the dial.
+	ref.dialAcquisitionInstance = func(_ context.Context, _ fleetingprovider.ConnectInfo, _ connector.DialOptions) (connector.Client, error) {
+		t.Error("dialAcquisitionInstance must not be called when the InstanceConnectInfo path returns early")
+		return nil, errors.New("unexpected dial")
+	}
+
+	logger, _ := test.NewNullLogger()
+	bl := buildlogger.New(nil, logrus.NewEntry(logger), buildlogger.Options{})
+
+	// job context is still alive
+	c, err := ref.Prepare(t.Context(), bl, executorPrepareOptions("", "", "", ""))
+
+	assert.Nil(t, c)
+	assert.True(t, isInstanceUnavailable(err), "expected instanceUnavailableError, got %v", err)
+	assert.ErrorIs(t, err, tsCause, "error must wrap the taskscaler cause")
+	_, isBuildErr := errors.AsType[*common.BuildError](err)
+	assert.False(t, isBuildErr, "error must not be a BuildError")
+}
+
+// TestAcquisitionRef_PrepareJobCancelledDuringConnectInfo checks that when
+// taskscaler cancels dialCtx and the job context is also cancelled,
+// Prepare returns a BuildError attributed to the job cancellation, not to
+// the taskscaler cause.
+func TestAcquisitionRef_PrepareJobCancelledDuringConnectInfo(t *testing.T) {
+	jobCause := fmt.Errorf("job cancelled: %w", context.Canceled)
+	tsCause := errors.New("instance removed by taskscaler")
+	jobCtx, cancelJob := context.WithCancelCause(t.Context())
+	dialCtx, cancelDial := context.WithCancelCause(t.Context())
+
+	acq := mocks.NewAcquisition(t)
+	acq.EXPECT().WithContext(mock.Anything).Return(dialCtx, func() {}).Once()
+	// Deliberately no HealthFailure EXPECT: taskscaler-cancel path skips it.
+	acq.EXPECT().InstanceConnectInfo(mock.Anything).
+		RunAndReturn(func(_ context.Context) (fleetingprovider.ConnectInfo, error) {
+			cancelDial(tsCause)
+			cancelJob(jobCause)
+			return fleetingprovider.ConnectInfo{}, context.Canceled
+		}).Once()
+
+	ref := newAcquisitionRef("test-key", false)
+	ref.acq = acq
+	ref.dialAcquisitionInstance = func(_ context.Context, _ fleetingprovider.ConnectInfo, _ connector.DialOptions) (connector.Client, error) {
+		t.Error("dialAcquisitionInstance must not be called when the InstanceConnectInfo path returns early")
+		return nil, errors.New("unexpected dial")
+	}
+
+	logger, _ := test.NewNullLogger()
+	bl := buildlogger.New(nil, logrus.NewEntry(logger), buildlogger.Options{})
+
+	c, err := ref.Prepare(jobCtx, bl, executorPrepareOptions("", "", "", ""))
 
 	assert.Nil(t, c)
 	var buildErr *common.BuildError
 	require.ErrorAs(t, err, &buildErr)
 	assert.Equal(t, common.JobCanceled, buildErr.FailureReason)
+	assert.ErrorIs(t, buildErr.Inner, jobCause,
+		"BuildError must reflect the job cause, not the taskscaler cause")
+	assert.False(t, isInstanceUnavailable(err), "error must not be instanceUnavailableError")
 }
 
 func TestBuildErrorFromContextCause(t *testing.T) {
