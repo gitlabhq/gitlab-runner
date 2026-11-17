@@ -179,14 +179,7 @@ func (e *Env) LookPath(name string, extra map[string]string) (string, error) {
 		return name, nil
 	}
 
-	var path string
-	for _, kv := range e.environ(extra) {
-		if k, v, ok := strings.Cut(kv, "="); ok && isPathKey(k) {
-			path = v
-		}
-	}
-
-	for _, dir := range filepath.SplitList(path) {
+	for _, dir := range filepath.SplitList(e.jobPath(extra)) {
 		if !filepath.IsAbs(dir) {
 			continue
 		}
@@ -198,6 +191,18 @@ func (e *Env) LookPath(name string, extra map[string]string) (string, error) {
 	}
 
 	return "", &notInJobPathError{name: name}
+}
+
+// jobPath extracts PATH from environ so helper overrides and executable lookup
+// share Command's precedence; environ itself returns all environment variables.
+func (e *Env) jobPath(extra map[string]string) string {
+	var path string
+	for _, kv := range e.environ(extra) {
+		if k, v, ok := strings.Cut(kv, "="); ok && isPathKey(k) {
+			path = v
+		}
+	}
+	return path
 }
 
 type notInJobPathError struct{ name string }
@@ -284,11 +289,9 @@ func (e *Env) HelperEnvs(existing map[string]string) map[string]string {
 
 	if e.bundledGit != "git" {
 		gitBinDir := filepath.Dir(e.bundledGit)
-		if path, ok := env["PATH"]; ok {
-			env["PATH"] = gitBinDir + ":" + path
-		} else {
-			env["PATH"] = gitBinDir + ":" + os.Getenv("PATH")
-		}
+		path := e.jobPath(existing)
+		maps.DeleteFunc(env, func(k, _ string) bool { return isPathKey(k) })
+		env["PATH"] = gitBinDir + string(os.PathListSeparator) + path
 	}
 
 	// Helper subprocess scratch follows the runner's, not the
