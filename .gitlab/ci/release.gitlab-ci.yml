@@ -30,6 +30,10 @@
     - "package-deb"
     - "package-rpm"
     - "package-helpers"
+  variables:
+    # Upload up to four packages at once. Pulp serialises the version changes of a repository
+    # anyway, so this mostly overlaps the file transfers.
+    RUNNER_MAGE_CONCURRENCY: "4"
   before_script:
     - ./ci/touch_git
     - mage pulp:createConfig
