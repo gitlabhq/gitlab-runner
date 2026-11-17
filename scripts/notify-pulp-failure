@@ -1,0 +1,32 @@
+#!/bin/sh
+# Sends one Slack message when a pulp release job failed. It names the failed pulp jobs. If the jobs
+# API does not answer, it links the pipeline failures page instead.
+set -eu
+
+if [ -z "${PULP_ALERT_SLACK_WEBHOOK_URL:-}" ]; then
+  echo "PULP_ALERT_SLACK_WEBHOOK_URL is not set, cannot send the notification" >&2
+  exit 1
+fi
+
+# The failures page also lists unrelated failed jobs, for example allowed-to-fail lint jobs.
+jobs_url="${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/pipelines/${CI_PIPELINE_ID}/jobs?scope[]=failed&per_page=100"
+jobs_json=$(curl --fail --silent --show-error --globoff --max-time 30 --retry 3 \
+  --header "JOB-TOKEN: ${CI_JOB_TOKEN}" "$jobs_url") || {
+  echo "Could not list the failed jobs, linking the failures page instead" >&2
+  jobs_json="[]"
+}
+failed_pulp_jobs=$(printf '%s' "$jobs_json" |
+  jq -r '.[] | select(.name | test("^(unstable|stable) pulp")) | "- <\(.web_url)|\(.name)>"') || failed_pulp_jobs=""
+
+prefix=":warning: A pulp release job failed on \`${CI_COMMIT_REF_NAME}\`. Runner packages are not being published."
+if [ -n "$failed_pulp_jobs" ]; then
+  text="${prefix} Failed pulp jobs:
+${failed_pulp_jobs}"
+else
+  text="${prefix} Failed jobs: ${CI_PIPELINE_URL}/failures"
+fi
+
+jq -n --arg text "$text" '{text: $text}' |
+  curl --fail --silent --show-error --max-time 30 --retry 3 \
+    --header "Content-Type: application/json" \
+    --data @- "$PULP_ALERT_SLACK_WEBHOOK_URL"
