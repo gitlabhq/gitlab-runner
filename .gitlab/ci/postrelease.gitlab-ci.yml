@@ -312,7 +312,8 @@ notify pulp failure:
   image: alpine:latest
   interruptible: false
   variables:
-    GIT_STRATEGY: none
+    GIT_STRATEGY: fetch
+    GIT_DEPTH: "1"
   needs:
     - job: unstable pulp
       optional: true
@@ -339,14 +340,4 @@ notify pulp failure:
   before_script:
     - apk add --no-cache curl jq
   script:
-    - |
-      if [ -z "${PULP_ALERT_SLACK_WEBHOOK_URL:-}" ]; then
-        echo "PULP_ALERT_SLACK_WEBHOOK_URL is not set, cannot send the notification"
-        exit 1
-      fi
-    - |
-      text=":warning: A pulp release job failed on \`${CI_COMMIT_REF_NAME}\`. Runner packages are not being published. Failed jobs: ${CI_PIPELINE_URL}/failures"
-      jq -n --arg text "$text" '{text: $text}' |
-        curl --fail --silent --show-error --max-time 30 --retry 3 \
-          -H "Content-Type: application/json" \
-          --data @- "$PULP_ALERT_SLACK_WEBHOOK_URL"
+    - scripts/notify-pulp-failure

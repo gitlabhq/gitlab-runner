@@ -1,0 +1,89 @@
+#!/bin/sh
+# Runs scripts/notify-pulp-failure against a fake curl. Needs jq.
+set -eu
+
+script_dir=$(cd "$(dirname "$0")" && pwd)
+tmp=$(mktemp -d)
+trap 'rm -rf "$tmp"' EXIT
+
+mkdir "$tmp/bin"
+# The fake curl answers the jobs API call with $FAKE_JOBS_FILE, or fails when it is unset.
+# It saves the body of the Slack call to $FAKE_SLACK_BODY.
+cat > "$tmp/bin/curl" <<'EOF'
+#!/bin/sh
+case "$*" in
+  *JOB-TOKEN*)
+    [ -n "${FAKE_JOBS_FILE:-}" ] || exit 22
+    cat "$FAKE_JOBS_FILE"
+    ;;
+  *)
+    cat > "$FAKE_SLACK_BODY"
+    ;;
+esac
+EOF
+chmod +x "$tmp/bin/curl"
+
+cat > "$tmp/jobs.json" <<'EOF'
+[
+  {"name": "dockerfile:lint", "web_url": "https://example.test/jobs/1"},
+  {"name": "unstable pulp: [debian]", "web_url": "https://example.test/jobs/2"},
+  {"name": "stable pulp: [el]", "web_url": "https://example.test/jobs/3"},
+  {"name": "unstable pulp: [%s&x]", "web_url": "https://example.test/jobs/4"}
+]
+EOF
+echo '[]' > "$tmp/empty.json"
+
+failures=0
+
+# run_script <name> [env assignments...] runs the script, saving stderr and the Slack text.
+run_script() {
+  name=$1
+  shift
+  env -i PATH="$tmp/bin:$PATH" \
+    CI_API_V4_URL=https://example.test/api/v4 CI_PROJECT_ID=1 CI_PIPELINE_ID=2 CI_JOB_TOKEN=token \
+    CI_COMMIT_REF_NAME=main CI_PIPELINE_URL=https://example.test/pipelines/2 \
+    PULP_ALERT_SLACK_WEBHOOK_URL=https://example.test/webhook \
+    FAKE_SLACK_BODY="$tmp/$name.body" \
+    "$@" sh "$script_dir/notify-pulp-failure" > "$tmp/$name.out" 2> "$tmp/$name.err" || return 1
+  jq -r .text "$tmp/$name.body" > "$tmp/$name.text"
+}
+
+expect() {
+  description=$1
+  shift
+  if "$@"; then
+    echo "ok: $description"
+  else
+    echo "FAIL: $description"
+    failures=$((failures + 1))
+  fi
+}
+
+has() { grep -qF -- "$2" "$1"; }
+lacks() { ! grep -qF -- "$2" "$1"; }
+
+run_script listed FAKE_JOBS_FILE="$tmp/jobs.json"
+expect "lists an unstable pulp job" has "$tmp/listed.text" "- <https://example.test/jobs/2|unstable pulp: [debian]>"
+expect "lists a stable pulp job" has "$tmp/listed.text" "- <https://example.test/jobs/3|stable pulp: [el]>"
+expect "keeps printf characters in a job name" has "$tmp/listed.text" "unstable pulp: [%s&x]"
+expect "leaves out a job that is not a pulp job" lacks "$tmp/listed.text" "dockerfile:lint"
+expect "does not link the failures page" lacks "$tmp/listed.text" "/failures"
+
+run_script empty FAKE_JOBS_FILE="$tmp/empty.json"
+expect "falls back to the failures page when no pulp job is listed" has "$tmp/empty.text" "https://example.test/pipelines/2/failures"
+
+run_script apifail
+expect "falls back to the failures page when the jobs API fails" has "$tmp/apifail.text" "https://example.test/pipelines/2/failures"
+expect "says in the job log that the API call failed" has "$tmp/apifail.err" "Could not list the failed jobs"
+
+expect "names the branch" has "$tmp/listed.text" "failed on \`main\`"
+
+if run_script nohook FAKE_JOBS_FILE="$tmp/jobs.json" PULP_ALERT_SLACK_WEBHOOK_URL=; then
+  echo "FAIL: exits with an error when the webhook is not set"
+  failures=$((failures + 1))
+else
+  echo "ok: exits with an error when the webhook is not set"
+fi
+
+[ "$failures" -eq 0 ] || { echo "$failures check(s) failed"; exit 1; }
+echo "all checks passed"
