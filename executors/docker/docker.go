@@ -1216,8 +1216,10 @@ func (e *executor) getBuildContainerUser(imageDefinition spec.Image) (string, er
 	}
 
 	if !e.Config.Docker.IsUserAllowed(user) {
-		return "", fmt.Errorf("user %q is not an allowed user: %v",
-			user, e.Config.Docker.AllowedUsers)
+		return "", &common.BuildError{
+			Inner:         fmt.Errorf("user %q is not an allowed user: %v", user, e.Config.Docker.AllowedUsers),
+			FailureReason: common.ConfigurationError,
+		}
 	}
 
 	return user, nil
