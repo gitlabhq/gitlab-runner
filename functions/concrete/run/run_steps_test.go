@@ -9,6 +9,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.yaml.in/yaml/v3"
 	"google.golang.org/protobuf/types/known/structpb"
 
 	"gitlab.com/gitlab-org/gitlab-runner/functions/concrete/run/env"
@@ -102,18 +103,51 @@ func TestInterpretRunResult(t *testing.T) {
 	}
 }
 
-// TestBuildStepsYAML_Preamble pins the "{}\n---\n" preamble step-runner's YAML
+// TestBuildRunRequest_Preamble pins the "{}\n---\n" preamble step-runner's YAML
 // parser requires. The idiomatic refactor (yaml.NewEncoder(...).Encode) would
-// pass a round-trip test but drop the preamble — this assert is what catches
+// pass a round-trip test but drop the preamble; this assert is what catches
 // that.
-func TestBuildStepsYAML_Preamble(t *testing.T) {
+func TestBuildRunRequest_Preamble(t *testing.T) {
 	script := "echo hi"
 	name := "greet"
-	out, err := buildStepsYAML([]schema.Step{{Name: &name, Script: &script}})
+	req, err := (&Runner{config: &Config{}, env: &env.Env{}}).buildRunRequest([]schema.Step{{Name: &name, Script: &script}})
 	require.NoError(t, err)
 
-	assert.True(t, strings.HasPrefix(out, "{}\n---\n"),
-		"step-runner's parser requires an empty front-matter document; missing preamble silently breaks dispatch.\ngot: %q", out)
+	assert.True(t, strings.HasPrefix(req.Steps, "{}\n---\n"),
+		"step-runner's parser requires an empty front-matter document; missing preamble silently breaks dispatch.\ngot: %q", req.Steps)
+}
+
+// TestBuildRunRequest_ScriptSurvivesStepRunnerDecoding guards the nested run:
+// path against the multi-line string bug: a script that starts with a blank
+// line or a tab failed to decode, and one indented on every line lost its
+// indentation.
+func TestBuildRunRequest_ScriptSurvivesStepRunnerDecoding(t *testing.T) {
+	tests := map[string]string{
+		"leading newline":           "\necho hi\necho there\n",
+		"leading tab":               "\techo hi\n\techo there\n",
+		"indented on every line":    "  echo hi\n  echo there\n",
+		"leading newline and space": "\n  echo hi\n",
+	}
+
+	for name, script := range tests {
+		t.Run(name, func(t *testing.T) {
+			stepName := "user"
+			r := &Runner{config: &Config{}, env: &env.Env{}}
+			req, err := r.buildRunRequest([]schema.Step{{Name: &stepName, Script: &script}})
+			require.NoError(t, err)
+
+			var spec schema.Spec
+			var got schema.Step
+			decoder := yaml.NewDecoder(strings.NewReader(req.Steps))
+			decoder.KnownFields(true)
+			require.NoError(t, decoder.Decode(&spec))
+			require.NoError(t, decoder.Decode(&got))
+
+			require.Len(t, got.Run, 1)
+			require.NotNil(t, got.Run[0].Script)
+			assert.Equal(t, script, *got.Run[0].Script)
+		})
+	}
 }
 
 // TestBuildRunRequest_ForwardsJobVars guards the fix for nested run: steps
