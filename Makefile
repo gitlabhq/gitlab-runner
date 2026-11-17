@@ -184,15 +184,18 @@ lint-shell-report:
 
 HADOLINT_REPORT_FILE ?= gl-hadolint-report.json
 
+# Match file names only. A plain '*dockerfile*' pattern also matches every file under a dockerfiles/ directory.
+DOCKERFILE_PATHSPECS := ':(glob)**/Dockerfile*' ':(glob)**/dockerfile*'
+
 .PHONY: lint-dockerfiles
 lint-dockerfiles:
-	@git ls-files -- '*Dockerfile*' '*dockerfile*' | xargs hadolint
+	@git ls-files -- $(DOCKERFILE_PATHSPECS) | xargs hadolint
 
 .PHONY: lint-dockerfiles-report
 lint-dockerfiles-report:
 	@# Execute the functionality of lint-dockerfiles and generate a Code Climate report.
 	@# Mainly for use in CI; requires https://gitlab.com/gitlab-org/language-tools/go/linters/linter2cc.
-	@git ls-files -- '*Dockerfile*' '*dockerfile*' | xargs linter2cc hadolint > $(HADOLINT_REPORT_FILE)
+	@git ls-files -- $(DOCKERFILE_PATHSPECS) | xargs linter2cc hadolint > $(HADOLINT_REPORT_FILE)
 
 .PHONY: test
 test: development_setup simple-test
