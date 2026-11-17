@@ -7,7 +7,7 @@ import (
 
 	"gitlab.com/gitlab-org/step-runner/pkg/api/client"
 	"gitlab.com/gitlab-org/step-runner/schema/v1"
-	"go.yaml.in/yaml/v3"
+	"go.yaml.in/yaml/v4"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
 )
@@ -23,7 +23,7 @@ import (
 var ErrNoStepRunnerButOkay = errors.New("no step runner but okay")
 
 func NewRequest(jobInfo JobInfo, steps []schema.Step) (*client.RunRequest, error) {
-	preambleSteps, err := addStepsPreamble(steps)
+	preambleSteps, err := AddStepsPreamble(steps)
 	if err != nil {
 		return nil, fmt.Errorf("parsing step request: %w", err)
 	}
@@ -65,7 +65,7 @@ const stepsPreamble = "{}\n---\n"
 
 // When using the run CI keyword, steps are written in yaml, parsed to json, validated, and finally sent over the wire
 // (as json) to the runner. However the step-runner expects steps as yaml :-( Plus we have to add this here preamble.
-func addStepsPreamble(steps []schema.Step) (string, error) {
+func AddStepsPreamble(steps []schema.Step) (string, error) {
 	stepSchema := &schema.Step{}
 	stepSchema.Run = steps
 

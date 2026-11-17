@@ -9,11 +9,11 @@ import (
 	"strconv"
 	"sync/atomic"
 
-	"go.yaml.in/yaml/v3"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common/buildlogger/innerstream"
+	stepsreq "gitlab.com/gitlab-org/gitlab-runner/steps"
 	"gitlab.com/gitlab-org/step-runner/pkg/api"
 	"gitlab.com/gitlab-org/step-runner/pkg/api/client"
 	"gitlab.com/gitlab-org/step-runner/pkg/api/client/extended"
@@ -39,10 +39,6 @@ var socketPathOverride atomic.Value
 func SetSocketPath(path string) {
 	socketPathOverride.Store(path)
 }
-
-// stepsPreamble is required by step-runner's YAML parser: an empty front
-// matter document followed by the actual step list.
-const stepsPreamble = "{}\n---\n"
 
 // runUserSteps dispatches the user's `run:` keyword as a nested job through
 // the step-runner that is hosting this concrete step. Concrete dials back
@@ -80,7 +76,7 @@ func (r *Runner) runUserSteps(ctx context.Context, steps []schema.Step) error {
 // Env alone does not populate that scope. Masked values are still masked by the
 // outer concrete job's log pipeline, which the nested output flows through.
 func (r *Runner) buildRunRequest(steps []schema.Step) (*client.RunRequest, error) {
-	stepsYAML, err := buildStepsYAML(steps)
+	stepsYAML, err := stepsreq.AddStepsPreamble(steps)
 	if err != nil {
 		return nil, fmt.Errorf("marshalling user steps: %w", err)
 	}
@@ -145,15 +141,6 @@ func interpretRunResult(status client.Status, runErr, flushErr error) error {
 		}
 		return errors.New(msg)
 	}
-}
-
-func buildStepsYAML(steps []schema.Step) (string, error) {
-	wrapper := &schema.Step{Run: steps}
-	out, err := yaml.Marshal(wrapper)
-	if err != nil {
-		return "", err
-	}
-	return stepsPreamble + string(out), nil
 }
 
 func socketPath() string {
