@@ -319,11 +319,18 @@ func (c *CacheExtractorCommand) presignedParallelDownloadEligible() bool {
 // 206, which the sequential download rejects.
 var errRangeNotHonored = errors.New("range not honored")
 
+// errObjectChanged marks a chunk answered with 412 to the If-Match that holds the probe's ETag: the
+// object was replaced after the probe, and the chunks already written may come from the version it
+// replaced. A sequential GET downloads a single version of the object.
+var errObjectChanged = errors.New("object changed during the parallel download")
+
 // tryPresignedParallelDownload uses a single-byte Range GET (not HEAD: presigned S3 URLs are typically
-// signed for GET only). A 206 response yields Content-Length/Content-Range for parallel chunk GETs.
+// signed for GET only). A 206 response yields Content-Length/Content-Range for parallel chunk GETs, and
+// a strong ETag that every chunk GET sends in If-Match.
 // It returns done=true when the download path finished (including up-to-date short-circuit or parallel
 // download); err propagates parallel download failures. done=false, err=nil means fall back to a full GET,
-// which is also the answer when a chunk is answered with 200 and the whole object.
+// which is also the answer when a chunk is answered with 200 and the whole object, or with 412 because
+// the object changed after the probe.
 func (c *CacheExtractorCommand) tryPresignedParallelDownload() (done bool, err error) {
 	selectedURL := c.selectPresignedURL()
 
@@ -371,9 +378,14 @@ func (c *CacheExtractorCommand) tryPresignedParallelDownload() (done bool, err e
 	_ = resp.Body.Close()
 
 	cleanedURL := url_helpers.CleanURL(selectedURL)
-	err = c.downloadParallel(contentLength, date, resp.Header.Get("ETag"), cleanedURL, headersToCacheMetadata(resp.Header), c.presignedRangeFetchChunk(selectedURL))
-	if errors.Is(err, errRangeNotHonored) {
+	etag := resp.Header.Get("ETag")
+	err = c.downloadParallel(contentLength, date, etag, cleanedURL, headersToCacheMetadata(resp.Header), c.presignedRangeFetchChunk(selectedURL, etag))
+	switch {
+	case errors.Is(err, errRangeNotHonored):
 		logrus.WithError(err).Infoln("Presigned URL did not honor a chunk Range request, using sequential download")
+		return false, nil
+	case errors.Is(err, errObjectChanged):
+		logrus.WithError(err).Infoln("Cache object changed during the parallel download, using sequential download")
 		return false, nil
 	}
 	return true, err
@@ -416,19 +428,30 @@ func (c *CacheExtractorCommand) effectiveParallelChunkSize() int {
 	return c.ChunkSize
 }
 
-func (c *CacheExtractorCommand) presignedRangeFetchChunk(rawURL string) func(offset, length int64) (io.ReadCloser, error) {
+// presignedRangeFetchChunk returns the chunk fetcher for rawURL. When etag, read by the probe, is
+// strong, every chunk GET sends it in If-Match, so a store that replaced the object since the probe
+// answers 412 rather than bytes of another version. Without a strong ETag the chunks are not
+// conditional, as a weak one would never match.
+func (c *CacheExtractorCommand) presignedRangeFetchChunk(rawURL, etag string) func(offset, length int64) (io.ReadCloser, error) {
+	ifMatch := transfer.StrongETag(etag)
 	return func(offset, length int64) (io.ReadCloser, error) {
 		req, err := http.NewRequest(http.MethodGet, rawURL, nil)
 		if err != nil {
 			return nil, err
 		}
 		req.Header.Set("Range", fmt.Sprintf("bytes=%d-%d", offset, offset+length-1))
+		if ifMatch {
+			req.Header.Set("If-Match", etag)
+		}
 		resp, err := c.getClient().Do(req)
 		if err != nil {
 			return nil, err
 		}
 		if err := checkChunkRange(resp.StatusCode, resp.Status, resp.Header.Get("Content-Range"), offset, length); err != nil {
 			_ = resp.Body.Close()
+			if resp.StatusCode == http.StatusPreconditionFailed {
+				return nil, fmt.Errorf("range request failed: %s: %w", resp.Status, errObjectChanged)
+			}
 			return nil, err
 		}
 		return resp.Body, nil
