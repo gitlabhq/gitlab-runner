@@ -11,6 +11,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/mathutil"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/retry"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/trace"
 )
@@ -364,7 +365,7 @@ func (c *clientJobTrace) setUpdateInterval(newUpdateInterval time.Duration) {
 
 	if c.config.IsFeatureFlagOn(featureflags.UseDynamicTraceForceSendInterval) {
 		forceSend := c.updateInterval * common.TraceForceSendUpdateIntervalMultiplier
-		c.forceSendInterval = min(max(forceSend, common.MinTraceForceSendInterval), common.MaxTraceForceSendInterval)
+		c.forceSendInterval = mathutil.Clamp(forceSend, common.MinTraceForceSendInterval, common.MaxTraceForceSendInterval)
 	}
 }
 

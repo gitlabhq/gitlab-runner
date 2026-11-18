@@ -14,6 +14,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/mathutil"
 	"gitlab.com/gitlab-org/gitlab-runner/session"
 )
 
@@ -194,7 +195,7 @@ func (b *buildsHelper) acquireRequest(runner *common.RunnerConfig) bool {
 
 	if runner.IsFeatureFlagOn(featureflags.UseAdaptiveRequestConcurrency) {
 		// concurrency is the adaptive concurrency value rounded up, between 1 and the max request concurrency
-		concurrency = min(max(1, int(math.Ceil(counter.adaptiveConcurrencyLimit))), runner.GetRequestConcurrency())
+		concurrency = mathutil.Clamp(int(math.Ceil(counter.adaptiveConcurrencyLimit)), 1, runner.GetRequestConcurrency())
 	}
 
 	counter.usedConcurrencyLimit = concurrency
@@ -226,7 +227,7 @@ func (b *buildsHelper) releaseRequest(runner *common.RunnerConfig, hasJob bool, 
 		default:
 			counter.adaptiveConcurrencyLimit *= concurrencyDecreaseFactor
 		}
-		counter.adaptiveConcurrencyLimit = min(max(1, counter.adaptiveConcurrencyLimit), float64(runner.GetRequestConcurrency()))
+		counter.adaptiveConcurrencyLimit = mathutil.Clamp(counter.adaptiveConcurrencyLimit, 1, float64(runner.GetRequestConcurrency()))
 	}
 
 	if counter.requests > 0 {
