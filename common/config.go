@@ -1570,6 +1570,7 @@ type RunnerSettings struct {
 type RunnerConfig struct {
 	Name                string `toml:"name" json:"name" short:"name" long:"description" env:"RUNNER_NAME" description:"Runner name"`
 	Limit               int    `toml:"limit,omitzero" json:"limit" long:"limit" env:"RUNNER_LIMIT" description:"Maximum number of builds processed by this runner"`
+	Concurrency         int    `toml:"concurrency,omitzero" json:"concurrency,omitempty" description:"Alias for limit"`
 	OutputLimit         int    `toml:"output_limit,omitzero" long:"output-limit" env:"RUNNER_OUTPUT_LIMIT" description:"Maximum build trace size in kilobytes"`
 	RequestConcurrency  int    `toml:"request_concurrency,omitzero" long:"request-concurrency" env:"RUNNER_REQUEST_CONCURRENCY" description:"Maximum concurrency for job requests" jsonschema:"min=1"`
 	StrictCheckInterval *bool  `toml:"strict_check_interval,omitzero" json:",omitempty" long:"strict-check-interval" env:"RUNNER_STRICT_CHECK_INTERVAL" description:"When you set StrictCheckInterval to true, the runner disables the faster-than-check_interval re-polling loop that occurs when a runner receives a job. Instead, the runner waits <check_interval> seconds before it polls again, even if additional jobs are available."`
@@ -1685,6 +1686,7 @@ type Config struct {
 	Labels Labels `toml:"labels,omitempty" json:"labels,omitempty" description:"Default custom labels for all runners."`
 
 	Concurrent             int             `toml:"concurrent" json:"concurrent"`
+	Concurrency            int             `toml:"concurrency,omitzero" json:"concurrency,omitempty" description:"Alias for concurrent"`
 	CheckInterval          int             `toml:"check_interval" json:"check_interval" description:"Define active checking interval of jobs"`
 	LogLevel               *string         `toml:"log_level" json:"log_level,omitempty" description:"Define log level (one of: panic, fatal, error, warning, info, debug)"`
 	LogFormat              *string         `toml:"log_format" json:"log_format,omitempty" description:"Define log format (one of: runner, text, json)"`
@@ -2874,6 +2876,56 @@ func (c *Config) StatConfig(configFile string) error {
 	return nil
 }
 
+type runnerMeta struct {
+	hasLimit       bool
+	hasConcurrency bool
+}
+
+func parseRunnerMeta(data []byte) []runnerMeta {
+	var shadow struct {
+		Runners []struct {
+			Limit       *int `toml:"limit"`
+			Concurrency *int `toml:"concurrency"`
+		} `toml:"runners"`
+	}
+	if _, err := toml.Decode(string(data), &shadow); err != nil {
+		return nil
+	}
+
+	runnerMetas := make([]runnerMeta, len(shadow.Runners))
+	for i, r := range shadow.Runners {
+		runnerMetas[i] = runnerMeta{hasLimit: r.Limit != nil, hasConcurrency: r.Concurrency != nil}
+	}
+	return runnerMetas
+}
+
+func (c *Config) applyGlobalConcurrencyAlias(meta toml.MetaData) {
+	if meta.IsDefined("concurrent") && meta.IsDefined("concurrency") {
+		logrus.Warning("Both 'concurrent' and 'concurrency' are defined in config.toml; 'concurrent' takes precedence")
+	} else if !meta.IsDefined("concurrent") && meta.IsDefined("concurrency") {
+		c.Concurrent = c.Concurrency
+	}
+	c.Concurrency = 0
+}
+
+func (c *Config) loadRunners(runnerMetas []runnerMeta) error {
+	if len(runnerMetas) != len(c.Runners) {
+		runnerMetas = nil
+	}
+
+	for i, r := range c.Runners {
+		var hasLimit, hasConcurrency bool
+		if i < len(runnerMetas) {
+			hasLimit = runnerMetas[i].hasLimit
+			hasConcurrency = runnerMetas[i].hasConcurrency
+		}
+		if err := r.loadConfig(c, hasLimit, hasConcurrency); err != nil {
+			return fmt.Errorf("loading configuration for %s runner: %w", r.Name, err)
+		}
+	}
+	return nil
+}
+
 func (c *Config) LoadConfig(configFile string) error {
 	info, err := os.Stat(configFile)
 
@@ -2884,9 +2936,17 @@ func (c *Config) LoadConfig(configFile string) error {
 		return err
 	}
 
-	if _, err = toml.DecodeFile(configFile, c); err != nil {
+	data, err := os.ReadFile(configFile)
+	if err != nil {
+		return fmt.Errorf("reading configuration file: %w", err)
+	}
+
+	var meta toml.MetaData
+	if meta, err = toml.Decode(string(data), c); err != nil {
 		return fmt.Errorf("decoding configuration file: %w", err)
 	}
+
+	c.applyGlobalConcurrencyAlias(meta)
 
 	// Fall back to the SENTRY_DSN environment variable when sentry_dsn is not
 	// set in the config file. The config file value takes precedence.
@@ -2896,11 +2956,8 @@ func (c *Config) LoadConfig(configFile string) error {
 		}
 	}
 
-	for _, r := range c.Runners {
-		err := r.loadConfig(c)
-		if err != nil {
-			return fmt.Errorf("loading configuration for %s runner: %w", r.Name, err)
-		}
+	if err := c.loadRunners(parseRunnerMeta(data)); err != nil {
+		return err
 	}
 
 	// config built-in validation is blocking when doesn't pass
@@ -2921,7 +2978,19 @@ func (c *Config) LoadConfig(configFile string) error {
 	return nil
 }
 
-func (c *RunnerConfig) loadConfig(globalCfg *Config) error {
+func (c *RunnerConfig) applyConcurrencyAlias(hasLimit, hasConcurrency bool) {
+	limitSet := hasLimit || c.Limit > 0
+	concurrencySet := hasConcurrency || c.Concurrency > 0
+
+	if limitSet && concurrencySet {
+		c.Log().Warning("Both 'limit' and 'concurrency' are defined for runner; 'limit' takes precedence")
+	} else if !limitSet && concurrencySet {
+		c.Limit = c.Concurrency
+	}
+	c.Concurrency = 0
+}
+
+func (c *RunnerConfig) loadConfig(globalCfg *Config, hasLimit, hasConcurrency bool) error {
 	// Expand environment variables in credentials
 	c.Token = os.ExpandEnv(c.Token)
 	c.URL = os.ExpandEnv(c.URL)
@@ -2943,6 +3012,8 @@ func (c *RunnerConfig) loadConfig(globalCfg *Config) error {
 				Info("job_router_url is set; connecting to it instead of the Job Router address GitLab advertises")
 		}
 	}
+
+	c.applyConcurrencyAlias(hasLimit, hasConcurrency)
 
 	if c.Machine != nil {
 		err := c.Machine.CompilePeriods()

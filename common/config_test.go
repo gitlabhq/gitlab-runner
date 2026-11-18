@@ -23,6 +23,7 @@ import (
 
 	"gitlab.com/gitlab-org/gitlab-runner/cache/cacheconfig"
 	"gitlab.com/gitlab-org/gitlab-runner/common/spec"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/process"
 )
@@ -3212,6 +3213,256 @@ concurrent = 1
 			}
 		})
 	}
+}
+
+func TestLoadConfig_ConcurrencyAlias(t *testing.T) {
+	tests := map[string]struct {
+		configContent      string
+		expectedConcurrent int
+		expectedLimit      int
+		expectedWarnings   []string
+	}{
+		"global concurrency alias mapped to Concurrent": {
+			configContent: `
+concurrency = 2
+[[runners]]
+  name = "runner-1"
+  url = "https://gitlab.example.com"
+  token = "token-1"
+`,
+			expectedConcurrent: 2,
+			expectedLimit:      0,
+		},
+		"runner concurrency alias mapped to Limit": {
+			configContent: `
+concurrent = 4
+[[runners]]
+  name = "runner-1"
+  url = "https://gitlab.example.com"
+  token = "token-1"
+  concurrency = 1
+`,
+			expectedConcurrent: 4,
+			expectedLimit:      1,
+		},
+		"both global and runner concurrency aliases mapped": {
+			configContent: `
+concurrency = 3
+[[runners]]
+  name = "runner-1"
+  url = "https://gitlab.example.com"
+  token = "token-1"
+  concurrency = 1
+`,
+			expectedConcurrent: 3,
+			expectedLimit:      1,
+		},
+		"canonical concurrent and limit take precedence": {
+			configContent: `
+concurrent = 5
+concurrency = 2
+[[runners]]
+  name = "runner-1"
+  url = "https://gitlab.example.com"
+  token = "${TEST_RUNNER_TOKEN}"
+  limit = 3
+  concurrency = 1
+`,
+			expectedConcurrent: 5,
+			expectedLimit:      3,
+			expectedWarnings: []string{
+				"Both 'concurrent' and 'concurrency' are defined in config.toml; 'concurrent' takes precedence",
+				"Both 'limit' and 'concurrency' are defined for runner; 'limit' takes precedence",
+			},
+		},
+		"explicit limit = 0 takes precedence over concurrency alias": {
+			configContent: `
+concurrent = 5
+[[runners]]
+  name = "runner-1"
+  url = "https://gitlab.example.com"
+  token = "${TEST_RUNNER_TOKEN}"
+  limit = 0
+  concurrency = 3
+`,
+			expectedConcurrent: 5,
+			expectedLimit:      0,
+			expectedWarnings: []string{
+				"Both 'limit' and 'concurrency' are defined for runner; 'limit' takes precedence",
+			},
+		},
+		"runner concurrency alias set to 0": {
+			configContent: `
+concurrent = 5
+[[runners]]
+  name = "runner-1"
+  url = "https://gitlab.example.com"
+  token = "${TEST_RUNNER_TOKEN}"
+  concurrency = 0
+`,
+			expectedConcurrent: 5,
+			expectedLimit:      0,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Setenv("TEST_RUNNER_TOKEN", "glrt-real-token-123456")
+			hook := logrustest.NewGlobal()
+			t.Cleanup(func() { logrus.StandardLogger().ReplaceHooks(make(logrus.LevelHooks)) })
+
+			tempFile, err := os.CreateTemp(t.TempDir(), "test_config_*.toml")
+			require.NoError(t, err)
+			defer tempFile.Close()
+
+			_, err = tempFile.WriteString(tc.configContent)
+			require.NoError(t, err)
+
+			cfg := NewConfig()
+			err = cfg.LoadConfig(tempFile.Name())
+			require.NoError(t, err)
+
+			assert.Equal(t, tc.expectedConcurrent, cfg.Concurrent)
+			require.Len(t, cfg.Runners, 1)
+			assert.Equal(t, tc.expectedLimit, cfg.Runners[0].Limit)
+
+			var msgs []string
+			for _, entry := range hook.AllEntries() {
+				if entry.Level == logrus.WarnLevel {
+					msgs = append(msgs, entry.Message)
+					if entry.Message == "Both 'limit' and 'concurrency' are defined for runner; 'limit' takes precedence" {
+						assert.Equal(t, helpers.ShortenToken("glrt-real-token-123456"), entry.Data["runner"])
+					}
+				}
+			}
+			assert.Equal(t, tc.expectedWarnings, msgs)
+		})
+	}
+}
+
+func TestLoadConfig_ConcurrencyAlias_InlineRunners(t *testing.T) {
+	configContent := `
+concurrent = 4
+runners = [
+  {name = "runner-a", url = "https://gitlab.example.com", token = "token-1", concurrency = 3},
+  {name = "runner-b", url = "https://gitlab.example.com", token = "token-2", limit = 0}
+]
+`
+	hook := logrustest.NewGlobal()
+	t.Cleanup(func() { logrus.StandardLogger().ReplaceHooks(make(logrus.LevelHooks)) })
+
+	tempFile, err := os.CreateTemp(t.TempDir(), "test_config_*.toml")
+	require.NoError(t, err)
+	defer tempFile.Close()
+
+	_, err = tempFile.WriteString(configContent)
+	require.NoError(t, err)
+
+	cfg := NewConfig()
+	err = cfg.LoadConfig(tempFile.Name())
+	require.NoError(t, err)
+
+	assert.Equal(t, 4, cfg.Concurrent)
+	require.Len(t, cfg.Runners, 2)
+	assert.Equal(t, 3, cfg.Runners[0].Limit)
+	assert.Equal(t, 0, cfg.Runners[1].Limit)
+
+	var msgs []string
+	for _, entry := range hook.AllEntries() {
+		if entry.Level == logrus.WarnLevel {
+			msgs = append(msgs, entry.Message)
+		}
+	}
+	assert.Empty(t, msgs)
+}
+
+func TestLoadConfig_ConcurrencyAlias_InlineRunnersExplicitLimitZero(t *testing.T) {
+	configContent := `
+concurrent = 4
+runners = [
+  {name = "runner-a", url = "https://gitlab.example.com", token = "token-1"},
+  {name = "runner-b", url = "https://gitlab.example.com", token = "token-2", limit = 0, concurrency = 3}
+]
+`
+
+	tempFile := filepath.Join(t.TempDir(), "config.toml")
+	require.NoError(t, os.WriteFile(tempFile, []byte(configContent), 0o600))
+
+	cfg := NewConfig()
+	require.NoError(t, cfg.LoadConfig(tempFile))
+
+	require.Len(t, cfg.Runners, 2)
+	assert.Equal(t, 0, cfg.Runners[0].Limit)
+	assert.Equal(t, 0, cfg.Runners[1].Limit)
+}
+
+func TestLoadRunners_ConcurrencyAliasWithoutMeta(t *testing.T) {
+	cfg := NewConfig()
+	cfg.Runners = []*RunnerConfig{
+		{Name: "alias-only", RunnerSettings: RunnerSettings{Executor: "shell"}, Concurrency: 2},
+		{Name: "both", RunnerSettings: RunnerSettings{Executor: "shell"}, Limit: 4, Concurrency: 2},
+	}
+
+	require.NoError(t, cfg.loadRunners(nil))
+
+	assert.Equal(t, 2, cfg.Runners[0].Limit)
+	assert.Equal(t, 4, cfg.Runners[1].Limit)
+	assert.Zero(t, cfg.Runners[0].Concurrency)
+	assert.Zero(t, cfg.Runners[1].Concurrency)
+}
+
+func TestSaveConfig_NoConcurrencyKey(t *testing.T) {
+	hook := logrustest.NewGlobal()
+	t.Cleanup(func() { logrus.StandardLogger().ReplaceHooks(make(logrus.LevelHooks)) })
+
+	tempFile, err := os.CreateTemp(t.TempDir(), "test_config_*.toml")
+	require.NoError(t, err)
+	defer tempFile.Close()
+
+	initialConfig := `
+concurrency = 3
+[[runners]]
+  name = "runner-1"
+  url = "https://gitlab.example.com"
+  token = "token-1"
+  concurrency = 2
+  [runners.docker]
+    image = "alpine"
+[[runners]]
+  name = "runner-2"
+  url = "https://gitlab.example.com"
+  token = "token-2"
+  limit = 4
+`
+	_, err = tempFile.WriteString(initialConfig)
+	require.NoError(t, err)
+
+	cfg := NewConfig()
+	err = cfg.LoadConfig(tempFile.Name())
+	require.NoError(t, err)
+
+	err = cfg.SaveConfig(tempFile.Name())
+	require.NoError(t, err)
+
+	savedBytes, err := os.ReadFile(tempFile.Name())
+	require.NoError(t, err)
+	assert.NotContains(t, string(savedBytes), "concurrency")
+
+	reloadedCfg := NewConfig()
+	err = reloadedCfg.LoadConfig(tempFile.Name())
+	require.NoError(t, err)
+	assert.Equal(t, 3, reloadedCfg.Concurrent)
+	require.Len(t, reloadedCfg.Runners, 2)
+	assert.Equal(t, 2, reloadedCfg.Runners[0].Limit)
+	assert.Equal(t, 4, reloadedCfg.Runners[1].Limit)
+
+	var msgs []string
+	for _, entry := range hook.AllEntries() {
+		if entry.Level == logrus.WarnLevel {
+			msgs = append(msgs, entry.Message)
+		}
+	}
+	assert.Empty(t, msgs)
 }
 
 func TestLoadConfig_ExpandsEnvironmentVariables(t *testing.T) {
