@@ -818,16 +818,17 @@ You can configure pods and containers to control how jobs are executed.
 
 The following annotations are added by default on the Pod running the jobs:
 
-| Key                                | Description |
-|------------------------------------|-------------|
-| `job.runner.gitlab.com/id`         | The ID of the job, unique across all jobs in the GitLab instance. |
-| `job.runner.gitlab.com/url`        | The URL for the job details. |
-| `job.runner.gitlab.com/sha`        | The commit revision the project is built for. |
-| `job.runner.gitlab.com/before_sha` | The previous latest commit present on a branch or tag. |
-| `job.runner.gitlab.com/ref`        | The branch or tag name for which the project is built. |
-| `job.runner.gitlab.com/name`       | The name of the job. |
-| `job.runner.gitlab.com/timeout`    | The job execution timeout in the time duration format. For example, `2h3m0.5s`. |
-| `project.runner.gitlab.com/id`     | The project ID of the job. |
+| Key                                   | Description |
+|---------------------------------------|-------------|
+| `job.runner.gitlab.com/id`            | The ID of the job, unique across all jobs in the GitLab instance. |
+| `job.runner.gitlab.com/url`           | The URL for the job details. |
+| `job.runner.gitlab.com/sha`           | The commit revision the project is built for. |
+| `job.runner.gitlab.com/before_sha`    | The previous latest commit present on a branch or tag. |
+| `job.runner.gitlab.com/ref`           | The branch or tag name for which the project is built. |
+| `job.runner.gitlab.com/name`          | The name of the job. |
+| `job.runner.gitlab.com/timeout`       | The job execution timeout in the time duration format. For example, `2h3m0.5s`. |
+| `project.runner.gitlab.com/id`        | The project ID of the job. |
+| `project.runner.gitlab.com/full-path` | The full path of the project, including its namespace. For example, `gitlab-org/gitlab-runner`. |
 
 To overwrite default annotations, use the `pod_annotations` in the GitLab Runner configuration.
 You can also overwrite annotations for each CI/CD job in the [`.gitlab-ci.yml` file](#overwrite-pod-annotations).

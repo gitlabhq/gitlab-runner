@@ -2785,14 +2785,15 @@ func (s *executor) createPodConfigPrepareOpts(initContainers []api.Container) (p
 // legacy and Concrete pod-assembly paths.
 func (s *executor) buildPodAnnotations() map[string]string {
 	annotations := map[string]string{
-		"job." + runnerLabelNamespace + "/id":         strconv.FormatInt(s.Build.ID, 10),
-		"job." + runnerLabelNamespace + "/url":        s.Build.JobURL(),
-		"job." + runnerLabelNamespace + "/sha":        s.Build.GitInfo.Sha,
-		"job." + runnerLabelNamespace + "/before_sha": s.Build.GitInfo.BeforeSha,
-		"job." + runnerLabelNamespace + "/ref":        s.Build.GitInfo.Ref,
-		"job." + runnerLabelNamespace + "/name":       s.Build.JobInfo.Name,
-		"job." + runnerLabelNamespace + "/timeout":    s.Build.GetBuildTimeout().String(),
-		"project." + runnerLabelNamespace + "/id":     strconv.FormatInt(s.Build.JobInfo.ProjectID, 10),
+		"job." + runnerLabelNamespace + "/id":            strconv.FormatInt(s.Build.ID, 10),
+		"job." + runnerLabelNamespace + "/url":           s.Build.JobURL(),
+		"job." + runnerLabelNamespace + "/sha":           s.Build.GitInfo.Sha,
+		"job." + runnerLabelNamespace + "/before_sha":    s.Build.GitInfo.BeforeSha,
+		"job." + runnerLabelNamespace + "/ref":           s.Build.GitInfo.Ref,
+		"job." + runnerLabelNamespace + "/name":          s.Build.JobInfo.Name,
+		"job." + runnerLabelNamespace + "/timeout":       s.Build.GetBuildTimeout().String(),
+		"project." + runnerLabelNamespace + "/id":        strconv.FormatInt(s.Build.JobInfo.ProjectID, 10),
+		"project." + runnerLabelNamespace + "/full-path": s.Build.JobInfo.ProjectFullPath,
 	}
 	for key, val := range s.configurationOverwrites.podAnnotations {
 		annotations[key] = s.Build.Variables.ExpandValue(val)
