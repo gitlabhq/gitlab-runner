@@ -155,10 +155,10 @@ Use `GIT_STRATEGY: fetch` only when you trust all users who have access to the s
 
 ### Reduce the security risk of using privileged containers
 
-If you must run CI/CD jobs that require the use of Docker's `--privileged` flag, you can take these steps to reduce the security risk:
+If you must run CI/CD jobs that require the use of the Docker `--privileged` flag, you can take these steps to reduce the security risk:
 
 - Run Docker containers with the `--privileged` flag enabled only on isolated and ephemeral virtual machines.
-- Configure dedicated runners that are meant to execute jobs that require the use of Docker's `--privileged` flag. Then configure these runners to execute jobs only on protected branches.
+- Configure dedicated runners that are meant to execute jobs that require the use of the Docker `--privileged` flag. Then configure these runners to execute jobs only on protected branches.
 
 ### Network segmentation
 
