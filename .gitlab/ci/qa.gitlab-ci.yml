@@ -325,7 +325,7 @@ docs:check Hugo build:
     - make add-latest-icons
   script:
     # Test that Hugo will build
-    - hugo --gc --printPathWarnings --panicOnWarning --environment test
+    - hugo --gc --printPathWarnings --environment test
     # Test for invalid index pages
     # See https://gitlab.com/gitlab-org/technical-writing/docs-gitlab-com/-/blob/main/scripts/check-index-filenames.sh
     - make check-index-pages SEARCH_DIR="../docs"

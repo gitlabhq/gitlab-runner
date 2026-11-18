@@ -69,7 +69,19 @@ the `coordinator` (GitLab installation through GitLab API).
 
 ## Where are logs stored when run as a service on Windows?
 
-- If GitLab Runner is running as a service on Windows, it creates system event logs. To view them, open the Event Viewer (from the Run menu, type `eventvwr.msc` or search for "Event Viewer"). Then go to **Windows Logs > Application**. The **Source** for Runner logs is `gitlab-runner`. If you are using Windows Server Core, run this PowerShell command to get the last 20 log entries: `get-eventlog Application -Source gitlab-runner -Newest 20 | format-table -wrap -auto`.
+If GitLab Runner is running as a service on Windows, it creates system event logs.
+
+To view them:
+
+1. Open the Event Viewer. From the Run menu, type `eventvwr.msc` or search for "Event Viewer".
+1. Go to **Windows Logs** > **Application**.
+
+The **Source** for Runner logs is `gitlab-runner`. If you are using Windows Server Core,
+run this PowerShell command to get the last 20 log entries:
+
+```shell
+get-eventlog Application -Source gitlab-runner -Newest 20 | format-table -wrap -auto
+```
 
 ## Enable debug logging mode
 
