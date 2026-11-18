@@ -3,6 +3,8 @@ package variables
 import (
 	"slices"
 	"strconv"
+
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/mathutil"
 )
 
 type Provider interface {
@@ -41,5 +43,5 @@ func DefaultIntClamp(v Provider, key string, defaultValue, lo, hi int) int {
 	if err != nil {
 		val = defaultValue
 	}
-	return min(max(val, lo), hi)
+	return mathutil.Clamp(val, lo, hi)
 }

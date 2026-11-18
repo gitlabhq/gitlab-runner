@@ -15,6 +15,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/cache"
 	"gitlab.com/gitlab-org/gitlab-runner/cache/cacheconfig"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/mathutil"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	v4 "github.com/aws/aws-sdk-go-v2/aws/signer/v4"
@@ -343,7 +344,7 @@ func (c *s3Client) FetchCredentialsForRole(ctx context.Context, roleARN, bucketN
 	// the entire transfer (at least `timeout`), but cap at 55 minutes so
 	// that cache hits are always possible within the 1-hour session lifetime,
 	// regardless of how large `timeout` is configured.
-	minValidity := min(max(timeout, time.Minute), 55*time.Minute)
+	minValidity := mathutil.Clamp(timeout, time.Minute, 55*time.Minute)
 	credKey := assumeRoleCacheKey(roleARN, bucketName, objectName, upload)
 
 	// Fast path: return cached credentials without touching the semaphore.
