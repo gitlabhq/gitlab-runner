@@ -1074,6 +1074,106 @@ func TestCacheExtractorPresignedParallelTransferFailsOnChunkError(t *testing.T) 
 	assert.NoFileExists(t, cacheExtractorArchive)
 }
 
+// TestCacheExtractorPresignedParallelTransferIfMatch covers the ETag the bytes=0-0 probe reads. A
+// strong ETag goes in If-Match on every chunk request, so a store that replaced the object after
+// the probe answers 412 instead of the new version's bytes: the parallel download stops and the
+// extractor makes one sequential GET, which downloads a single version. A weak ETag never matches
+// If-Match and a store that sends none gives nothing to match, so then no chunk carries If-Match
+// and the parallel download works as before.
+func TestCacheExtractorPresignedParallelTransferIfMatch(t *testing.T) {
+	tests := map[string]struct {
+		etag string
+		// replaced answers every chunk from offset 32 on, and a GET without Range, from a new
+		// version of the object with ETag "v2", as a store does once another job uploaded the
+		// same cache key during the download.
+		replaced       bool
+		wantIfMatch    string
+		wantSequential int64
+	}{
+		"strong ETag": {
+			etag:        `"v1"`,
+			wantIfMatch: `"v1"`,
+		},
+		"strong ETag, object replaced during the download": {
+			etag:           `"v1"`,
+			replaced:       true,
+			wantIfMatch:    `"v1"`,
+			wantSequential: 1,
+		},
+		"weak ETag": {
+			etag: `W/"v1"`,
+		},
+		"no ETag": {},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Setenv(featureflags.UseParallelCacheTransfer, "true")
+			cdTempDir(t)
+
+			original := parallelTestZipBytes(t)
+			require.Greater(t, len(original), 32, "payload should span multiple parallel chunks")
+			replacement := bytes.Repeat([]byte{'2'}, len(original))
+			want := original
+			if tc.replaced {
+				want = replacement
+			}
+
+			lm := time.Date(2020, 5, 1, 12, 0, 0, 0, time.UTC).Format(http.TimeFormat)
+			var chunks, chunksAsWanted, sequential atomic.Int64
+			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				body, etag := original, tc.etag
+				start, end, ok := parseBytesRangeHeader(r.Header.Get("Range"))
+				if tc.replaced && (!ok || start >= 32) {
+					body, etag = replacement, `"v2"`
+				}
+				if etag != "" {
+					w.Header().Set("ETag", etag)
+				}
+				w.Header().Set("Last-Modified", lm)
+
+				if !ok {
+					sequential.Add(1)
+					_, _ = w.Write(body)
+					return
+				}
+				if r.Header.Get("Range") != "bytes=0-0" {
+					chunks.Add(1)
+					if r.Header.Get("If-Match") == tc.wantIfMatch {
+						chunksAsWanted.Add(1)
+					}
+				}
+				// If-Match compares entity tags strongly, so a weak one never matches.
+				if m := r.Header.Get("If-Match"); m != "" && (m != etag || strings.HasPrefix(etag, "W/")) {
+					w.WriteHeader(http.StatusPreconditionFailed)
+					return
+				}
+				w.Header().Set("Content-Range", fmt.Sprintf("bytes %d-%d/%d", start, end, len(body)))
+				w.WriteHeader(http.StatusPartialContent)
+				_, _ = w.Write(body[start : end+1])
+			}))
+			t.Cleanup(ts.Close)
+
+			cmd := CacheExtractorCommand{
+				File:               cacheExtractorArchive,
+				URL:                ts.URL + "/cache.zip",
+				ChunkSize:          7,
+				Concurrency:        4,
+				TransferBufferSize: defaultCacheTransferBufferSize,
+			}
+
+			require.NoError(t, cmd.handlePresignedURL())
+			require.Positive(t, chunks.Load(), "the extractor should have made chunk requests")
+			assert.Equal(t, chunks.Load(), chunksAsWanted.Load(), "every chunk request should carry If-Match %q", tc.wantIfMatch)
+			assert.Equal(t, tc.wantSequential, sequential.Load(), "sequential GETs")
+
+			got, err := os.ReadFile(cacheExtractorArchive)
+			require.NoError(t, err)
+			assert.Equal(t, want, got)
+		})
+	}
+}
+
 // TestCacheExtractorGoCloudParallelTransfer exercises handleGoCloudURL with FF_USE_PARALLEL_CACHE_TRANSFER, range probe, and parallel NewRangeReader + WriteAt.
 func TestCacheExtractorGoCloudParallelTransfer(t *testing.T) {
 	t.Setenv(featureflags.UseParallelCacheTransfer, "true")

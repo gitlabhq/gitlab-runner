@@ -1219,11 +1219,15 @@ type artifactChunkFile interface {
 // example when dest does not implement artifactChunkFile. A failed attempt empties dest for that
 // stream first. When it cannot, the error says so, and the caller must not write the stream into dest.
 // locationURL may be a presigned URL (auth in query string); it is used as-is for HEAD and all GETs (including Range), which is correct.
+// etag is the ETag of the caller's probe. When it is strong, every chunk GET sends it in If-Match, so an
+// object store that replaced the object since the probe answers 412, which fails the parallel download,
+// rather than bytes of another version. Without a strong ETag the chunks are not conditional.
 func (n *GitLabClient) tryArtifactParallelDownload(
 	ctx context.Context,
 	config requestCredentials,
 	locationURL string,
 	contentLength int64,
+	etag string,
 	log logrus.FieldLogger,
 	dest io.WriteCloser,
 ) (bool, error) {
@@ -1237,16 +1241,22 @@ func (n *GitLabClient) tryArtifactParallelDownload(
 		log.Infoln("Artifact download: file size <=", artifactParallelChunkSize/(1024*1024), "MiB (chunk size), using single download stream")
 		return false, nil
 	}
+	ifMatch := transfer.StrongETag(etag)
 	fetchChunk := func(offset, length int64) (io.ReadCloser, error) {
 		rangeHeaders := http.Header{"Range": []string{fmt.Sprintf("bytes=%d-%d", offset, offset+length-1)}}
+		if ifMatch {
+			rangeHeaders.Set("If-Match", etag)
+		}
 		resp, err := cli.do(ctx, locationURL, http.MethodGet, nil, "", rangeHeaders)
 		if err != nil {
 			return nil, err
 		}
-		// Anything but a 206 for exactly this range (a 200 full body, or a 206
-		// for another range) would put the wrong bytes at this chunk's offset.
-		wantRange := fmt.Sprintf("bytes %d-%d/", offset, offset+length-1)
-		if resp.StatusCode != http.StatusPartialContent || !strings.HasPrefix(resp.Header.Get("Content-Range"), wantRange) {
+		// Anything but a 206 for exactly this range of an object of contentLength
+		// bytes (a 200 full body, a 206 for another range, or one from a version
+		// of another size) would put the wrong bytes at this chunk's offset. A
+		// version of the same size is caught only by If-Match.
+		wantRange := fmt.Sprintf("bytes %d-%d/%d", offset, offset+length-1, contentLength)
+		if resp.StatusCode != http.StatusPartialContent || resp.Header.Get("Content-Range") != wantRange {
 			_ = resp.Body.Close()
 			return nil, fmt.Errorf("range request failed: %s", resp.Status)
 		}
@@ -1391,7 +1401,7 @@ func (n *GitLabClient) DownloadArtifacts(
 					// Drain probe body before Close so the connection can be reused (see transfer.RangeProbeBodyMaxDiscard).
 					_, _ = io.Copy(io.Discard, io.LimitReader(probeResp.Body, transfer.RangeProbeBodyMaxDiscard))
 					_ = probeResp.Body.Close()
-					done, err := n.tryArtifactParallelDownload(ctx, &config, location, contentLength, log, artifactsFile)
+					done, err := n.tryArtifactParallelDownload(ctx, &config, location, contentLength, probeResp.Header.Get("ETag"), log, artifactsFile)
 					if err != nil {
 						log.WithError(err).Errorln("Downloading artifacts from coordinator...", "error")
 						return common.DownloadFailed

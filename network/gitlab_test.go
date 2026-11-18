@@ -3273,7 +3273,7 @@ func tryArtifactParallelDownloadFrom(t *testing.T, serverURL string, size int, d
 	require.NoError(t, err)
 	cli.ensureTLSConfig()
 
-	done, err := c.tryArtifactParallelDownload(t.Context(), credentials, serverURL+"/artifacts.zip", int64(size), log, dest)
+	done, err := c.tryArtifactParallelDownload(t.Context(), credentials, serverURL+"/artifacts.zip", int64(size), "", log, dest)
 	require.NoError(t, err)
 	return done
 }
@@ -3307,8 +3307,10 @@ func TestTryArtifactParallelDownload(t *testing.T) {
 
 // TestTryArtifactParallelDownloadRejectsChunkOutsideRange covers an object store that honors the
 // first chunk Range GET but answers every chunk after the first with bytes from elsewhere in the
-// object. Written at the chunk offset, they would corrupt the artifact, so the parallel download
-// must report failure and leave the object to the single download stream.
+// object, or with the requested range of an object whose size is not the one the probe read, as a
+// store with no strong ETag does once the object was replaced by one of another size. Written at
+// the chunk offset, they would corrupt the artifact, so the parallel download must report failure
+// and leave the object to the single download stream.
 func TestTryArtifactParallelDownloadRejectsChunkOutsideRange(t *testing.T) {
 	tests := map[string]func(w http.ResponseWriter, payload []byte, start, end int){
 		"200 with the whole object": func(w http.ResponseWriter, payload []byte, _, _ int) {
@@ -3317,6 +3319,17 @@ func TestTryArtifactParallelDownloadRejectsChunkOutsideRange(t *testing.T) {
 		},
 		"206 for another range": func(w http.ResponseWriter, payload []byte, start, end int) {
 			writeArtifactRange(w, payload, 0, end-start)
+		},
+		"206 for this range of an object of another size": func(w http.ResponseWriter, payload []byte, start, end int) {
+			w.Header().Set("Content-Range", fmt.Sprintf("bytes %d-%d/%d", start, end, len(payload)+1))
+			w.WriteHeader(http.StatusPartialContent)
+			_, _ = w.Write(payload[start : end+1])
+		},
+		// Ten times the size is the probe's total followed by a 0, which a prefix match would accept.
+		"206 for this range of an object ten times the size": func(w http.ResponseWriter, payload []byte, start, end int) {
+			w.Header().Set("Content-Range", fmt.Sprintf("bytes %d-%d/%d", start, end, len(payload)*10))
+			w.WriteHeader(http.StatusPartialContent)
+			_, _ = w.Write(payload[start : end+1])
 		},
 		"206 without Content-Range": func(w http.ResponseWriter, payload []byte, start, end int) {
 			w.WriteHeader(http.StatusPartialContent)
@@ -3519,6 +3532,120 @@ func TestDownloadArtifactsParallelFailsWhenFileCannotBeEmptied(t *testing.T) {
 	assert.Equal(t, DownloadFailed, state)
 	assert.Positive(t, chunks.Load(), "DownloadArtifacts should have tried the parallel download")
 	assert.Zero(t, fullGets.Load(), "DownloadArtifacts should not write a single download stream over the failed attempt")
+}
+
+// TestDownloadArtifactsParallelIfMatch covers the ETag the bytes=0-0 probe of a direct download
+// reads. A strong ETag goes in If-Match on every chunk request, so an object store that replaced
+// the object after the probe answers 412 instead of the new version's bytes: the parallel download
+// fails and DownloadArtifacts makes one GET without Range, which downloads a single version. A
+// weak ETag never matches If-Match and a store that sends none gives nothing to match, so then no
+// chunk carries If-Match and the parallel download works as before.
+func TestDownloadArtifactsParallelIfMatch(t *testing.T) {
+	tests := map[string]struct {
+		etag string
+		// replaced answers every chunk after the first, and a GET without Range, from a new
+		// version of the object with ETag "v2", as a store does once the object was replaced.
+		replaced bool
+		// shorter makes the new version 1024 bytes long.
+		shorter     bool
+		wantIfMatch string
+		wantFullGet int64
+	}{
+		"strong ETag": {
+			etag:        `"v1"`,
+			wantIfMatch: `"v1"`,
+		},
+		"strong ETag, object replaced during the download": {
+			etag:        `"v1"`,
+			replaced:    true,
+			wantIfMatch: `"v1"`,
+			wantFullGet: 1,
+		},
+		"strong ETag, object replaced by a shorter one during the download": {
+			etag:        `"v1"`,
+			replaced:    true,
+			shorter:     true,
+			wantIfMatch: `"v1"`,
+			wantFullGet: 1,
+		},
+		"weak ETag": {
+			etag: `W/"v1"`,
+		},
+		"no ETag": {},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Setenv(featureflags.UseParallelArtifactTransfer, "true")
+
+			original := artifactRangePayload(2*artifactParallelChunkSize + 1024)
+			replacement := bytes.Repeat([]byte{'2'}, len(original))
+			if tc.shorter {
+				replacement = replacement[:1024]
+			}
+			want := original
+			if tc.replaced {
+				want = replacement
+			}
+
+			var chunks, chunksAsWanted, fullGets atomic.Int64
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.URL.Path == "/api/v4/jobs/10/artifacts" {
+					http.Redirect(w, r, "http://"+r.Host+"/artifacts.zip", http.StatusFound)
+					return
+				}
+
+				body, etag := original, tc.etag
+				start, end, ok := parseArtifactRange(r)
+				if tc.replaced && (r.Header.Get("Range") == "" || start > 0) {
+					body, etag = replacement, `"v2"`
+				}
+				if etag != "" {
+					w.Header().Set("ETag", etag)
+				}
+
+				switch {
+				case r.Header.Get("Range") == "":
+					fullGets.Add(1)
+					_, _ = w.Write(body)
+					return
+				case !ok:
+					http.Error(w, "invalid Range", http.StatusBadRequest)
+					return
+				}
+				if r.Header.Get("Range") != "bytes=0-0" {
+					chunks.Add(1)
+					if r.Header.Get("If-Match") == tc.wantIfMatch {
+						chunksAsWanted.Add(1)
+					}
+				}
+				// If-Match compares entity tags strongly, so a weak one never matches.
+				if m := r.Header.Get("If-Match"); m != "" && (m != etag || strings.HasPrefix(etag, "W/")) {
+					w.WriteHeader(http.StatusPreconditionFailed)
+					return
+				}
+				writeArtifactRange(w, body, start, end)
+			}))
+			defer server.Close()
+
+			path := filepath.Join(t.TempDir(), "artifacts.zip")
+			dest, err := os.Create(path)
+			require.NoError(t, err)
+			defer dest.Close()
+
+			directDownload := true
+			state := NewGitLabClient().DownloadArtifacts(JobCredentials{ID: 10, URL: server.URL, Token: "token"}, dest, &directDownload)
+
+			require.Equal(t, DownloadSucceeded, state)
+			require.Positive(t, chunks.Load(), "DownloadArtifacts should have made chunk requests")
+			assert.Equal(t, chunks.Load(), chunksAsWanted.Load(), "every chunk request should carry If-Match %q", tc.wantIfMatch)
+			assert.Equal(t, tc.wantFullGet, fullGets.Load(), "GETs without Range")
+
+			got, err := os.ReadFile(path)
+			require.NoError(t, err)
+			assert.True(t, bytes.Equal(want, got), "the file is not the expected version of the object (%d bytes, want %d)", len(got), len(want))
+		})
+	}
 }
 
 func TestRunnerVersion(t *testing.T) {
