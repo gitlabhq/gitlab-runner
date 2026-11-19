@@ -28,7 +28,7 @@ func (e *executor) Prepare(options common.ExecutorPrepareOptions) error {
 		if options.Config.Autoscaler.VMIsolation.Enabled || options.Config.Autoscaler.MaxUseCount == 1 {
 			e.SharedBuildsDir = false
 		} else {
-			e.BuildLogger.Warningln("use_common_build_dir has no effect: requires vm isolation or max_use_count = 1")
+			options.BuildLogger.Warningln("use_common_build_dir has no effect: requires vm isolation or max_use_count = 1")
 		}
 	}
 
