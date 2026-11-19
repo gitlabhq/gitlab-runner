@@ -222,7 +222,11 @@ func (c *clientJobTrace) ensureAllTraceSent() error {
 	return nil
 }
 
-func (c *clientJobTrace) finalUpdate() error {
+// finalUpdate flushes the trace and sends the final job status. When
+// ignoreTraceFailure is set, a trace flush failure no longer prevents the final
+// job status from being sent, so the job can still reach its final state with
+// a possibly incomplete trace.
+func (c *clientJobTrace) finalUpdate(ignoreTraceFailure bool) error {
 	// On final-update we want the Runner to fallback
 	// to default interval and make Rails to override it
 	c.setUpdateInterval(common.DefaultUpdateInterval)
@@ -230,9 +234,9 @@ func (c *clientJobTrace) finalUpdate() error {
 	for {
 		// Before sending update to ensure that trace is sent
 		// as `sendUpdate()` can force Runner to rewind trace
-		err := c.ensureAllTraceSent()
-		if err != nil {
-			return err
+		traceErr := c.ensureAllTraceSent()
+		if traceErr != nil && !ignoreTraceFailure {
+			return traceErr
 		}
 
 		switch c.sendUpdate() {
@@ -243,9 +247,17 @@ func (c *clientJobTrace) finalUpdate() error {
 		case common.UpdateNotFound:
 			return nil
 		case common.UpdateAcceptedButNotCompleted:
+			// Keep polling without counting against the retry limit, even
+			// when the trace is incomplete: GitLab bounds how long it
+			// answers 202 before it accepts the final job status.
 			time.Sleep(c.getUpdateInterval())
 		case common.UpdateTraceValidationFailed:
 			time.Sleep(c.getUpdateInterval())
+			if traceErr != nil {
+				// Count this against the retry limit, as the trace
+				// can't be sent to satisfy the request.
+				return traceErr
+			}
 		case common.UpdateFailed:
 			time.Sleep(c.getUpdateInterval())
 			return ErrInvalidUpdateJobResponse
@@ -264,15 +276,27 @@ func (c *clientJobTrace) Finish() {
 func (c *clientJobTrace) finishWithFinalUpdate() error {
 	c.buffer.Finish()
 	c.finished <- true
-	err := retry.NewNoValue(
-		retry.New().
-			WithMaxTries(c.finalUpdateRetryLimit).
-			WithBackoff(time.Second, c.finalUpdateBackoffMax),
-		c.finalUpdate,
-	).Run()
+	err := c.retryFinalUpdate(false)
+	if errors.Is(err, ErrInvalidPatchTraceResponse) {
+		// The trace could not be sent within the retry limit. Send the final
+		// job status anyway, so that the job doesn't stay running until it
+		// times out. The trace may be incomplete; the checksum and bytesize in
+		// the update let GitLab detect it if it is.
+		c.log.WithError(err).Warningln("Could not confirm the complete job trace was sent, sending final job status; the trace may be incomplete")
+		err = c.retryFinalUpdate(true)
+	}
 	c.buffer.Close()
 
 	return err
+}
+
+func (c *clientJobTrace) retryFinalUpdate(ignoreTraceFailure bool) error {
+	return retry.NewNoValue(
+		retry.New().
+			WithMaxTries(c.finalUpdateRetryLimit).
+			WithBackoff(time.Second, c.finalUpdateBackoffMax),
+		func() error { return c.finalUpdate(ignoreTraceFailure) },
+	).Run()
 }
 
 // incrementalUpdate returns a flag if jobs is supposed

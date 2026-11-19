@@ -342,6 +342,73 @@ func TestJobFinishTraceUpdateRetry(t *testing.T) {
 	})
 }
 
+func TestJobFinalUpdateSentWhenTracePatchKeepsFailing(t *testing.T) {
+	const traceContent = "My trace send"
+
+	tests := map[string]struct {
+		updateResults []common.UpdateState
+		expectedErr   error
+	}{
+		"final update accepted": {
+			updateResults: []common.UpdateState{common.UpdateSucceeded},
+		},
+		"final update accepted after trace processing": {
+			updateResults: []common.UpdateState{common.UpdateAcceptedButNotCompleted, common.UpdateSucceeded},
+		},
+		"final update accepted after more trace processing responses than the retry limit": {
+			updateResults: []common.UpdateState{
+				common.UpdateAcceptedButNotCompleted,
+				common.UpdateAcceptedButNotCompleted,
+				common.UpdateAcceptedButNotCompleted,
+				common.UpdateSucceeded,
+			},
+		},
+		"final update keeps failing": {
+			updateResults: []common.UpdateState{common.UpdateFailed, common.UpdateFailed, common.UpdateFailed},
+			expectedErr:   ErrInvalidUpdateJobResponse,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			synctest.Test(t, func(t *testing.T) {
+				mockNetwork := common.NewMockNetwork(t)
+				ignoreOptionalTouchJob(mockNetwork)
+
+				b, err := newTestJobTrace(mockNetwork, jobConfig)
+				require.NoError(t, err)
+
+				b.finalUpdateRetryLimit = 3
+				b.finalUpdateBackoffMax = time.Second
+
+				// Simulate a transport-level error (for example EOF) on every trace PATCH
+				mockNetwork.On("PatchTrace", jobConfig, jobCredentials, mock.Anything, mock.Anything, false).
+					Return(common.NewPatchTraceResult(0, common.PatchFailed, 0))
+
+				finalUpdateMatcher := mock.MatchedBy(func(jobInfo common.UpdateJobInfo) bool {
+					return matchJobState(jobInfo, jobCredentials.ID, common.Success, "") &&
+						jobInfo.Output.Bytesize == len(traceContent)
+				})
+				for _, state := range tc.updateResults {
+					mockNetwork.On("UpdateJob", jobConfig, jobCredentials, finalUpdateMatcher).
+						Return(common.UpdateJobResult{State: state}).
+						Once()
+				}
+
+				b.start()
+				fmt.Fprint(b, traceContent)
+
+				err = b.Success()
+				if tc.expectedErr != nil {
+					assert.ErrorIs(t, err, tc.expectedErr)
+					return
+				}
+				assert.NoError(t, err)
+			})
+		})
+	}
+}
+
 func TestJobDelayedTraceProcessingWithRejection(t *testing.T) {
 	updateMatcher := generateJobInfoMatcher(jobCredentials.ID, common.Success, "")
 
