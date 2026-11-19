@@ -283,7 +283,7 @@ The relabel configuration:
 The following is an example metrics with runner identification:
 
 ```prometheus
-gitlab_runner_concurrent{runner_name="my-gitlab-runner"} 10
+gitlab_runner_concurrent{runner_name="my-gitlab-runner",system_id="s_c2d3e4f5g6h7"} 10
 gitlab_runner_jobs_running_total{runner_name="my-gitlab-runner"} 3
 ```
 
@@ -338,7 +338,7 @@ scrape_configs:
 This configuration adds runner identification to your metrics:
 
 ```prometheus
-gitlab_runner_concurrent{runner_name="production-runner-1"} 10
+gitlab_runner_concurrent{runner_name="production-runner-1",system_id="s_a1b2c3d4e5f6"} 10
 gitlab_runner_jobs_running_total{runner_name="staging-runner-1"} 3
 ```
 
