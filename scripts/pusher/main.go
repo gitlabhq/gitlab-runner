@@ -34,6 +34,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 
@@ -44,6 +45,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/layout"
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
+	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -277,7 +279,7 @@ func (c *RuntimeConfig) pushImage(ctx context.Context, componentName string, ima
 		}
 
 		now := time.Now()
-		if err := pusher.Push(ctx, ref, index); err != nil {
+		if err := pushWithRetry(ctx, pusher, ref, index); err != nil {
 			return fmt.Errorf("pushing image %v: %w", ref, err)
 		}
 		fmt.Printf("[%v] %v => %v@%s (%v)\n", archive, c.repo, tag, digest, time.Since(now))
@@ -289,6 +291,55 @@ func (c *RuntimeConfig) pushImage(ctx context.Context, componentName string, ima
 		ref:  digestRef,
 	}
 	return nil
+}
+
+const pushRetries = 3
+
+// pushRetryBackoff doubles after each retry.
+var pushRetryBackoff = 5 * time.Second
+
+// lostUploadSessionCodes mean the registry lost the upload session mid-push.
+// go-containerregistry retries a blob upload only on errors it deems
+// temporary, which excludes these; repeating the whole push opens a new
+// session and skips blobs already uploaded.
+var lostUploadSessionCodes = []transport.ErrorCode{
+	transport.BlobUploadUnknownErrorCode,
+	"RESUMABLE_BLOB_UPLOAD_INVALID",
+}
+
+// pushWithRetry repeats pusher.Push while it fails with a lost upload session.
+func pushWithRetry(ctx context.Context, pusher *remote.Pusher, ref name.Reference, t remote.Taggable) error {
+	backoff := pushRetryBackoff
+	for retry := 1; ; retry++ {
+		err := pusher.Push(ctx, ref, t)
+		if err == nil || retry > pushRetries || !isLostUploadSession(err) {
+			return err
+		}
+
+		fmt.Printf("retrying push of %v in %v (%d/%d): %v\n", ref, backoff, retry, pushRetries, err)
+
+		timer := time.NewTimer(backoff)
+		select {
+		case <-ctx.Done():
+			timer.Stop()
+			return errors.Join(err, ctx.Err())
+		case <-timer.C:
+		}
+		backoff *= 2
+	}
+}
+
+func isLostUploadSession(err error) bool {
+	var terr *transport.Error
+	if !errors.As(err, &terr) {
+		return false
+	}
+	for _, d := range terr.Errors {
+		if slices.Contains(lostUploadSessionCodes, d.Code) {
+			return true
+		}
+	}
+	return false
 }
 
 // subjectPushJobs matches remote.Pusher's default WithJobs concurrency.
@@ -309,7 +360,7 @@ func pushSubjectsFirst(ctx context.Context, pusher *remote.Pusher, repo name.Rep
 	for d, img := range imgs {
 		wg.Go(func() error {
 			ref := repo.Digest(d.String())
-			if err := pusher.Push(ctx, ref, img); err != nil {
+			if err := pushWithRetry(ctx, pusher, ref, img); err != nil {
 				return fmt.Errorf("pushing %s: %w", ref, err)
 			}
 			return nil
@@ -425,7 +476,7 @@ func (c *RuntimeConfig) pushIndex(
 			continue
 		}
 
-		if err := pusher.Push(ctx, idxRef, index); err != nil {
+		if err := pushWithRetry(ctx, pusher, idxRef, index); err != nil {
 			return fmt.Errorf("pushing image index %v: %w", idxRef, err)
 		}
 	}

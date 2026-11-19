@@ -23,6 +23,8 @@ variables:
   DEPENDENCY_SCANNING_DISABLED: "true"
   TRANSFER_METER_FREQUENCY: "5s"
   CACHE_COMPRESSION_FORMAT: tarzstd
+  # Retry transient network failures, e.g. "Connection reset by peer"
+  GET_SOURCES_ATTEMPTS: "3"
   # only the default branch pushes the Go cache, see workflow rules
   GO_CACHE_POLICY: pull
   GO111MODULE: "on"
