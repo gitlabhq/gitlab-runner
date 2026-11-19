@@ -414,42 +414,61 @@ func (m *machineProvider) findFreeExistingMachine(config *common.RunnerConfig) (
 	return m.findFreeMachine(true, machines...), nil
 }
 
-func (m *machineProvider) useMachine(config *common.RunnerConfig) (*machineDetails, error) {
+func (m *machineProvider) useMachine(ctx context.Context, config *common.RunnerConfig) (*machineDetails, error) {
 	details, err := m.findFreeExistingMachine(config)
 	if err != nil || details != nil {
 		return details, err
 	}
 
-	return m.createAndAcquireMachine(config)
+	return m.createAndAcquireMachine(ctx, config)
 }
 
-func (m *machineProvider) createAndAcquireMachine(config *common.RunnerConfig) (*machineDetails, error) {
+func (m *machineProvider) createAndAcquireMachine(ctx context.Context, config *common.RunnerConfig) (*machineDetails, error) {
 	coordinator, err := m.runnerMachinesCoordinator(config)
 	if err != nil {
 		return nil, err
 	}
 
-	// Idle between creation and tryAcquireMachineDetails below; the shutdown drain must not take it.
+	// Idle between creation and acquisition below. While pendingUse is set, the machine is reserved for us:
+	// neither another job (tryAcquireMachineDetails) nor the shutdown drain may take it.
 	newDetails, errCh := m.create(config, machineStateIdle, true, m.warmupLimitsFor(config, time.Now()))
 	defer func() {
-		if newDetails != nil {
-			newDetails.Lock()
-			newDetails.pendingUse = false
-			newDetails.Unlock()
+		if newDetails == nil {
+			return
+		}
+
+		newDetails.Lock()
+		newDetails.pendingUse = false
+		// We used another free machine (or gave up) after ours was created: it is free for others now. Its
+		// creation signal may already have been consumed by a waiter that skipped it while it was reserved.
+		freed := newDetails.State == machineStateIdle
+		newDetails.Unlock()
+
+		if freed {
+			coordinator.addAvailableMachine()
 		}
 	}()
-	// Use either a free machine, or the created machine; whichever comes first. There's no guarantee that the created
-	// machine can be used by us because between the time the machine is created, and the acquisition of the machine,
-	// another goroutine may have found it via findFreeMachine and acquired it.
+
+	ticker := time.NewTicker(time.Second)
+	defer ticker.Stop()
+
+	// Use either a free machine, or the created machine; whichever comes first.
 	var details *machineDetails
 	for details == nil && err == nil {
 		select {
+		case <-ctx.Done():
+			return nil, fmt.Errorf("waiting for a machine: %w", context.Cause(ctx))
 		case err = <-errCh:
 			if err != nil {
 				return nil, err
 			}
 
-			details = m.tryAcquireMachineDetails(newDetails)
+			details = m.acquireReservedMachine(newDetails)
+			if details == nil {
+				// e.g. removed by the final shutdown drain, which takes reserved machines too (updateMachines
+				// counts them as Acquired and won't remove them); don't wait for a machine that's never signalled
+				return nil, fmt.Errorf("machine %s created for this job is no longer available", newDetails.Name)
+			}
 		case <-coordinator.availableMachineSignal():
 			// Even though the signal is fired and we are *almost* sure that
 			// there's a machine available, let's use the getAvailableMachine
@@ -458,7 +477,7 @@ func (m *machineProvider) createAndAcquireMachine(config *common.RunnerConfig) (
 			// goroutine that didn't accept the signal and instead used the ticker
 			// hasn't already snatched a machine
 			details, err = m.tryGetFreeExistingMachineFromCoordinator(config, coordinator)
-		case <-time.After(time.Second):
+		case <-ticker.C:
 			details, err = m.tryGetFreeExistingMachineFromCoordinator(config, coordinator)
 		}
 	}
@@ -481,7 +500,9 @@ func (m *machineProvider) tryAcquireMachineDetails(details *machineDetails) *mac
 	details.Lock()
 	defer details.Unlock()
 
-	if details.isUsed() {
+	// A machine created by createAndAcquireMachine is reserved for the job that created it. Taking it would leave
+	// that job waiting for a machine created for yet another job, and the last job in that chain without any.
+	if details.isUsed() || details.pendingUse {
 		return nil
 	}
 
@@ -489,11 +510,26 @@ func (m *machineProvider) tryAcquireMachineDetails(details *machineDetails) *mac
 	return details
 }
 
-func (m *machineProvider) retryUseMachine(config *common.RunnerConfig) (details *machineDetails, err error) {
+// acquireReservedMachine acquires a machine created by createAndAcquireMachine for its own job, which
+// tryAcquireMachineDetails refuses while it is reserved.
+func (m *machineProvider) acquireReservedMachine(details *machineDetails) *machineDetails {
+	details.Lock()
+	defer details.Unlock()
+
+	if details.isUsed() {
+		return nil
+	}
+
+	details.pendingUse = false
+	details.State = machineStateAcquired
+	return details
+}
+
+func (m *machineProvider) retryUseMachine(ctx context.Context, config *common.RunnerConfig) (details *machineDetails, err error) {
 	// Try to find a machine
 	for range 3 {
-		details, err = m.useMachine(config)
-		if err == nil {
+		details, err = m.useMachine(ctx, config)
+		if err == nil || ctx.Err() != nil {
 			break
 		}
 		time.Sleep(provisionRetryInterval)
@@ -673,7 +709,7 @@ func (m *machineProvider) updateMachines(
 		details.LastSeen = time.Now()
 		details.missedListings = 0
 		details.removeWithoutStop = config.Machine.RemoveWithoutStop
-		info := details.info()
+		info := details.capacityInfo()
 		details.Unlock()
 
 		reason := shouldRemoveIdle(config, &data, warmup, info)
@@ -688,7 +724,7 @@ func (m *machineProvider) updateMachines(
 
 		// remove() above can mutate details, so we re-create info:
 		details.Lock()
-		info = details.info()
+		info = details.capacityInfo()
 		details.Unlock()
 
 		data.Add(info)
@@ -904,6 +940,7 @@ func (m *machineProvider) Acquire(config *common.RunnerConfig) (common.ExecutorD
 
 //nolint:nakedret
 func (m *machineProvider) Use(
+	buildCtx context.Context,
 	config *common.RunnerConfig,
 	data common.ExecutorData,
 ) (newConfig common.RunnerConfig, newData common.ExecutorData, err error) {
@@ -921,7 +958,7 @@ func (m *machineProvider) Use(
 	defer ctxCancelFn()
 
 	if !canBeUsed || !m.machine.CanConnect(ctx, details.Name, true) {
-		details, err = m.retryUseMachine(config)
+		details, err = m.retryUseMachine(buildCtx, config)
 		if err != nil {
 			return
 		}

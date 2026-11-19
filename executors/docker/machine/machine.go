@@ -72,7 +72,7 @@ func (e *machineExecutor) Prepare(options common.ExecutorPrepareOptions) (err er
 
 	// Use the machine
 	e.SetCurrentStage(DockerMachineExecutorStageUseMachine)
-	e.config, e.data, err = e.provider.Use(options.Config, options.Build.ExecutorData)
+	e.config, e.data, err = e.provider.Use(options.Context, options.Config, options.Build.ExecutorData)
 	if err != nil {
 		return err
 	}

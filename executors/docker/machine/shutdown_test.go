@@ -1073,7 +1073,7 @@ func TestClaimIdle(t *testing.T) {
 func TestCreateAndAcquireMachine_ClearsPendingUse(t *testing.T) {
 	p, _ := testMachineProvider()
 
-	details, err := p.createAndAcquireMachine(machineDefaultConfig)
+	details, err := p.createAndAcquireMachine(t.Context(), machineDefaultConfig)
 	require.NoError(t, err)
 	require.NotNil(t, details)
 	assert.Equal(t, machineStateAcquired, details.State)

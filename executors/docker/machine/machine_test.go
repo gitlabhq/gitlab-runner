@@ -81,7 +81,8 @@ func testMachineCredentialsUsage(t *testing.T, name string, runnerConfigSource f
 
 		runnerConfig := runnerConfigSource()
 		options := common.ExecutorPrepareOptions{
-			Config: runnerConfig,
+			Context: t.Context(),
+			Config:  runnerConfig,
 			Build: &common.Build{
 				Runner: runnerConfig,
 				ExecutorData: &machineDetails{
