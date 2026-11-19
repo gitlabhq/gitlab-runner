@@ -87,6 +87,17 @@ func (m *machineDetails) info() machineInfo {
 	}
 }
 
+// capacityInfo is info() as autoscaling sees it: an Idle machine reserved by createAndAcquireMachine (pendingUse)
+// counts as Acquired, as it is neither free for another job nor an idle machine to remove. info() itself is kept
+// as-is because metrics and the debug output report the machine's real state.
+func (m *machineDetails) capacityInfo() machineInfo {
+	info := m.info()
+	if m.pendingUse && info.State == machineStateIdle {
+		info.State = machineStateAcquired
+	}
+	return info
+}
+
 func (m *machineDetails) isPersistedOnDisk() bool {
 	// Machines in creating phase might or might not be persisted on disk
 	// this is due to async nature of machine creation process

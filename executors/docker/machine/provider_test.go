@@ -483,19 +483,19 @@ func TestMachineUse(t *testing.T) {
 
 	p, _ := testMachineProvider("machine1")
 
-	d1, err := p.useMachine(machineDefaultConfig)
+	d1, err := p.useMachine(t.Context(), machineDefaultConfig)
 	assert.NotNil(t, d1)
 	assert.NoError(t, err)
 	assert.Equal(t, machineStateAcquired, d1.State)
 	assert.Equal(t, "machine1", d1.Name, "finds a free machine1")
 
-	d2, err := p.useMachine(machineDefaultConfig)
+	d2, err := p.useMachine(t.Context(), machineDefaultConfig)
 	assert.NotNil(t, d2)
 	assert.NoError(t, err)
 	assert.Equal(t, machineStateAcquired, d2.State)
 	assert.NotEqual(t, "machine1", d2.Name, "creates a new machine")
 
-	_, err = p.useMachine(machineProvisionFail)
+	_, err = p.useMachine(t.Context(), machineProvisionFail)
 	assert.Error(t, err, "fails to create a new machine")
 }
 
@@ -552,7 +552,7 @@ func TestMachineReuse(t *testing.T) {
 
 	machineMock.On("List").Return([]string{createdMachineDetails.Name}, nil)
 
-	usedMachineDetails, err := p.useMachine(machineGrowthConfig)
+	usedMachineDetails, err := p.useMachine(t.Context(), machineGrowthConfig)
 	require.NoError(t, err)
 	require.Equal(t, createdMachineDetails, usedMachineDetails)
 }
@@ -607,7 +607,7 @@ func TestMachineReuseWithContention(t *testing.T) {
 			defer wg.Done()
 			<-startCh
 
-			usedMachineDetails, err := p.useMachine(machineGrowthConfig)
+			usedMachineDetails, err := p.useMachine(t.Context(), machineGrowthConfig)
 			require.NoError(t, err)
 			require.NotNil(t, usedMachineDetails)
 			p.Release(machineGrowthConfig, usedMachineDetails)
@@ -626,11 +626,11 @@ func TestMachineTestRetry(t *testing.T) {
 	provisionRetryInterval = 0
 
 	p, _ := testMachineProvider()
-	_, err := p.useMachine(machineSecondFail)
+	_, err := p.useMachine(t.Context(), machineSecondFail)
 	assert.Error(t, err, "fails to create a new machine")
 
 	p, _ = testMachineProvider()
-	d1, err := p.retryUseMachine(machineSecondFail)
+	d1, err := p.retryUseMachine(t.Context(), machineSecondFail)
 	assert.NoError(t, err, "after replying the same test scenario and using retry it succeeds")
 	assert.Equal(t, machineStateAcquired, d1.State)
 }
@@ -750,7 +750,7 @@ func TestMachineOnDemandModeWithLimit(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Nil(t, data)
 
-		_, nd, err := p.Use(config, data)
+		_, nd, err := p.Use(t.Context(), config, data)
 		assert.NoError(t, err)
 		assert.NotNil(t, nd)
 	}
@@ -847,7 +847,7 @@ func TestMachineMaxBuilds(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, d)
 
-	_, nd, err := p.Use(config, d)
+	_, nd, err := p.Use(t.Context(), config, d)
 	assert.NoError(t, err)
 	assert.Nil(t, nd, "we passed the data, we should not get the data now")
 
@@ -892,21 +892,21 @@ func TestMachineUseOnDemand(t *testing.T) {
 
 	p, _ := testMachineProvider()
 
-	_, nd, err := p.Use(machineDefaultConfig, nil)
+	_, nd, err := p.Use(t.Context(), machineDefaultConfig, nil)
 	assert.NoError(t, err, "it create a new machine")
 	assert.NotNil(t, nd)
 	assertTotalMachines(t, p, 1, "it creates one machine")
 
-	_, nd2, err := p.Use(machineDefaultConfig, nil)
+	_, nd2, err := p.Use(t.Context(), machineDefaultConfig, nil)
 	assert.NoError(t, err, "it create a new machine")
 	assert.NotNil(t, nd2)
 	assertTotalMachines(t, p, 2, "it creates two machines")
 
-	_, _, err = p.Use(machineProvisionFail, nil)
+	_, _, err = p.Use(t.Context(), machineProvisionFail, nil)
 	assert.Error(t, err, "fail to create a new machine")
 	assertTotalMachines(t, p, 2, "it fails to create a third machine")
 
-	_, _, err = p.Use(machineNoConnect, nil)
+	_, _, err = p.Use(t.Context(), machineNoConnect, nil)
 	assert.Error(t, err, "fail to create a new machine on connect")
 	assertTotalMachines(t, p, 3, "it fails on no-connect, but we leave the machine created")
 }
@@ -914,7 +914,7 @@ func TestMachineUseOnDemand(t *testing.T) {
 func TestMachineReleaseIfInvalidDataArePassed(t *testing.T) {
 	p, _ := testMachineProvider()
 
-	_, nd, err := p.Use(machineDefaultConfig, nil)
+	_, nd, err := p.Use(t.Context(), machineDefaultConfig, nil)
 	assert.NoError(t, err, "it create a new machine")
 	assert.NotNil(t, nd)
 	assertTotalMachines(t, p, 1, "it creates one machine")
@@ -925,7 +925,7 @@ func TestMachineReleaseIfInvalidDataArePassed(t *testing.T) {
 func TestMachineCreationIfFailedToConnect(t *testing.T) {
 	p, _ := testMachineProvider()
 
-	_, nd, err := p.Use(machineNoConnect, nil)
+	_, nd, err := p.Use(t.Context(), machineNoConnect, nil)
 	assert.Error(t, err, "it create a new machine")
 	assert.Nil(t, nd)
 }
@@ -1926,5 +1926,225 @@ func TestMachineWarmupPrunedRunnerDoesNotRestartWarmup(t *testing.T) {
 
 	for range 4 {
 		<-m.Created
+	}
+}
+
+// blockingCreateMachine blocks machine creation until release is closed.
+type blockingCreateMachine struct {
+	*testMachine
+	release chan struct{}
+}
+
+func (m *blockingCreateMachine) Create(ctx context.Context, driver, name string, output docker.MachineOutput, opts ...string) error {
+	<-m.release
+	return m.testMachine.Create(ctx, driver, name, output, opts...)
+}
+
+// https://gitlab.com/gitlab-org/gitlab-runner/-/issues/40224
+func TestMachineProvider_ReservedMachineIsNotTakenByOtherJobs(t *testing.T) {
+	p, _ := testMachineProvider()
+
+	details, errCh := p.create(machineDefaultConfig, machineStateIdle, true, nil)
+	require.NotNil(t, details)
+	require.NoError(t, <-errCh)
+
+	assert.Nil(t, p.findFreeMachine(true, details.Name),
+		"a machine created for a job must not be handed to another job")
+	assert.Equal(t, machineStateIdle, details.State)
+
+	assert.Same(t, details, p.acquireReservedMachine(details))
+	assert.Equal(t, machineStateAcquired, details.State)
+	assert.False(t, details.pendingUse)
+}
+
+// https://gitlab.com/gitlab-org/gitlab-runner/-/issues/40224
+func TestMachineProvider_CreateAndAcquireMachine_StopsWaitingWhenJobContextEnds(t *testing.T) {
+	p, tm := testMachineProvider()
+	release := make(chan struct{})
+	p.machine = &blockingCreateMachine{testMachine: tm, release: release}
+
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel()
+
+	done := make(chan error, 1)
+	go func() {
+		details, err := p.createAndAcquireMachine(ctx, machineDefaultConfig)
+		assert.Nil(t, details)
+		done <- err
+	}()
+
+	select {
+	case err := <-done:
+		require.ErrorIs(t, err, context.Canceled)
+	case <-time.After(5 * time.Second):
+		t.Fatal("createAndAcquireMachine kept waiting after the job context ended")
+	}
+
+	// The machine still being created is no longer reserved: once ready, other jobs can use it.
+	close(release)
+	<-tm.Created
+
+	p.lock.RLock()
+	require.Len(t, p.details, 1)
+	var name string
+	for n := range p.details {
+		name = n
+	}
+	p.lock.RUnlock()
+
+	coordinator, err := p.runnerMachinesCoordinator(machineDefaultConfig)
+	require.NoError(t, err)
+	require.Eventually(t, coordinator.getAvailableMachine, 5*time.Second, 10*time.Millisecond)
+	assert.NotNil(t, p.findFreeMachine(true, name))
+}
+
+// https://gitlab.com/gitlab-org/gitlab-runner/-/issues/40224
+func TestMachineProvider_Acquire_ReservedMachineIsNotFreeCapacity(t *testing.T) {
+	config := createMachineConfigWithLimit(t, 1, 5, 1)
+	p, _ := testMachineProvider()
+
+	details, errCh := p.create(config, machineStateIdle, true, nil)
+	require.NotNil(t, details)
+	require.NoError(t, <-errCh)
+
+	data, err := p.Acquire(config)
+	assert.Nil(t, data)
+	var noFreeErr *common.NoFreeExecutorError
+	assert.ErrorAs(t, err, &noFreeErr, "the only machine is reserved for the job that created it")
+}
+
+// https://gitlab.com/gitlab-org/gitlab-runner/-/issues/40224
+func TestMachineProvider_UpdateMachines_CountsReservedMachineAsAcquired(t *testing.T) {
+	config := createMachineConfigWithLimit(t, 1, 5, 1)
+	p, tm := testMachineProvider("test-machine-existing")
+
+	reserved, errCh := p.create(config, machineStateIdle, true, nil)
+	require.NotNil(t, reserved)
+	require.NoError(t, <-errCh)
+
+	machines, err := tm.List()
+	require.NoError(t, err)
+	require.Equal(t, []string{"test-machine-existing", reserved.Name}, machines)
+
+	data, validMachines := p.updateMachines(machines, config, nil)
+	assert.Equal(t, 1, data.Idle)
+	assert.Equal(t, 1, data.Acquired)
+	assert.Contains(t, validMachines, reserved.Name, "a reserved machine is not removed as too many machines")
+	assert.Equal(t, machineStateIdle, reserved.State)
+	assert.True(t, reserved.pendingUse)
+}
+
+// stalledConnectMachine stalls CanConnect for one machine until release is closed, reporting the first call on
+// entered. A job looking for a free machine can so be held while the machine it created becomes ready.
+type stalledConnectMachine struct {
+	*blockingCreateMachine
+	name       string
+	canConnect bool
+	entered    chan struct{}
+	release    chan struct{}
+	once       sync.Once
+}
+
+func (m *stalledConnectMachine) CanConnect(ctx context.Context, name string, skipCache bool) bool {
+	if name != m.name {
+		return m.blockingCreateMachine.CanConnect(ctx, name, skipCache)
+	}
+
+	m.once.Do(func() { close(m.entered) })
+	<-m.release
+	return m.canConnect
+}
+
+// https://gitlab.com/gitlab-org/gitlab-runner/-/issues/40224
+func TestMachineProvider_CreateAndAcquireMachine_ReservedMachineReadyWhileJobLooksElsewhere(t *testing.T) {
+	const otherMachine = "other-machine"
+
+	tests := map[string]struct {
+		otherCanConnect bool
+		removeReserved  bool
+		assert          func(t *testing.T, p *machineProvider, c *runnerMachinesCoordinator, reserved, got *machineDetails, err error)
+	}{
+		"job uses another machine: reserved machine is freed and signalled again": {
+			otherCanConnect: true,
+			assert: func(t *testing.T, p *machineProvider, c *runnerMachinesCoordinator, reserved, got *machineDetails, err error) {
+				require.NoError(t, err)
+				assert.Equal(t, otherMachine, got.Name)
+
+				assert.False(t, reserved.pendingUse)
+				assert.True(t, c.getAvailableMachine(), "its creation signal was consumed while it was reserved")
+				assert.Same(t, reserved, p.findFreeMachine(true, reserved.Name))
+			},
+		},
+		"reserved machine removed: job fails right away": {
+			removeReserved: true,
+			assert: func(t *testing.T, _ *machineProvider, _ *runnerMachinesCoordinator, reserved, got *machineDetails, err error) {
+				assert.Nil(t, got)
+				assert.ErrorContains(t, err, fmt.Sprintf("machine %s created for this job is no longer available", reserved.Name))
+			},
+		},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			p, tm := testMachineProvider(otherMachine)
+			createRelease := make(chan struct{})
+			m := &stalledConnectMachine{
+				blockingCreateMachine: &blockingCreateMachine{testMachine: tm, release: createRelease},
+				name:                  otherMachine,
+				canConnect:            tt.otherCanConnect,
+				entered:               make(chan struct{}),
+				release:               make(chan struct{}),
+			}
+			p.machine = m
+
+			coordinator, err := p.runnerMachinesCoordinator(machineDefaultConfig)
+			require.NoError(t, err)
+
+			type result struct {
+				details *machineDetails
+				err     error
+			}
+			done := make(chan result, 1)
+			go func() {
+				details, err := p.createAndAcquireMachine(t.Context(), machineDefaultConfig)
+				done <- result{details: details, err: err}
+			}()
+
+			// Hold the job in CanConnect of the other machine while its own machine is still being created.
+			coordinator.addAvailableMachine()
+			select {
+			case <-m.entered:
+			case <-time.After(5 * time.Second):
+				t.Fatal("job did not look for a free machine")
+			}
+
+			// The job's machine becomes ready. Its signal is consumed by another waiter that skips it while reserved.
+			close(createRelease)
+			require.Eventually(t, coordinator.getAvailableMachine, 5*time.Second, 10*time.Millisecond)
+
+			p.lock.RLock()
+			var reserved *machineDetails
+			for name, details := range p.details {
+				if name != otherMachine {
+					reserved = details
+				}
+			}
+			p.lock.RUnlock()
+			require.NotNil(t, reserved)
+			assert.Nil(t, p.findFreeMachine(true, reserved.Name))
+
+			if tt.removeReserved {
+				// e.g. by the final shutdown drain
+				require.NoError(t, p.remove(reserved.Name, "removed while reserved"))
+			}
+
+			close(m.release)
+			select {
+			case res := <-done:
+				tt.assert(t, p, coordinator, reserved, res.details, res.err)
+			case <-time.After(5 * time.Second):
+				t.Fatal("createAndAcquireMachine kept waiting")
+			}
+		})
 	}
 }
