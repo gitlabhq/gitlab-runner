@@ -2681,3 +2681,22 @@ func TestRunCommand_processRunner_LogsJobURL(t *testing.T) {
 		assert.Equal(t, expectedRepoURL, found.Data["repo_url"], message)
 	}
 }
+
+func TestRunCommand_Collect_concurrentCarriesSystemID(t *testing.T) {
+	cmd := RunCommand{
+		healthHelper: newHealthHelper(),
+		buildsHelper: newBuildsHelper(),
+		configfile: configfile.New("", configfile.WithExistingConfig(
+			&common.Config{Concurrent: 5},
+		), configfile.WithSystemID("test-system-id")),
+	}
+	cmd.setupInternalMetrics()
+
+	expected := `
+# HELP gitlab_runner_concurrent The current value of concurrent setting
+# TYPE gitlab_runner_concurrent gauge
+gitlab_runner_concurrent{system_id="test-system-id"} 5
+`
+
+	require.NoError(t, testutil.CollectAndCompare(&cmd, strings.NewReader(expected), "gitlab_runner_concurrent"))
+}

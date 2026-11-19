@@ -71,7 +71,7 @@ var (
 	concurrentDesc = prometheus.NewDesc(
 		"gitlab_runner_concurrent",
 		"The current value of concurrent setting",
-		nil,
+		[]string{"system_id"},
 		nil,
 	)
 
@@ -1953,10 +1953,18 @@ func (mr *RunCommand) Describe(ch chan<- *prometheus.Desc) {
 func (mr *RunCommand) Collect(ch chan<- prometheus.Metric) {
 	config := mr.configfile.Config()
 
+	// The concurrent setting is per manager, so label it with the manager's
+	// system_id (as gitlab_runner_limit is) to keep the series from separate
+	// manager processes distinct and summable across replicas.
+	systemID := mr.configfile.SystemID()
+	if systemID == "" {
+		systemID = common.UnknownSystemID
+	}
 	ch <- prometheus.MustNewConstMetric(
 		concurrentDesc,
 		prometheus.GaugeValue,
 		float64(config.Concurrent),
+		systemID,
 	)
 
 	for _, runner := range config.Runners {

@@ -252,7 +252,7 @@ To view those metrics on a runner, execute the command as noted in [available me
 | `gitlab_runner_autoscaling_warmup`                             | `1` while the runner is in [warm-up](../configuration/advanced-configuration.md#warm-up), `0` otherwise. This metric and the two following gauges are reported only for runners with warm-up enabled. |
 | `gitlab_runner_autoscaling_warmup_ready_seconds`               | Seconds from the start of warm-up until the pool reached the ready threshold. Absent until it does. |
 | `gitlab_runner_autoscaling_warmup_timed_out`                   | `1` if warm-up ended before the pool reached the ready threshold, `0` otherwise. |
-| `gitlab_runner_concurrent`                                     | The value of concurrent setting. |
+| `gitlab_runner_concurrent`                                     | The value of concurrent setting, partitioned by `system_id`. |
 | `gitlab_runner_errors_total`                                   | The number of caught errors. This metric is a counter that tracks log lines. The metric includes the label `level`. The possible values are `warning` and `error`. If you plan to include this metric, then use `rate()` or `increase()` when observing. In other words, if you notice that the rate of warnings or errors is increasing, then this could suggest an issue that needs further investigation. |
 | `gitlab_runner_jobs`                                           | This shows how many jobs are being executed (with different scopes in the labels). |
 | `gitlab_runner_job_duration_seconds`                           | Histogram of job durations. |
