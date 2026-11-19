@@ -2857,6 +2857,73 @@ func TestUserProbeContainerConfiguratorContainerConfig(t *testing.T) {
 	}
 }
 
+func TestGetBuildContainerUserDisallowedUserIsConfigurationError(t *testing.T) {
+	tests := map[string]struct {
+		runnerUser   string
+		jobUser      spec.StringOrInt64
+		allowedUsers []string
+		wantUser     string
+		wantErrMsg   string
+	}{
+		"disallowed runner user": {
+			runnerUser:   "baba",
+			allowedUsers: []string{"yaga"},
+			wantErrMsg:   `user "baba" is not an allowed user: [yaga]`,
+		},
+		"disallowed job user": {
+			jobUser:      "baba",
+			allowedUsers: []string{"yaga"},
+			wantErrMsg:   `user "baba" is not an allowed user: [yaga]`,
+		},
+		"allowed runner user": {
+			runnerUser:   "baba",
+			allowedUsers: []string{"baba"},
+			wantUser:     "baba",
+		},
+		"allowed job user": {
+			jobUser:      "baba",
+			allowedUsers: []string{"baba"},
+			wantUser:     "baba",
+		},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			dockerConfig := &common.DockerConfig{
+				User:         tt.runnerUser,
+				AllowedUsers: tt.allowedUsers,
+			}
+
+			_, e := createExecutorForTestDockerConfiguration(t, dockerConfig, nil)
+
+			imageConfig := spec.Image{
+				Name: "alpine",
+				ExecutorOptions: spec.ImageExecutorOptions{
+					Docker: spec.ImageDockerOptions{
+						User: tt.jobUser,
+					},
+				},
+			}
+
+			user, err := e.getBuildContainerUser(imageConfig)
+
+			if tt.wantErrMsg == "" {
+				require.NoError(t, err)
+				assert.Equal(t, tt.wantUser, user)
+				return
+			}
+
+			require.Error(t, err)
+			assert.Empty(t, user)
+
+			var buildErr *common.BuildError
+			require.ErrorAs(t, err, &buildErr)
+			assert.Equal(t, common.ConfigurationError, buildErr.FailureReason)
+			assert.Equal(t, tt.wantErrMsg, err.Error())
+		})
+	}
+}
+
 func TestDockerImageWithUser(t *testing.T) {
 	tests := map[string]struct {
 		jobUser          spec.StringOrInt64
