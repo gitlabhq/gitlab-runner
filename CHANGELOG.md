@@ -180,6 +180,12 @@
 
 - Update RUNNER_IMAGES_VERSION to 0.0.59 (19-4-stable) [!7715](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/7715)
 
+## v19.4.2 (2026-10-23)
+
+### Maintenance
+
+- Backport Go 1.26.10 and base images 0.0.58 to 19-4-stable [!7688](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/7688)
+
 ## v19.4.1 (2026-09-24)
 
 ### Maintenance
@@ -302,6 +308,7 @@
 - Go: Update gitlab.com/gitlab-org/moa digest to 42caf37 [!7308](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/7308)
 - [FixPipeline] https://gitlab.com/gitlab-org/gitlab-runner/-/pipelines/2766442924 [!7197](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/7197)
 - Product Docs AI Translation: GITTECHA-869 #1 [!6971](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6971)
+- [19.4] Raise stable pulp job timeout to 12h [!7371](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/7371)
 
 ## v19.3.6 (2026-11-05)
 
@@ -330,6 +337,13 @@
 ### Maintenance
 
 - Backport Go 1.26.10 and base images 0.0.58 to 19-3-stable [!7689](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/7689)
+
+## v19.3.3 (2026-09-14)
+
+### Maintenance
+
+- [19.3] Raise stable pulp job timeout to 12h [!7366](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/7366)
+- Use alpine pwsh images in TestPwshGitCredHelper [!7394](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/7394)
 
 ## v19.3.2 (2026-09-10)
 
@@ -551,7 +565,19 @@
 - Go: Update module github.com/moby/moby/client to v0.5.1 [!7105](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/7105)
 - Go: Update module github.com/in-toto/attestation to v1.2.0 [!7049](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/7049)
 
-## v19.2.4 (2026-09-15)
+## v19.2.6 (2026-09-15)
+
+### Maintenance
+
+- Use alpine pwsh images in TestPwshGitCredHelper [!7393](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/7393)
+
+## v19.2.5 (2026-09-14)
+
+### Maintenance
+
+- [19.2] Raise stable pulp job timeout to 12h [!7365](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/7365)
+
+## v19.2.4 (2026-09-10)
 
 ### New features
 
@@ -560,11 +586,6 @@
 ### Bug fixes
 
 - Bump base images to 0.0.50 for the FIPS TLS 1.3 fix (19-2-stable) [!7283](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/7283)
-
-### Maintenance
-
-- Use alpine pwsh images in TestPwshGitCredHelper [!7393](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/7393)
-- [19.2] Raise stable pulp job timeout to 12h [!7365](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/7365)
 
 ## v19.2.3 (2026-08-24)
 
@@ -577,6 +598,12 @@
 ### Maintenance
 
 - Verify resources: authenticate Docker Hub image checks [!7162](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/7162)
+
+## v19.2.1 (2026-07-28)
+
+### Bug fixes
+
+- [19.2] Key S3 client cache by config value, not pointer [!6981](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6981)
 
 ## v19.2.0 (2026-07-10)
 
@@ -662,6 +689,18 @@
 - Builtin functions implement BuiltinFunction interface [!6874](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6874)
 - Product Docs AI Translation: GITTECHA-836 #1 [!6867](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6867)
 - Classify image-pull access-denied errors as ConfigurationError [!6850](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/6850)
+
+## v19.1.5 (2026-09-15)
+
+### Maintenance
+
+- Use alpine pwsh images in TestPwshGitCredHelper [!7392](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/7392)
+
+## v19.1.4 (2026-09-14)
+
+### Maintenance
+
+- [19.1] Raise stable pulp job timeout to 12h [!7364](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/7364)
 
 ## v19.1.3 (2026-09-10)
 
@@ -1514,6 +1553,18 @@
 - Minor improvements to runner fleet scaling best practices doc [!5737](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5737)
 - Add a note about the experiment status of GRIT [!5729](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5729)
 
+## v18.2.2 (2025-08-19)
+
+### Bug fixes
+
+- Update fleeting plugin dependency [!5784](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5784)
+
+## v18.2.1 (2025-07-28)
+
+### Bug fixes
+
+- Fix cache key sanitation issues, esp. re. "cache key files" [!5741](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5741)
+
 ## v18.2.0 (2025-07-12)
 
 ### New features
@@ -1576,6 +1627,28 @@
 - Update step-runner version to 0.13.0 [!5705](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5705)
 - Fix docs pipelines for forks [!5664](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5664)
 - Small typo fixes [!5652](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5652)
+
+## v18.1.3 (2025-07-28)
+
+### Bug fixes
+
+- Fix cache key sanitation issues, esp. re. "cache key files" [!5741](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5741)
+
+## v18.1.2 (2025-07-18)
+
+### Bug fixes
+
+- Tighten cache key sanitation [!5719](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5719)
+
+## v18.1.1 (2025-06-26)
+
+### Bug fixes
+
+- Put the fips binary in the fips runner image [!5669](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5669)
+
+### Maintenance
+
+- Bump golang to 1.24.4 [!5668](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5668)
 
 ## v18.1.0 (2025-06-19)
 
@@ -1652,6 +1725,18 @@
 - Update the cntlm link to the new fork [!5556](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5556) (Dan Fredell @DFredell)
 - Update docker-machine version in docs [!5617](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5617)
 
+## v18.0.5 (2025-07-28)
+
+### Bug fixes
+
+- Fix cache key sanitation issues, esp. re. "cache key files" [!5741](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5741)
+
+## v18.0.4 (2025-07-18)
+
+### Bug fixes
+
+- Tighten cache key sanitation [!5719](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5719)
+
 ## v18.0.3 (2025-06-11)
 
 ### Bug fixes
@@ -1693,7 +1778,7 @@
 
 ### Bug fixes
 
-- Switch the default for FF_Git_URLS_WITHOUT_TOKENS back to false [!5572](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5572)
+- Switch the default for FF_GIT_URLS_WITHOUT_TOKENS back to false [!5572](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5572)
 
 ## v18.0.0 (2025-05-15)
 
@@ -1717,7 +1802,7 @@
 
 ### Maintenance
 
-- FF_Git_URLS_WITHOUT_TOKENS defaults to true [!5525](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5525)
+- FF_GIT_URLS_WITHOUT_TOKENS defaults to true [!5525](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5525)
 - Wait for MR image before starting runner incept [!5528](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5528)
 - Remove outdated mentions [!5510](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5510)
 - Update markdownlint for JP Docs & Push Translations [!5547](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5547)
