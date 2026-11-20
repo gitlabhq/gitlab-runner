@@ -97,7 +97,13 @@ type kubernetesLogProcessor struct {
 	wg          sync.WaitGroup
 
 	logsOffset int64
+	// heldPartialLine survives reattaches because logsOffset already points past it.
+	heldPartialLine string
 }
+
+// maxHeldPartialLineSize bounds how much of an unterminated line readLogs holds back
+// waiting for the rest of it. The stage exit status JSON is far smaller than this.
+const maxHeldPartialLineSize = 1024
 
 type kubernetesLogProcessorPodConfig struct {
 	namespace          string
@@ -180,6 +186,7 @@ func (l *kubernetesLogProcessor) attach(ctx context.Context, outCh chan string, 
 				// where the shells.TrapCommandExitStatus is written.
 				// To not miss this line, we need to have the offset reset when we reconnect to the newly created log
 				l.logsOffset = 0
+				l.heldPartialLine = ""
 				errCh <- fmt.Errorf("output log file deleted, cannot continue %w", err)
 			case err != nil:
 				l.logger.Warningln(fmt.Sprintf("Error %v. Retrying...", err))
@@ -236,7 +243,9 @@ func (l *kubernetesLogProcessor) processStream(ctx context.Context, outCh chan s
 }
 
 func (l *kubernetesLogProcessor) readLogs(ctx context.Context, logs io.Reader, outCh chan string) error {
-	var previousLogsOffset int64 = -1
+	// The helper counts offsets from the --offset it was started with, which is l.logsOffset,
+	// so the first chunk of a stream can be checked for being partial like the following ones.
+	previousLogsOffset := l.logsOffset
 	logsScanner, linesCh := l.scan(ctx, logs)
 
 	for {
@@ -250,24 +259,58 @@ func (l *kubernetesLogProcessor) readLogs(ctx context.Context, logs io.Reader, o
 			}
 
 			newLogsOffset, logLine := l.parseLogLine(line)
-			if newLogsOffset != -1 {
-				l.logsOffset = newLogsOffset
+			if newLogsOffset == -1 {
+				// Lines without an offset, such as the helper's own errors, are not part of the log file, so
+				// they must not complete a held partial line or shift the offset it is checked against.
+				outCh <- logLine
+				continue
 			}
 
-			// Helper when reading the log add a new line when the buffer doesn't end with a new line
-			// This makes the buffer size greater than the log offset shift
-			// When the buffer size is greater than the log offset shift and the additional character is a \n
-			// it can then be safely removed as it is likely the addition character added by helper
-			if l := len(logLine); previousLogsOffset != -1 &&
-				l > int(newLogsOffset-previousLogsOffset) && logLine[l-1] == '\n' {
-				logLine = logLine[:l-1]
-			}
-
+			l.logsOffset = newLogsOffset
+			logLine, complete := l.assembleLine(logLine, previousLogsOffset, newLogsOffset)
 			previousLogsOffset = newLogsOffset
+			if !complete {
+				continue
+			}
 
 			outCh <- logLine
 		}
 	}
+}
+
+// assembleLine returns the line to forward, and false when it is being held back
+// until the rest of it arrives.
+func (l *kubernetesLogProcessor) assembleLine(logLine string, previousLogsOffset, newLogsOffset int64) (string, bool) {
+	// Helper when reading the log add a new line when the buffer doesn't end with a new line
+	// This makes the buffer size greater than the log offset shift
+	// When the buffer size is greater than the log offset shift and the additional character is a \n
+	// it can then be safely removed as it is likely the addition character added by helper
+	isPartial := false
+	if n := len(logLine); n > int(newLogsOffset-previousLogsOffset) && logLine[n-1] == '\n' {
+		logLine = logLine[:n-1]
+		isPartial = true
+	}
+
+	logLine = l.heldPartialLine + logLine
+	l.heldPartialLine = ""
+	if isPartial && mayBeStageCommandStatus(logLine) {
+		l.heldPartialLine = logLine
+		return "", false
+	}
+
+	return logLine, true
+}
+
+// mayBeStageCommandStatus reports whether a partial line could be the start of the
+// stage exit status JSON. That line is only detected when it reaches the executor whole, so it must not
+// be forwarded in pieces when the helper hits EOF mid-write. Other partial lines are forwarded right
+// away so output without a trailing newline (progress bars, prompts) still streams live.
+func mayBeStageCommandStatus(line string) bool {
+	// The shells and the fallback exit status marker all write the status with this prefix.
+	const marker = `{"command_exit_code"`
+
+	return len(line) < maxHeldPartialLineSize &&
+		(strings.HasPrefix(marker, line) || strings.HasPrefix(line, marker))
 }
 
 func (l *kubernetesLogProcessor) scan(ctx context.Context, logs io.Reader) (*logScanner, <-chan string) {
