@@ -68,7 +68,7 @@ require (
 	github.com/prometheus/procfs v0.22.0
 	github.com/samber/lo v1.53.0
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.3
-	github.com/saracen/fastzip v0.2.0
+	github.com/saracen/fastzip v0.2.1
 	github.com/saracen/zipextra v0.0.0-20250129175152-f1aa42d25216
 	github.com/sirupsen/logrus v1.10.2
 	github.com/sourcegraph/conc v0.3.0
