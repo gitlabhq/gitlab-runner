@@ -93,10 +93,22 @@ Unlike GitLab-hosted runners, which are hosted and managed by GitLab, you have c
 
 ## GitLab Runner versions
 
-For compatibility reasons, the GitLab Runner [major.minor](https://en.wikipedia.org/wiki/Software_versioning) version
-should stay in sync with the GitLab major and minor version. Older runners may still work
-with newer GitLab versions, and vice versa. However, features may not be available or work properly
-if a version difference exists.
+For compatibility reasons, and to take advantage of security patches and bug fixes, keep the GitLab Runner
+[`major.minor`](https://en.wikipedia.org/wiki/Software_versioning) version the same as the GitLab major
+and minor version.
+
+Older runners may still work with newer GitLab versions, and vice versa. However:
+
+- Features may not be available or work properly if a version difference exists.
+- Runners that do not have the latest `PATCH` version can be vulnerable to security or high severity bugs.
+- Some features might not be available or work properly for runners that are one or more `MAJOR` versions
+  behind your GitLab instance.
+
+For more information, see:
+
+- [Determine which runners need to be upgraded](https://docs.gitlab.com/ci/runners/runners_scope/#determine-which-runners-need-to-be-upgraded).
+- The [CHANGELOG](https://gitlab.com/gitlab-org/gitlab-runner/blob/main/CHANGELOG.md) for fixes in each
+  release.
 
 Backward compatibility is guaranteed between minor version updates. However, sometimes minor
 version updates of GitLab can introduce new features that require GitLab Runner to be on the same minor

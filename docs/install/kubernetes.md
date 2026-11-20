@@ -143,6 +143,10 @@ helm install --namespace <NAMESPACE> gitlab-runner \
 
 ## Upgrade GitLab Runner with the Helm chart
 
+> [!note]
+> Keep GitLab Runner on the same major and minor version as your GitLab instance, and install patch releases as they become available.
+> For more information, see [GitLab Runner versions](../_index.md#gitlab-runner-versions).
+
 Prerequisites:
 
 - You've installed your GitLab Runner chart.
