@@ -382,6 +382,25 @@ func TestStepsPreparePodConfig_HasBuildAndServicesButNoHelper(t *testing.T) {
 	}
 }
 
+// The Concrete pod must carry the per-pod selector label, valued with its
+// own generated name, so the PDB and Service selectors match only this pod.
+func TestStepsPreparePodConfig_PodSelectorLabelIsPodName(t *testing.T) {
+	ex := newStepsTestExecutor(t)
+
+	opts := podConfigPrepareOpts{labels: map[string]string{"foo": "bar"}}
+	first, err := ex.stepsPreparePodConfig(opts)
+	require.NoError(t, err)
+	second, err := ex.stepsPreparePodConfig(opts)
+	require.NoError(t, err)
+
+	for _, pod := range []api.Pod{first, second} {
+		assert.Equal(t, "bar", pod.Labels["foo"])
+		assert.Equal(t, pod.Name, pod.Labels[podSelectorLabelKey])
+	}
+	assert.NotEqual(t, first.Labels[podSelectorLabelKey], second.Labels[podSelectorLabelKey])
+	assert.NotContains(t, opts.labels, podSelectorLabelKey, "the caller's labels must not be modified")
+}
+
 // The Concrete pod's InitContainers list must be exactly the opts
 // passed in — i.e., the single init-steps-bootstrap container — and
 // must not be augmented by init-permissions or init-logs.

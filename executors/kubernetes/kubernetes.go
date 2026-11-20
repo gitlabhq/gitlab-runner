@@ -2733,9 +2733,6 @@ func (s *executor) buildLabels() map[string]string {
 		"project." + runnerLabelNamespace + "/root-namespace":    sanitizeLabel(s.Build.Variables.Value("CI_PROJECT_ROOT_NAMESPACE")),
 		"project." + runnerLabelNamespace + "/root-namespace-id": strconv.FormatInt(s.Build.JobInfo.RootNamespaceID, 10),
 
-		// Used for setting up services for the build pod
-		"job." + runnerLabelNamespace + "/pod": sanitizeLabel(s.Build.ProjectUniqueName()),
-
 		"manager." + runnerLabelNamespace + "/name":     sanitizeLabel(s.Config.Name),
 		"manager." + runnerLabelNamespace + "/id-short": sanitizeLabel(s.Config.ShortDescription()),
 	}
@@ -2756,6 +2753,27 @@ func (s *executor) buildLabels() map[string]string {
 	}
 
 	return labels
+}
+
+// podSelectorLabelKey identifies a single build pod. PodDisruptionBudget and
+// Service selectors match on it, so its value must be unique per pod. It is
+// not part of buildLabels(), which also feeds the pod watcher's selector: the
+// pod name changes when withPullRetry recreates the pod, and the watcher must
+// keep seeing the new pod.
+const podSelectorLabelKey = "job." + runnerLabelNamespace + "/pod"
+
+// podMetadataLabels returns the labels for a pod named podName: the given
+// labels plus the per-pod selector label.
+func podMetadataLabels(labels map[string]string, podName string) map[string]string {
+	podLabels := make(map[string]string, len(labels)+1)
+	maps.Copy(podLabels, labels)
+	podLabels[podSelectorLabelKey] = sanitizeLabel(podName)
+	return podLabels
+}
+
+// podSelector returns the label selector matching only the build pod.
+func (s *executor) podSelector() map[string]string {
+	return map[string]string{podSelectorLabelKey: s.pod.Labels[podSelectorLabelKey]}
 }
 
 func (s *executor) createPodConfigPrepareOpts(initContainers []api.Container) (podConfigPrepareOpts, error) {
@@ -2886,11 +2904,12 @@ func (s *executor) preparePodConfig(opts podConfigPrepareOpts) (api.Pod, error) 
 		return api.Pod{}, err
 	}
 
+	podName := generateNameForK8sResources(s.Build.ProjectUniqueName())
 	pod := api.Pod{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        generateNameForK8sResources(s.Build.ProjectUniqueName()),
+			Name:        podName,
 			Namespace:   s.configurationOverwrites.namespace,
-			Labels:      opts.labels,
+			Labels:      podMetadataLabels(opts.labels, podName),
 			Annotations: opts.annotations,
 		},
 		Spec: api.PodSpec{
@@ -3462,9 +3481,7 @@ func (s *executor) createPodDisruptionBudget(
 		Spec: policyv1.PodDisruptionBudgetSpec{
 			MinAvailable: &minAvailable,
 			Selector: &metav1.LabelSelector{
-				MatchLabels: map[string]string{
-					"job." + runnerLabelNamespace + "/pod": sanitizeLabel(s.Build.ProjectUniqueName()),
-				},
+				MatchLabels: s.podSelector(),
 			},
 		},
 	}
@@ -3565,7 +3582,7 @@ func (s *executor) prepareServiceConfig(
 		},
 		Spec: api.ServiceSpec{
 			Ports:    ports,
-			Selector: map[string]string{"job." + runnerLabelNamespace + "/pod": sanitizeLabel(s.Build.ProjectUniqueName())},
+			Selector: s.podSelector(),
 			Type:     api.ServiceTypeClusterIP,
 		},
 	}
