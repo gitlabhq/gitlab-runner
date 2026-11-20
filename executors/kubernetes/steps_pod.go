@@ -249,11 +249,12 @@ func (s *executor) stepsPreparePodConfig(opts podConfigPrepareOpts) (api.Pod, er
 
 	containers := append([]api.Container{buildContainer}, opts.services...)
 
+	podName := generateNameForK8sResources(s.Build.ProjectUniqueName())
 	return api.Pod{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        generateNameForK8sResources(s.Build.ProjectUniqueName()),
+			Name:        podName,
 			Namespace:   s.configurationOverwrites.namespace,
-			Labels:      opts.labels,
+			Labels:      podMetadataLabels(opts.labels, podName),
 			Annotations: opts.annotations,
 		},
 		Spec: api.PodSpec{

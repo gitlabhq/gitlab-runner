@@ -5136,7 +5136,7 @@ func TestSetupBuildPod(t *testing.T) {
 					"test":                      "label",
 					"another":                   "label",
 					"var":                       "sometestvar",
-					"job.runner.gitlab.com/pod": "runner--project-0-concurrent-0",
+					"job.runner.gitlab.com/pod": pod.Name,
 				}
 				containsLabels(t, pod.ObjectMeta.Labels, expectedLabels)
 			},
@@ -5163,7 +5163,7 @@ func TestSetupBuildPod(t *testing.T) {
 					"another":                   "newlabel",
 					"var":                       "sometestvar",
 					"another2":                  "sometestvar",
-					"job.runner.gitlab.com/pod": "runner--project-0-concurrent-0",
+					"job.runner.gitlab.com/pod": pod.Name,
 				}
 				containsLabels(t, pod.ObjectMeta.Labels, expectedLabels)
 			},
@@ -5661,7 +5661,7 @@ func TestSetupBuildPod(t *testing.T) {
 									Name:       "build-80",
 								},
 							},
-							Selector: map[string]string{"job.runner.gitlab.com/pod": "runner--project-0-concurrent-0"},
+							Selector: map[string]string{"job.runner.gitlab.com/pod": e.pod.Name},
 							Type:     api.ServiceTypeClusterIP,
 						},
 					},
@@ -5684,7 +5684,7 @@ func TestSetupBuildPod(t *testing.T) {
 									Name:       "proxy-svc-0-84",
 								},
 							},
-							Selector: map[string]string{"job.runner.gitlab.com/pod": "runner--project-0-concurrent-0"},
+							Selector: map[string]string{"job.runner.gitlab.com/pod": e.pod.Name},
 							Type:     api.ServiceTypeClusterIP,
 						},
 					},
@@ -5702,7 +5702,7 @@ func TestSetupBuildPod(t *testing.T) {
 									Name:       "proxy-svc-1-85",
 								},
 							},
-							Selector: map[string]string{"job.runner.gitlab.com/pod": "runner--project-0-concurrent-0"},
+							Selector: map[string]string{"job.runner.gitlab.com/pod": e.pod.Name},
 							Type:     api.ServiceTypeClusterIP,
 						},
 					},
@@ -5775,7 +5775,7 @@ func TestSetupBuildPod(t *testing.T) {
 			},
 			VerifyExecutorFn: func(t *testing.T, test setupBuildPodTestDef, e *executor) {
 				for _, service := range e.services {
-					assert.Equal(t, map[string]string{"job.runner.gitlab.com/pod": "runner--project-0-concurrent-0"}, service.Spec.Selector)
+					assert.Equal(t, map[string]string{"job.runner.gitlab.com/pod": e.pod.Name}, service.Spec.Selector)
 				}
 			},
 		},
@@ -7450,7 +7450,11 @@ containers:
 				require.NotNil(t, pdb.Spec.MinAvailable)
 				assert.Equal(t, int32(1), pdb.Spec.MinAvailable.IntVal)
 				assert.NotNil(t, pdb.Spec.Selector)
-				assert.Contains(t, pdb.Spec.Selector.MatchLabels, "job.runner.gitlab.com/pod")
+				assert.Equal(t,
+					map[string]string{"job.runner.gitlab.com/pod": strings.TrimSuffix(pdb.Name, "-pdb")},
+					pdb.Spec.Selector.MatchLabels,
+					"the PDB must select only its own pod",
+				)
 			},
 			VerifyExecutorFn: func(t *testing.T, test setupBuildPodTestDef, e *executor) {
 				require.NotNil(t, e.podDisruptionBudget)
@@ -7618,6 +7622,7 @@ func TestPodWatcherSetup(t *testing.T) {
 	fakeKubeClient := testclient.NewClientset()
 	mockPodWatcher := newMockPodWatcher(t)
 
+	var watcherLabels map[string]string
 	ex := newExecutor()
 	ex.getKubeConfig = func(conf *common.KubernetesConfig, overwrites *overwrites) (*restclient.Config, error) {
 		return nil, nil
@@ -7632,6 +7637,10 @@ func TestPodWatcherSetup(t *testing.T) {
 		assert.Equal(t, time.Millisecond*1234, c.maxSyncDuration)
 		assert.Subset(t, c.labels, podLabels)
 		assert.Contains(t, c.labels, "pod")
+		// The per-pod label changes when withPullRetry recreates the pod, so
+		// it must not narrow the watcher's selector.
+		assert.NotContains(t, c.labels, podSelectorLabelKey)
+		watcherLabels = c.labels
 		return mockPodWatcher
 	}
 
@@ -7651,9 +7660,19 @@ func TestPodWatcherSetup(t *testing.T) {
 	assert.NotNil(t, ex.featureChecker, "expected feature checker to be set")
 	assert.NotNil(t, ex.podWatcher, "expected pod watcher to be set")
 
-	mockPodWatcher.On("UpdatePodName", mock.AnythingOfType("string")).Once()
-	err = ex.setupBuildPod(ctx, nil)
-	assert.NoError(t, err, "setting up the  build pod")
+	// The second setup simulates withPullRetry recreating the pod.
+	mockPodWatcher.On("UpdatePodName", mock.AnythingOfType("string")).Twice()
+	var pods []*api.Pod
+	for range 2 {
+		require.NoError(t, ex.setupBuildPod(ctx, nil), "setting up the build pod")
+		pods = append(pods, ex.pod)
+	}
+
+	for _, pod := range pods {
+		assert.Subset(t, pod.Labels, watcherLabels, "the pod watcher must see every build pod")
+		assert.Equal(t, pod.Name, pod.Labels[podSelectorLabelKey])
+	}
+	assert.NotEqual(t, pods[0].Labels[podSelectorLabelKey], pods[1].Labels[podSelectorLabelKey])
 
 	mockPodWatcher.On("Stop").Once()
 	ex.Finish(nil)
