@@ -188,6 +188,10 @@ some of the most common problems with GitLab Runner.
 
 ## Upgrade GitLab Runner
 
+> [!note]
+> Keep GitLab Runner on the same major and minor version as your GitLab instance, and install patch releases as they become available.
+> For more information, see [GitLab Runner versions](../_index.md#gitlab-runner-versions).
+
 To install the latest version of GitLab Runner:
 
 {{< tabs >}}

@@ -103,6 +103,10 @@ For more information about configuration options, see
 
 ## Upgrade GitLab Runner
 
+> [!note]
+> Keep GitLab Runner on the same major and minor version as your GitLab instance, and install patch releases as they become available.
+> For more information, see [GitLab Runner versions](../_index.md#gitlab-runner-versions).
+
 To upgrade GitLab Runner to a newer version:
 
 1. Stop the service:

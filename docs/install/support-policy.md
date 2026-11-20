@@ -6,6 +6,8 @@ title: GitLab Runner support policy
 ---
 
 The support policy by GitLab Runner is determined by the lifecycle policy of the operating system.
+It covers OS and container image lifecycles. It does not cover how long a runner version is supported.
+For information related to versions, see [GitLab Runner versions](../_index.md#gitlab-runner-versions).
 
 ## Container images support
 
