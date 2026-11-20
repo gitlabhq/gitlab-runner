@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 	"sync"
 	"testing"
 	"testing/synctest"
@@ -23,6 +24,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"k8s.io/client-go/kubernetes"
 	restclient "k8s.io/client-go/rest"
+
+	"gitlab.com/gitlab-org/gitlab-runner/shells"
 )
 
 type log struct {
@@ -163,6 +166,163 @@ func TestProcessedOffsetSet(t *testing.T) {
 	err := proc.readLogs(t.Context(), logs, ch)
 	assert.NoError(t, err)
 	assert.Equal(t, int64(20), proc.logsOffset)
+}
+
+// partialLog builds a log line the way the helper's read-logs prints a chunk read
+// up to EOF in the middle of a line: the offset only counts the chunk, and a '\n' is appended to it.
+func partialLog(chunk string, previousOffset int64) log {
+	return log{line: chunk, offset: previousOffset + int64(len(chunk))}
+}
+
+func fullLog(line string, previousOffset int64) log {
+	return log{line: line, offset: previousOffset + int64(len(line)) + 1}
+}
+
+func TestReadLogsPartialLines(t *testing.T) {
+	exitStatus := `{"command_exit_code": 0, "script": "/scripts-1-1/restore_cache"}`
+	longJSON := `{"command_exit_code": 0, "script": "` + strings.Repeat("a", maxHeldPartialLineSize)
+
+	tests := map[string]struct {
+		chunks        func() []log
+		expectedLines []string
+	}{
+		"exit status split in two": {
+			chunks: func() []log {
+				first := fullLog("line 1", 0)
+				part1 := partialLog(exitStatus[:25], first.offset)
+				part2 := fullLog(exitStatus[25:], part1.offset)
+				return []log{first, part1, part2}
+			},
+			expectedLines: []string{"line 1\n", exitStatus + "\n"},
+		},
+		"exit status split in three": {
+			chunks: func() []log {
+				first := fullLog("line 1", 0)
+				part1 := partialLog(exitStatus[:10], first.offset)
+				part2 := partialLog(exitStatus[10:40], part1.offset)
+				part3 := fullLog(exitStatus[40:], part2.offset)
+				return []log{first, part1, part2, part3}
+			},
+			expectedLines: []string{"line 1\n", exitStatus + "\n"},
+		},
+		"partial non JSON line is forwarded right away": {
+			chunks: func() []log {
+				first := fullLog("line 1", 0)
+				part1 := partialLog("progress: 10%", first.offset)
+				part2 := fullLog(" 100%", part1.offset)
+				return []log{first, part1, part2}
+			},
+			expectedLines: []string{"line 1\n", "progress: 10%", " 100%\n"},
+		},
+		"line without offset does not break a held exit status": {
+			chunks: func() []log {
+				first := fullLog("line 1", 0)
+				part1 := partialLog(exitStatus[:10], first.offset)
+				part2 := partialLog(exitStatus[10:40], part1.offset)
+				part3 := fullLog(exitStatus[40:], part2.offset)
+				return []log{first, part1, {line: "out of band", offset: -1}, part2, part3}
+			},
+			expectedLines: []string{"line 1\n", "out of band\n", exitStatus + "\n"},
+		},
+		"partial JSON line other than the exit status is forwarded right away": {
+			chunks: func() []log {
+				first := fullLog("line 1", 0)
+				part1 := partialLog(`{"level":"info",`, first.offset)
+				part2 := fullLog(`"msg":"done"}`, part1.offset)
+				return []log{first, part1, part2}
+			},
+			expectedLines: []string{"line 1\n", `{"level":"info",`, `"msg":"done"}` + "\n"},
+		},
+		"partial JSON line over the size limit is forwarded right away": {
+			chunks: func() []log {
+				first := fullLog("line 1", 0)
+				part1 := partialLog(longJSON, first.offset)
+				part2 := fullLog("}", part1.offset)
+				return []log{first, part1, part2}
+			},
+			expectedLines: []string{"line 1\n", longJSON, "}\n"},
+		},
+	}
+
+	for tn, tt := range tests {
+		t.Run(tn, func(t *testing.T) {
+			proc := new(kubernetesLogProcessor)
+			proc.logger = logrus.New()
+
+			ch := make(chan string)
+			var received []string
+			done := make(chan struct{})
+			go func() {
+				defer close(done)
+				for line := range ch {
+					received = append(received, line)
+				}
+			}()
+
+			err := proc.readLogs(t.Context(), logsToReader(tt.chunks()...), ch)
+			close(ch)
+			<-done
+
+			require.NoError(t, err)
+			assert.Equal(t, tt.expectedLines, received)
+		})
+	}
+}
+
+func TestReadLogsSplitExitStatusIsDetected(t *testing.T) {
+	exitStatus := `{"command_exit_code": 1, "script": "/scripts-1-1/step_script"}`
+
+	proc := new(kubernetesLogProcessor)
+	proc.logger = logrus.New()
+
+	first := fullLog("line 1", 0)
+	part1 := partialLog(exitStatus[:25], first.offset)
+	part2 := fullLog(exitStatus[25:], part1.offset)
+
+	ch := make(chan string, 3)
+	require.NoError(t, proc.readLogs(t.Context(), logsToReader(first, part1, part2), ch))
+	close(ch)
+
+	var statuses []shells.StageCommandStatus
+	for line := range ch {
+		var status shells.StageCommandStatus
+		if status.TryUnmarshal(line) {
+			statuses = append(statuses, status)
+		}
+	}
+
+	require.Len(t, statuses, 1)
+	require.True(t, statuses[0].IsExited())
+	assert.Equal(t, 1, *statuses[0].CommandExitCode)
+}
+
+func TestReadLogsPartialLineHeldAcrossReattach(t *testing.T) {
+	exitStatus := `{"command_exit_code": 0, "script": "/scripts-1-1/restore_cache"}`
+
+	proc := new(kubernetesLogProcessor)
+	proc.logger = logrus.New()
+
+	readLogs := func(logs ...log) []string {
+		ch := make(chan string, len(logs))
+		require.NoError(t, proc.readLogs(t.Context(), logsToReader(logs...), ch))
+		close(ch)
+
+		var lines []string
+		for line := range ch {
+			lines = append(lines, line)
+		}
+		return lines
+	}
+
+	first := fullLog("line 1", 0)
+	part1 := partialLog(exitStatus[:10], first.offset)
+	received := readLogs(first, part1)
+
+	part2 := partialLog(exitStatus[10:40], proc.logsOffset)
+	part3 := fullLog(exitStatus[40:], part2.offset)
+	received = append(received, readLogs(part2, part3)...)
+
+	assert.Equal(t, []string{"line 1\n", exitStatus + "\n"}, received)
 }
 
 func logsToReader(logs ...log) io.Reader {
