@@ -26,9 +26,13 @@ hosted runners bridge bleeding edge:
     - job: unstable pulp
       artifacts: false
 
+# Work added to the stable bridge must be informational, must not affect release
+# artifacts, and must be allowed to fail. Release-critical work belongs in an earlier stage.
 hosted runners bridge stable:
   extends:
     - .hosted-runners-bridge
+  # Informational job: a failure must not fail the stable tag pipeline.
+  allow_failure: true
   rules:
     - if: !reference [.if-not-canonical-namespace, if]
       when: never
