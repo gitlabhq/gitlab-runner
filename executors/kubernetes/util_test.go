@@ -8,7 +8,9 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"net/http"
+	"slices"
 	"strings"
 	"testing"
 	"testing/synctest"
@@ -177,6 +179,31 @@ func TestGetKubeClientConfig(t *testing.T) {
 func TestWaitForPodRunning(t *testing.T) {
 	version, codec := testVersionAndCodec()
 	retries := 0
+	sandboxNotReady := []api.PodCondition{{Type: api.PodReadyToStartContainers, Status: api.ConditionFalse}}
+	userNSPod := &api.Pod{
+		ObjectMeta: metav1.ObjectMeta{Name: "test-pod", Namespace: "test-ns"},
+		Spec:       api.PodSpec{HostUsers: new(false)},
+	}
+	// userNSPodPolls answers each poll with a scheduled hostUsers=false pod,
+	// changed by mutate, that is running from poll runningFrom. Polls run
+	// every 3s and the sandbox check is due from 10s after scheduling.
+	userNSPodPolls := func(runningFrom int, mutate func(*api.Pod)) func(*http.Request) (*http.Response, error) {
+		return func(*http.Request) (*http.Response, error) {
+			pod := userNSPod.DeepCopy()
+			pod.Spec.NodeName = "node-1"
+			pod.Status = api.PodStatus{Phase: api.PodPending, Conditions: slices.Clone(sandboxNotReady)}
+			mutate(pod)
+			if retries >= runningFrom {
+				pod.Status = api.PodStatus{Phase: api.PodRunning, ContainerStatuses: []api.ContainerStatus{{Ready: true}}}
+			}
+			retries++
+			return &http.Response{
+				StatusCode: http.StatusOK,
+				Body:       objBody(codec, pod),
+				Header:     map[string][]string{common.ContentType: {"application/json"}},
+			}, nil
+		}
+	}
 
 	tests := []struct {
 		Name              string
@@ -197,6 +224,10 @@ func TestWaitForPodRunning(t *testing.T) {
 		// is the behaviour under test, and no assertion on phase or error can
 		// detect it firing.
 		ExpectNoEventsList bool
+		ExpectEventsList   bool
+		EventsListHangs    bool // the events LIST blocks until cancelled
+		// MaxWait, when set, bounds how long waitForPodRunning may take.
+		MaxWait time.Duration
 	}{
 		{
 			Name: "ensure function retries until ready",
@@ -459,6 +490,7 @@ func TestWaitForPodRunning(t *testing.T) {
 					Name:      "test-pod",
 					Namespace: "test-ns",
 				},
+				Spec: api.PodSpec{HostUsers: new(false)},
 			},
 			Config: &common.KubernetesConfig{},
 			ClientFunc: func(req *http.Request) (*http.Response, error) {
@@ -474,9 +506,11 @@ func TestWaitForPodRunning(t *testing.T) {
 						// can reject for lacking user namespace support.
 						Spec: api.PodSpec{
 							HostUsers: new(false),
+							NodeName:  "node-1",
 						},
 						Status: api.PodStatus{
-							Phase: api.PodPending,
+							Phase:      api.PodPending,
+							Conditions: sandboxNotReady,
 						},
 					}
 					return &http.Response{
@@ -519,6 +553,7 @@ func TestWaitForPodRunning(t *testing.T) {
 					Name:      "test-pod",
 					Namespace: "test-ns",
 				},
+				Spec: api.PodSpec{HostUsers: new(false)},
 			},
 			Config: &common.KubernetesConfig{},
 			ClientFunc: func(req *http.Request) (*http.Response, error) {
@@ -531,9 +566,11 @@ func TestWaitForPodRunning(t *testing.T) {
 						},
 						Spec: api.PodSpec{
 							HostUsers: new(false),
+							NodeName:  "node-1",
 						},
 						Status: api.PodStatus{
-							Phase: api.PodPending,
+							Phase:      api.PodPending,
+							Conditions: sandboxNotReady,
 						},
 					}
 					return &http.Response{
@@ -579,6 +616,7 @@ func TestWaitForPodRunning(t *testing.T) {
 					Name:      "test-pod",
 					Namespace: "test-ns",
 				},
+				Spec: api.PodSpec{HostUsers: new(false)},
 			},
 			Config: &common.KubernetesConfig{
 				PrintPodWarningEvents: new(bool),
@@ -593,9 +631,11 @@ func TestWaitForPodRunning(t *testing.T) {
 						},
 						Spec: api.PodSpec{
 							HostUsers: new(false),
+							NodeName:  "node-1",
 						},
 						Status: api.PodStatus{
-							Phase: api.PodPending,
+							Phase:      api.PodPending,
+							Conditions: sandboxNotReady,
 						},
 					}
 					return &http.Response{
@@ -692,6 +732,7 @@ func TestWaitForPodRunning(t *testing.T) {
 					Name:      "test-pod",
 					Namespace: "test-ns",
 				},
+				Spec: api.PodSpec{HostUsers: new(false)},
 			},
 			Config: &common.KubernetesConfig{},
 			ClientFunc: func(req *http.Request) (*http.Response, error) {
@@ -704,13 +745,15 @@ func TestWaitForPodRunning(t *testing.T) {
 						},
 						Spec: api.PodSpec{
 							HostUsers: new(false),
+							NodeName:  "node-1",
 						},
 						Status: api.PodStatus{
-							Phase: api.PodPending,
+							Phase:      api.PodPending,
+							Conditions: sandboxNotReady,
 						},
 					}
 
-					if retries > 0 {
+					if retries > 4 { // pending until after the check at t=12s
 						pod.Status.Phase = api.PodRunning
 						pod.Status.ContainerStatuses = []api.ContainerStatus{
 							{Ready: true},
@@ -738,8 +781,59 @@ func TestWaitForPodRunning(t *testing.T) {
 					},
 				},
 			},
-			PodEndPhase: api.PodRunning,
-			Retries:     1,
+			PodEndPhase:      api.PodRunning,
+			Retries:          1,
+			ExpectEventsList: true,
+		},
+		{
+			Name:   "ensure no events LIST once the pod's sandbox is ready, however long it pends",
+			Pod:    userNSPod,
+			Config: &common.KubernetesConfig{},
+			ClientFunc: userNSPodPolls(60, func(pod *api.Pod) {
+				if retries > 0 {
+					pod.Status.Conditions[0].Status = api.ConditionTrue
+				}
+			}),
+			PodEndPhase:        api.PodRunning,
+			ExpectNoEventsList: true,
+		},
+		{
+			Name:               "ensure no events LIST for an unscheduled pod",
+			Pod:                userNSPod,
+			Config:             &common.KubernetesConfig{},
+			ClientFunc:         userNSPodPolls(60, func(pod *api.Pod) { pod.Spec.NodeName = "" }),
+			PodEndPhase:        api.PodRunning,
+			ExpectNoEventsList: true,
+		},
+		{
+			// The LIST at t=12s is cut off at t=42s and the wait goes on. The
+			// next LIST waits 10s from then (t=54s), not from when the first
+			// one started, which would be the next poll at t=45s.
+			Name:             "ensure a hanging events LIST is bounded and paced from its end",
+			Pod:              userNSPod,
+			Config:           &common.KubernetesConfig{},
+			ClientFunc:       userNSPodPolls(10, func(*api.Pod) {}),
+			EventsListHangs:  true,
+			PodEndPhase:      api.PodRunning,
+			ExpectEventsList: true,
+		},
+		{
+			// Each poll that runs the LIST counts as one attempt but takes up
+			// to 30s, so unless its time is charged as attempts the 61 attempts
+			// take ~10m.
+			Name:             "ensure a hanging events LIST does not stretch the wait past poll_timeout",
+			Pod:              userNSPod,
+			Config:           &common.KubernetesConfig{},
+			ClientFunc:       userNSPodPolls(math.MaxInt, func(*api.Pod) {}),
+			EventsListHangs:  true,
+			PodEndPhase:      api.PodUnknown,
+			Error:            true,
+			ExpectEventsList: true,
+			// poll_timeout plus at most one poll_interval of overshoot.
+			MaxWait: time.Duration(common.KubernetesPollTimeout+common.KubernetesPollInterval) * time.Second,
+			VerifyError: func(t *testing.T, err error) {
+				assert.ErrorContains(t, err, "timed out waiting for pod to start (last phase: Pending)")
+			},
 		},
 	}
 
@@ -748,9 +842,21 @@ func TestWaitForPodRunning(t *testing.T) {
 			synctest.Test(t, func(t *testing.T) {
 				retries = 0
 				eventsLists := 0
+				var lastListEnd time.Time
 				clientFunc := func(req *http.Request) (*http.Response, error) {
 					if req.Method == http.MethodGet && strings.HasSuffix(req.URL.Path, "/events") {
 						eventsLists++
+						if !lastListEnd.IsZero() {
+							assert.GreaterOrEqual(t, time.Since(lastListEnd), sandboxCheckInterval,
+								"events LIST paced from when the previous one returned")
+						}
+						defer func() { lastListEnd = time.Now() }()
+						if test.EventsListHangs {
+							start := time.Now()
+							<-req.Context().Done()
+							assert.LessOrEqual(t, time.Since(start), 30*time.Second, "events LIST cut off")
+							return nil, req.Context().Err()
+						}
 						events := test.Events
 						if events == nil {
 							events = &api.EventList{}
@@ -777,7 +883,11 @@ func TestWaitForPodRunning(t *testing.T) {
 						return len(b), nil
 					},
 				}
+				waitStart := time.Now()
 				phase, err := waitForPodRunning(t.Context(), c, test.Pod, fw, test.Config, nil)
+				if test.MaxWait > 0 {
+					assert.LessOrEqual(t, time.Since(waitStart), test.MaxWait, "[%s] wait bounded by poll_timeout", test.Name)
+				}
 
 				if err != nil && !test.Error {
 					t.Errorf("[%s] Expected success. Got: %s", test.Name, err.Error())
@@ -807,6 +917,9 @@ func TestWaitForPodRunning(t *testing.T) {
 
 				if test.ExpectNoEventsList {
 					assert.Zero(t, eventsLists, "[%s] Expected no events LIST to be issued", test.Name)
+				}
+				if test.ExpectEventsList {
+					assert.NotZero(t, eventsLists, "[%s] Expected an events LIST", test.Name)
 				}
 
 				if test.VerifyError != nil {

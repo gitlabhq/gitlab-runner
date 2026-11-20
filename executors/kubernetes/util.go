@@ -205,7 +205,7 @@ type podPhaseResponse struct {
 	nodeName string
 }
 
-func getPodPhase(ctx context.Context, client kubernetes.Interface, pod *api.Pod, out io.Writer, printPodWarningEvents bool, containers ...string) (pf podPhaseResponse) {
+func getPodPhase(ctx context.Context, client kubernetes.Interface, pod *api.Pod, out io.Writer, printPodWarningEvents bool, sandboxCheck *sandboxCheckPacer, containers ...string) (pf podPhaseResponse) {
 	// kubeAPI: pods, get
 	pod, err := client.CoreV1().Pods(pod.Namespace).Get(ctx, pod.Name, metav1.GetOptions{})
 	if err != nil {
@@ -222,8 +222,14 @@ func getPodPhase(ctx context.Context, client kubernetes.Interface, pod *api.Pod,
 		return podPhaseResponse{done: true, phase: api.PodUnknown, err: err}
 	}
 
-	if podUsesUserNamespaces(pod) {
-		if err := checkPodSandboxUserNamespaceFailure(ctx, client, pod); err != nil {
+	if podUsesUserNamespaces(pod) && sandboxCheck.due(pod, time.Now()) {
+		start := time.Now()
+		listCtx, cancel := context.WithDeadline(ctx, sandboxCheck.deadline)
+		err := checkPodSandboxUserNamespaceFailure(listCtx, client, pod)
+		cancel()
+		sandboxCheck.lastCheck = time.Now() // pace from when the LIST returns
+		sandboxCheck.spent += sandboxCheck.lastCheck.Sub(start)
+		if err != nil {
 			return podPhaseResponse{done: true, phase: api.PodUnknown, err: err}
 		}
 	}
@@ -275,9 +281,62 @@ var userNamespaceSandboxFailures = []string{
 	"error setting namespace of type user",
 }
 
+// sandboxCheckInterval is how long a scheduled pod's sandbox must stay not ready
+// before the first sandbox check, and the minimum gap between the end of one
+// check and the start of the next. Healthy sandboxes are ready within seconds,
+// so healthy pods never run the check.
+const sandboxCheckInterval = 10 * time.Second
+
+// sandboxCheckPacer paces checkPodSandboxUserNamespaceFailure, whose events LIST
+// scans the whole namespace, across the polls of one waitForPodRunning call.
+type sandboxCheckPacer struct {
+	// lastCheck is when the last check returned, or when the pod was first
+	// seen scheduled, so the first check runs one interval after scheduling.
+	lastCheck time.Time
+	// deadline is when poll_timeout runs out. No check starts after it, and a
+	// running check is cut off at it.
+	deadline time.Time
+	// spent is the total time the checks took. waitForPodRunning charges it
+	// against its poll attempts so the checks don't stretch poll_timeout.
+	spent time.Duration
+}
+
+func (p *sandboxCheckPacer) due(pod *api.Pod, now time.Time) bool {
+	if p == nil || pod.Spec.NodeName == "" || !now.Before(p.deadline) {
+		return false
+	}
+	if p.lastCheck.IsZero() {
+		p.lastCheck = now // runner clock: no skew against condition timestamps
+	}
+	for _, c := range pod.Status.Conditions {
+		if c.Type == api.PodReadyToStartContainers && c.Status == api.ConditionTrue {
+			return false // the sandbox exists, so it can no longer fail
+		}
+	}
+	return now.Sub(p.lastCheck) >= sandboxCheckInterval
+}
+
+// chargeAttempts returns the poll attempts the checks' time has used since the
+// last call. A poll that runs the check takes up to 30s but counts as one
+// attempt, so without the charge the wait runs several times past poll_timeout.
+func (p *sandboxCheckPacer) chargeAttempts(pollInterval int) int {
+	if p == nil {
+		return 0
+	}
+	interval := time.Duration(pollInterval) * time.Second
+	n := int(p.spent / interval)
+	p.spent %= interval
+	return n
+}
+
 // checkPodSandboxUserNamespaceFailure detects a runtime that cannot create a pod
 // sandbox with `spec.hostUsers: false`.
 func checkPodSandboxUserNamespaceFailure(ctx context.Context, client kubernetes.Interface, pod *api.Pod) error {
+	// The field selector is not indexed: on a namespace with many events the
+	// LIST can run to the API server's 60s timeout. Only overdue pods wait on it.
+	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
+
 	//nolint:gocritic
 	// kubeAPI: events, list, hostUsers=false
 	events, err := client.CoreV1().Events(pod.Namespace).List(ctx, metav1.ListOptions{
@@ -307,11 +366,12 @@ func checkPodSandboxUserNamespaceFailure(ctx context.Context, client kubernetes.
 	return nil
 }
 
-func triggerPodPhaseCheck(ctx context.Context, c kubernetes.Interface, pod *api.Pod, out io.Writer, printPodWarningEvents bool, containers ...string) <-chan podPhaseResponse {
-	errc := make(chan podPhaseResponse)
+func triggerPodPhaseCheck(ctx context.Context, c kubernetes.Interface, pod *api.Pod, out io.Writer, printPodWarningEvents bool, sandboxCheck *sandboxCheckPacer, containers ...string) <-chan podPhaseResponse {
+	// Buffered: waitForPodRunning stops reading when its context is done.
+	errc := make(chan podPhaseResponse, 1)
 	go func() {
 		defer close(errc)
-		errc <- getPodPhase(ctx, c, pod, out, printPodWarningEvents, containers...)
+		errc <- getPodPhase(ctx, c, pod, out, printPodWarningEvents, sandboxCheck, containers...)
 	}()
 	return errc
 }
@@ -337,9 +397,17 @@ func waitForPodRunning(
 	pollInterval := config.GetPollInterval()
 	pollAttempts := config.GetPollAttempts()
 	var lastPhase api.PodPhase
+	var sandboxCheck *sandboxCheckPacer
+	if podUsesUserNamespaces(pod) {
+		pollTimeout := time.Duration(config.GetPollTimeout()) * time.Second
+		sandboxCheck = &sandboxCheckPacer{deadline: time.Now().Add(pollTimeout)}
+	}
 	for i := 0; i <= pollAttempts; i++ {
+		if i += sandboxCheck.chargeAttempts(pollInterval); i > pollAttempts {
+			break
+		}
 		select {
-		case r := <-triggerPodPhaseCheck(ctx, c, pod, out, config.GetPrintPodWarningEvents(), containers...):
+		case r := <-triggerPodPhaseCheck(ctx, c, pod, out, config.GetPrintPodWarningEvents(), sandboxCheck, containers...):
 			if r.nodeName != "" && onScheduled != nil {
 				onScheduled()
 				onScheduled = nil
