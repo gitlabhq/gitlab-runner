@@ -357,11 +357,8 @@ check_test_directives:
 		ARGS="$(shell pwd)" \
 		run_go_script
 
-update_feature_flags_docs:
-	@$(MAKE) \
-		SCRIPT_NAME=update-feature-flags-docs \
-		ARGS="$(shell pwd)" \
-		run_go_script
+update_feature_flags_docs: $(MAGE)
+	@$(MAGE) updateFeatureFlagsDocs
 
 generate_changelog: export CHANGELOG_RELEASE ?= $(VERSION)
 generate_changelog: $(GITLAB_CHANGELOG)
