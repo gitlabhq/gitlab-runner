@@ -1567,6 +1567,15 @@ func TestCleanup_KeepsPVCWhenConfigMapDeleteFails(t *testing.T) {
 	}
 }
 
+func TestCleanup_StopsPodWatcher(t *testing.T) {
+	e := newTestExecutorWithKubeClient(t, &common.KubernetesConfig{})
+	mockPodWatcher := newMockPodWatcher(t)
+	mockPodWatcher.On("Stop").Once()
+	e.podWatcher = mockPodWatcher
+
+	e.Cleanup()
+}
+
 func TestCleanup_ConfigMapLifecycle(t *testing.T) {
 	tests := []struct {
 		name                 string
@@ -7657,6 +7666,98 @@ func TestPodWatcherSetup(t *testing.T) {
 
 	mockPodWatcher.On("Stop").Once()
 	ex.Finish(nil)
+}
+
+func TestPodWatcherStartErrors(t *testing.T) {
+	tests := map[string]struct {
+		startErr        error
+		expectErr       bool
+		expectedWarning string
+	}{
+		"cache not synced": {
+			startErr:        fmt.Errorf("%w: *v1.Pod", watchers.ErrCacheNotSynced),
+			expectedWarning: "Pod watcher did not finish its initial sync within 1.234s",
+		},
+		"joined cache not synced": {
+			startErr:        errors.Join(fmt.Errorf("%w: *v1.Pod", watchers.ErrCacheNotSynced)),
+			expectedWarning: "Pod watcher did not finish its initial sync within 1.234s",
+		},
+		"other error": {
+			startErr:  errors.New("registering event handler: boom"),
+			expectErr: true,
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			ctx, cancel := context.WithCancel(t.Context())
+			defer cancel()
+
+			build := &common.Build{
+				Job: spec.Job{},
+				Runner: &common.RunnerConfig{
+					RunnerSettings: common.RunnerSettings{
+						Kubernetes: &common.KubernetesConfig{
+							Image:                  "some-build-image",
+							Namespace:              "some-namespace",
+							RequestRetryBackoffMax: 1234,
+						},
+					},
+				},
+			}
+
+			fakeKubeClient := testclient.NewClientset()
+			mockPodWatcher := newMockPodWatcher(t)
+
+			ex := newExecutor()
+			ex.getKubeConfig = func(conf *common.KubernetesConfig, overwrites *overwrites) (*restclient.Config, error) {
+				return nil, nil
+			}
+			ex.newKubeClient = func(config *restclient.Config) (kubernetes.Interface, error) {
+				return fakeKubeClient, nil
+			}
+			ex.newPodWatcher = func(c podWatcherConfig) podWatcher {
+				return mockPodWatcher
+			}
+
+			mockPodWatcher.On("Start").Return(test.startErr).Once()
+
+			var (
+				mu  sync.Mutex
+				log bytes.Buffer
+			)
+			mockTrace := buildlogger.NewMockTrace(t)
+			mockTrace.EXPECT().IsStdout().Return(true).Once()
+			mockTrace.EXPECT().Write(mock.Anything).RunAndReturn(func(p []byte) (int, error) {
+				mu.Lock()
+				defer mu.Unlock()
+				return log.Write(p)
+			})
+
+			err := ex.Prepare(common.ExecutorPrepareOptions{
+				Context:     ctx,
+				Build:       build,
+				Config:      build.Runner,
+				BuildLogger: buildlogger.New(mockTrace, logrus.WithFields(logrus.Fields{}), buildlogger.Options{}),
+			})
+
+			if test.expectErr {
+				require.Error(t, err)
+				assert.ErrorIs(t, err, test.startErr)
+				return
+			}
+
+			require.NoError(t, err, "preparing the executor")
+			assert.Same(t, mockPodWatcher, ex.podWatcher, "expected the pod watcher to be kept")
+
+			mu.Lock()
+			assert.Contains(t, log.String(), test.expectedWarning)
+			mu.Unlock()
+
+			mockPodWatcher.On("Stop").Once()
+			ex.Finish(nil)
+		})
+	}
 }
 
 func TestPodWatcherGracefulDegrade(t *testing.T) {

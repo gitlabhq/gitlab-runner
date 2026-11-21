@@ -645,6 +645,7 @@ func (s *executor) prepareInfrastructure(ctx context.Context) error {
 		}
 	}
 
+	maxSyncDuration := s.Config.Kubernetes.RequestRetryBackoffMax.Get()
 	s.podWatcher = s.newPodWatcher(podWatcherConfig{
 		ctx:             ctx,
 		logger:          &s.BuildLogger,
@@ -652,11 +653,19 @@ func (s *executor) prepareInfrastructure(ctx context.Context) error {
 		featureChecker:  s.featureChecker,
 		namespace:       s.configurationOverwrites.namespace,
 		labels:          s.buildLabels(),
-		maxSyncDuration: s.Config.Kubernetes.RequestRetryBackoffMax.Get(),
+		maxSyncDuration: maxSyncDuration,
 		retryProvider:   s,
 	})
 	if err := s.podWatcher.Start(); err != nil {
-		return fmt.Errorf("starting pod watcher: %w", err)
+		// The watcher only speeds up the detection of terminal pod errors, and keeps syncing in the
+		// background. A slow API server must not fail the job.
+		if !errors.Is(err, watchers.ErrCacheNotSynced) {
+			return fmt.Errorf("starting pod watcher: %w", err)
+		}
+		s.BuildLogger.Warningln(fmt.Sprintf(
+			"Pod watcher did not finish its initial sync within %s (retry_backoff_max): %v. The job continues and the watcher keeps syncing in the background. Terminal pod errors are detected after it syncs.",
+			maxSyncDuration, err,
+		))
 	}
 
 	if s.Build.UseNativeSteps() {
@@ -1754,6 +1763,11 @@ func (s *executor) Finish(err error) {
 func (s *executor) Cleanup() {
 	if s.eventsStream != nil {
 		s.eventsStream.Stop()
+	}
+
+	// Finish() is skipped when Prepare fails, so stop the informers here too.
+	if s.podWatcher != nil {
+		s.podWatcher.Stop()
 	}
 
 	if s.suspended {

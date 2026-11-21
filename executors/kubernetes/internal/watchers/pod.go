@@ -21,6 +21,10 @@ import (
 // receive (looking at you, windows).
 const emitErrorTimeout = time.Millisecond
 
+// ErrCacheNotSynced is returned by [PodWatcher.Start] when the initial cache sync did not finish in time. The informers
+// keep running and retrying until [PodWatcher.Stop], so callers may treat it as non-fatal.
+var ErrCacheNotSynced = errors.New("not synced")
+
 type logger interface {
 	Debugln(args ...any)
 }
@@ -72,7 +76,7 @@ func (p *PodWatcher) Start() error {
 		if isSynced {
 			continue
 		}
-		err = errors.Join(err, fmt.Errorf("not synced: %s", informer))
+		err = errors.Join(err, fmt.Errorf("%w: %s", ErrCacheNotSynced, informer))
 	}
 
 	return err

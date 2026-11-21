@@ -266,6 +266,11 @@ If all permissions are granted, the executor uses an informer.
 If any permission is missing, GitLab Runner logs a warning. The build continues
 and uses the previous mechanism to track the build pod's status and changes.
 
+If the informer does not complete its initial sync with the Kubernetes API within
+`retry_backoff_max` (2 seconds by default), GitLab Runner logs a warning and the build continues.
+The informer keeps syncing in the background and reports terminal pod errors after it syncs.
+With the default attach strategy, the executor also polls the pod status, so the build does not depend on the informer.
+
 ## Configuration settings
 
 Use the following settings in the `config.toml` file to configure the Kubernetes executor.
