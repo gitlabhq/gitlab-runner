@@ -15,6 +15,7 @@ import (
 	"github.com/stretchr/testify/require"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/kubernetes/fake"
 	ktesting "k8s.io/client-go/testing"
@@ -169,6 +170,25 @@ func TestPodWatcher(t *testing.T) {
 			})
 		})
 	}
+}
+
+func TestPodWatcherStartCacheNotSynced(t *testing.T) {
+	ctx, cancel := context.WithCancel(t.Context())
+	defer cancel()
+
+	// The pod list blocks until the test is done, so the initial cache sync can never complete in time.
+	fakeKubeClient := fake.NewClientset()
+	fakeKubeClient.PrependReactor("list", "pods", func(ktesting.Action) (bool, runtime.Object, error) {
+		<-ctx.Done()
+		return true, nil, ctx.Err()
+	})
+
+	podWatcher := NewPodWatcher(ctx, newMockLogger(t), fakeKubeClient, defaultNamespace, defaultLabels, 50*time.Millisecond)
+	defer podWatcher.Stop()
+
+	err := podWatcher.Start()
+	require.Error(t, err)
+	assert.ErrorIs(t, err, ErrCacheNotSynced)
 }
 
 func TestPodWatcherNoConsumer(t *testing.T) {
