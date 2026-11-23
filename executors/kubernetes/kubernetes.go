@@ -24,7 +24,7 @@ import (
 	"github.com/distribution/reference"
 	"github.com/docker/cli/cli/config/types"
 	jsonpatch "github.com/evanphx/json-patch"
-	"github.com/hashicorp/golang-lru/v2/expirable"
+	"github.com/hashicorp/golang-lru/v2/simplelru"
 	"github.com/jpillora/backoff"
 	"github.com/sirupsen/logrus"
 	api "k8s.io/api/core/v1"
@@ -115,7 +115,6 @@ const (
 	//   key (UID:count) ≈ 40 B + string header 16 B + time.Time 24 B + LRU links 16 B ≈ 96 B
 	//   For 100k entries, worst‑case RAM ≈ 10 MB.
 	podEventLRUCapacity = 100000
-	podEventStateTTL    = 2 * time.Hour
 
 	suspendBuildsSubPath = "builds"
 )
@@ -512,7 +511,7 @@ type executor struct {
 
 type podEventState struct {
 	lastFetched time.Time
-	seen        *expirable.LRU[string, time.Time]
+	seen        *simplelru.LRU[string, time.Time]
 }
 
 type podWatcher interface {
@@ -1009,7 +1008,7 @@ func (s *executor) initPodEventState() {
 		return
 	}
 
-	cache := expirable.NewLRU[string, time.Time](podEventLRUCapacity, nil, podEventStateTTL)
+	cache, _ := simplelru.NewLRU[string, time.Time](podEventLRUCapacity, nil)
 
 	s.podEventState = &podEventState{seen: cache}
 }
