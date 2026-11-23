@@ -474,6 +474,16 @@ func (e *executor) createService(
 
 	dockerOptions := definition.ExecutorOptions.Docker.Expand(e.Build.GetAllVariables())
 
+	// Unlike build containers, services never run as the runner's configured user, so only
+	// an explicit allowed_users list restricts the user a job can choose for a service.
+	if user := string(dockerOptions.User); len(e.Config.Docker.AllowedUsers) > 0 && !e.Config.Docker.IsUserAllowed(user) {
+		return nil, &common.BuildError{
+			Inner: fmt.Errorf("service %q: user %q is not an allowed user: %v",
+				definition.Name, user, e.Config.Docker.AllowedUsers),
+			FailureReason: common.ConfigurationError,
+		}
+	}
+
 	e.BuildLogger.Println("Starting service", serviceName)
 	serviceImage, err := e.pullManager.GetDockerImage(image, dockerOptions, definition.PullPolicies)
 	if err != nil {
