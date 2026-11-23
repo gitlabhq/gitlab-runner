@@ -173,6 +173,25 @@ You can tell Docker which DNS server to use by using the `dns` configuration in 
 dns = ["192.168.xxx.xxx","192.168.xxx.xxx"]
 ```
 
+## Docker service health check fails with `No HOST or PORT found`
+
+When the Docker executor starts a service, you might see `FATAL: No HOST or PORT found`
+in the health check container logs. The helper did not receive a host address or TCP port
+to check, so it exited before attempting a connection.
+
+If this starts after upgrading to Docker 29:
+
+1. Check the GitLab Runner version and the version of the Docker Engine used by the executor.
+   With Docker-in-Docker, the engine used by the executor can differ from the engine
+   reported by `docker version` inside the CI/CD job.
+1. If you are using GitLab Runner earlier than 18.7, upgrade to a supported version.
+   GitLab Runner 18.7 changed how the default bridge network handles
+   [legacy container links](../executors/docker.md#configure-a-network-with-container-links).
+1. If the error persists, check
+   [issue 39131](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/39131).
+   Include the runner and engine versions, the networking mode, the service image tag,
+   and the health check container logs when reporting a reproduction.
+
 ## I'm seeing `x509: certificate signed by unknown authority`
 
 For more information, see [the self-signed certificates](../configuration/tls-self-signed.md).
