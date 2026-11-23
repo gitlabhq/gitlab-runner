@@ -3107,7 +3107,24 @@ For example, to allow only the `always` and `if-not-present` pull policies:
 GitLab Runner uses `kube attach` instead of `kube exec` by default. This should avoid problems like when a [job is marked successful midway](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4119)
 in environments with an unstable network.
 
-Follow [issue #27976](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27976) for progress on legacy execution strategy removal.
+The legacy `kube exec` execution strategy, enabled with the
+[`FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY` feature flag](../../configuration/feature-flags.md),
+is deprecated and is planned for removal in GitLab Runner 19.10.
+After removal, the runner always uses `kube attach`.
+
+If you set `FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY` to `true` in the runner configuration or as a CI/CD variable, before you upgrade:
+
+- Make sure the runner's service account can `create`, `delete`, `get`, and `patch`
+  the `pods/attach` resource. Some feature flags, such as `FF_KUBERNETES_HONOR_ENTRYPOINT`, also need `pods/log` and `pods` `watch`. For more information, see
+  [configure runner API permissions](#configure-runner-api-permissions).
+- Remove the feature flag and test your jobs with the `attach` strategy.
+  The legacy strategy does not avoid the network faults behind issues like
+  [missing stage scripts](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/39644).
+  Under the same faults, it can report a job as successful without
+  running the stage ([test results](https://gitlab.com/gitlab-org/gitlab-runner/-/work_items/39818#note_4274884401)).
+  If a job fails only with the `attach` strategy, [open an issue](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/new).
+
+Follow [issue 39818](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/39818) for progress on legacy execution strategy removal.
 
 ### Configure the number of request attempts to the Kubernetes API
 

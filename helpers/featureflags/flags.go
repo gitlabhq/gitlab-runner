@@ -98,13 +98,16 @@ var flags = []FeatureFlag{
 	{
 		Name:            UseLegacyKubernetesExecutionStrategy,
 		DefaultValue:    false,
-		Deprecated:      false,
-		ToBeRemovedWith: "",
-		Description: "When set to `false` disables execution of remote Kubernetes commands through `exec` in " +
+		Deprecated:      true,
+		ToBeRemovedWith: "19.10",
+		Description: "When set to `false`, disables execution of remote Kubernetes commands through `exec` in " +
 			"favor of `attach` to solve problems like " +
-			"[#4119](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4119). " +
-			"This feature flag requires the Service Account to have specific permissions. " +
-			"For more information, see [configure runner API permissions](../executors/kubernetes/_index.md#configure-runner-api-permissions).",
+			"[issue 4119](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4119). " +
+			"This feature flag requires the service account to have specific permissions. " +
+			"For more information, see [configure runner API permissions](../executors/kubernetes/_index.md#configure-runner-api-permissions). " +
+			"Deprecated: The legacy `exec` execution strategy and this flag are removed in GitLab Runner 19.10, " +
+			"after which the `attach` strategy is always used. " +
+			"See [job execution](../executors/kubernetes/_index.md#job-execution).",
 	},
 	{
 		Name:            UseDirectDownload,
