@@ -1336,3 +1336,79 @@ func exposedPortRange(start, end uint16) network.PortSet {
 	}
 	return set
 }
+
+func TestDockerServiceUserAllowed(t *testing.T) {
+	tests := map[string]struct {
+		serviceUser  spec.StringOrInt64
+		runnerUser   string
+		allowedUsers []string
+		want         string
+		wantErr      bool
+	}{
+		"no allowed users, no service user":           {},
+		"no allowed users, service user specified":    {serviceUser: "0", want: "0"},
+		"runner user only, service user unrestricted": {runnerUser: "1000", serviceUser: "0", want: "0"},
+		"allowed users, no service user":              {allowedUsers: []string{"1000"}},
+		"allowed users, allowed service user":         {allowedUsers: []string{"1000"}, serviceUser: "1000", want: "1000"},
+		"allowed users, service user as variable":     {allowedUsers: []string{"1000"}, serviceUser: "${SVC_USER}", want: "1000"},
+		"allowed users include root, root service":    {allowedUsers: []string{"1000", "0"}, serviceUser: "0", want: "0"},
+		"allowed users, disallowed service user":      {allowedUsers: []string{"1000"}, serviceUser: "0", wantErr: true},
+		"allowed users, disallowed user as variable":  {allowedUsers: []string{"1000"}, serviceUser: "${ROOT_USER}", wantErr: true},
+		"allowed users, allowed user with root group": {allowedUsers: []string{"1000"}, serviceUser: "1000:0", wantErr: true},
+		"allowed users, service user by name":         {allowedUsers: []string{"1000"}, serviceUser: "root", wantErr: true},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			dockerConfig := &common.DockerConfig{
+				User:         tt.runnerUser,
+				AllowedUsers: tt.allowedUsers,
+			}
+			serviceConfig := spec.Image{
+				Name: "alpine",
+				ExecutorOptions: spec.ImageExecutorOptions{
+					Docker: spec.ImageDockerOptions{User: tt.serviceUser},
+				},
+			}
+
+			cce := func(t *testing.T, config *container.Config, _ *container.HostConfig, _ *network.NetworkingConfig) {
+				assert.Equal(t, tt.want, config.User)
+			}
+
+			var e *executor
+			if tt.wantErr {
+				// no expectations: a disallowed user must be rejected before the image is pulled
+				_, e = createExecutorForTestDockerConfiguration(t, dockerConfig, cce)
+			} else {
+				var c *dockerConfigurationTestFakeDockerClient
+				c, e = prepareTestDockerConfiguration(t, dockerConfig, cce, "alpine:latest", "alpine:latest")
+				c.On("ContainerStart", mock.Anything, "abc", mock.Anything).
+					Return(nil).Once()
+				c.On("ContainerInspect", mock.Anything, "abc").
+					Return(container.InspectResponse{
+						NetworkSettings: &container.NetworkSettings{},
+						Config:          &container.Config{},
+						ID:              "abc", State: &container.State{Status: container.StateRunning},
+					}, nil)
+			}
+
+			e.Build.Variables = append(e.Build.Variables,
+				spec.Variable{Key: "SVC_USER", Value: "1000"},
+				spec.Variable{Key: "ROOT_USER", Value: "0"},
+			)
+
+			require.NoError(t, e.createVolumesManager())
+			require.NoError(t, e.createPullManager())
+
+			_, err := e.createService(0, "alpine", "latest", "alpine:latest", serviceConfig, nil)
+			if tt.wantErr {
+				var buildErr *common.BuildError
+				require.ErrorAs(t, err, &buildErr)
+				assert.Equal(t, common.ConfigurationError, buildErr.FailureReason)
+				assert.Contains(t, err.Error(), "is not an allowed user")
+				return
+			}
+			require.NoError(t, err)
+		})
+	}
+}
