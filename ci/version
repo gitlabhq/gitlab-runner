@@ -10,7 +10,7 @@ if echo "${exact_tag}" | grep -qE "^[0-9]+\.[0-9]+\.[0-9]+(-rc[0-9]+)?$"; then
     exit 0
 fi
 
-last_tag=$(git describe --abbrev=0 --exclude='*-rc*' --exclude='helpers/runner_wrapper/api/v*')
+last_tag=$(git describe --abbrev=0 --exclude='*-rc*' --exclude='helpers/runner_wrapper/api/v*' 2>/dev/null || echo "")
 
 # VERSION is written when a stable branch is cut and not updated by patch
 # releases, so a patch tag can be newer than it. The next release is then the
@@ -21,7 +21,26 @@ if [[ "${tag_version}" =~ ^([0-9]+\.[0-9]+)\.([0-9]+)$ ]] &&
     version="${BASH_REMATCH[1]}.$((BASH_REMATCH[2] + 1))"
 fi
 
-commits=$(git rev-list --count "${last_tag}..HEAD")
+# Release tags live on stable branches and are not ancestors of main, so
+# git describe on main finds a tag from an older minor. VERSION is bumped on
+# main after each x.y.0 release, so count from the last change to VERSION.
+if [[ -n "${last_tag}" && "${last_tag#v}" == "${version%.*}."* ]]; then
+    base=${last_tag}
+else
+    base=$(git log -1 --format=%H -- VERSION)
+    shallow=$(git rev-parse --git-path shallow)
+    if [[ -n "${base}" && -f "${shallow}" ]] && grep -qx "${base}" "${shallow}"; then
+        echo "ci/version: last change to VERSION is not in this shallow clone; fetch more history" >&2
+        exit 1
+    fi
+fi
+
+if [[ -n "${base}" ]]; then
+    commits=$(git rev-list --count "${base}..HEAD")
+else
+    echo "ci/version: VERSION has no history; counting all commits" >&2
+    commits=$(git rev-list --count HEAD)
+fi
 revision=$(git rev-parse --short=8 HEAD || echo unknown)
 
 echo "${version}~pre.${commits}.g${revision}"

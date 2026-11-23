@@ -44,9 +44,11 @@ git tag -a v19.2.2-rc1 -m v19.2.2-rc1
 git commit -q --allow-empty -m "fix 3"
 expect '^19\.2\.2~pre\.2\.g[0-9a-f]{8}$'
 
-# Development branch: VERSION is the next minor, ahead of the last tag.
+# Development branch: VERSION is the next minor, and the count starts at
+# the VERSION bump.
 echo 19.3.0 > VERSION
 git commit -q -am "next minor"
-expect '^19\.3\.0~pre\.3\.g[0-9a-f]{8}$'
+git commit -q --allow-empty -m "feature"
+expect '^19\.3\.0~pre\.1\.g[0-9a-f]{8}$'
 
 exit "${failures}"
