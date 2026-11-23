@@ -568,6 +568,99 @@ block the job pod from its node.
 When the runner starts to shut down, it scales the `Deployment` to zero immediately.
 The `idle_time` cooldown does not apply.
 
+### What pause pods do not do
+
+Pause pods reserve node resources only: CPU, memory, and ephemeral storage when you
+set requests or limits for it. The pause container runs a minimal image,
+`registry.k8s.io/pause` by default, that holds the reservation so the Kubernetes
+scheduler can place a job pod immediately instead of waiting for the cluster
+autoscaler to provision a node. The pause image shares no layers with your helper
+image, build images, or service images.
+
+Pause pods do not:
+
+- Pre-pull the helper, `init-permissions`, build, or service images. A job pod
+  scheduled onto a node immediately might still wait while those images are
+  pulled. For more information, see [pause pods and image pull latency](#pause-pods-and-image-pull-latency).
+- Warm application-level state, such as a JVM or an in-process cache.
+- Respond to queued jobs. `scale_factor` scales on active jobs. A queue that
+  builds while no jobs run, such as during an upstream service degradation,
+  provides no signal to scale on.
+- Guarantee that a job pod is placed on a node that previously ran a job.
+
+Pause pods reduce the time a job pod spends waiting to be scheduled. If your job
+startup latency is spent after scheduling, increasing `idle_count`,
+`max_pause_pods`, or `scale_factor` does not reduce it.
+
+To identify where the time is spent, compare the job log against the following phases.
+By default, the job log prints a `Waiting for pod <namespace>/<pod> to be running on the node <node>, status is Pending`
+line, followed by pod condition reasons such as `Unschedulable`. When the
+[`FF_PRINT_POD_EVENTS`](../../configuration/feature-flags.md) feature flag is enabled,
+the job log prints pod events such as `FailedScheduling` and `Pulling` instead of
+these lines. Without the feature flag, run `kubectl describe pod` to view pod events.
+
+| Phase | Signal | Addressed by pause pods |
+|-------|---------------------------|-------------------------|
+| Queueing | The job stays queued and the job log names no pod. | No. Review the `concurrent` setting and runner manager capacity. |
+| Node provisioning | The pod is `Pending`, the job log shows the node as `<unknown>`, and the condition reason is `Unschedulable`. Pod events show `FailedScheduling`. | Yes. |
+| Image pull | The pod is `Pending` and the job log names a node. Pod events show `Pulling`. | No. |
+| Job preparation | The pod is `Running` and the job log is slow to progress during clone, cache restore, or artifact download. | No. |
+
+### Pause pods and image pull latency
+
+When a job preempts a pause pod, the pod's `Deployment` recreates it. The 
+replacement pod might cause the cluster autoscaler to add a node, so turning on 
+pause pods can increase the rate at which new nodes join the cluster. A new node 
+has an empty image cache, so the first job scheduled onto it pulls the helper 
+image and the job's build image before the job starts.
+
+Two settings determine how often images are pulled:
+
+- Image pull policy: When `pull_policy` is not set, the runner does not set a
+  pull policy, and Kubernetes applies its
+  [default](https://kubernetes.io/docs/concepts/containers/images/#updating-images).
+  The default is `Always` for images tagged `:latest` or with no tag, and `IfNotPresent` for any
+  other tag or for a digest.
+
+  Under `Always`, the container runtime still reuses layers already on the node.
+  It contacts the registry to resolve the tag to a digest and downloads only the
+  layers that are not already cached, so on a warm node the added cost is a
+  registry round trip, not a re-download.
+
+  The cost is a dependency rather than latency. `Always` fails the pull if the
+  registry cannot be reached, even when every layer is already present on the node.
+  When a registry is unreachable, rate-limited, or rejects rotated credentials, the
+  runner treats `ErrImagePull` and `ImagePullBackOff` as final. It retries with the
+  next entry in `pull_policy` on a new pod, or fails the job. To fall back to a
+  cached image during a temporary registry failure, see [set a pull policy](#set-a-pull-policy).
+
+  Reference build images by digest (`image@sha256:...`). Digests are immutable and
+  default to `IfNotPresent`, which keeps the registry out of the container start
+  path on a warm node. A new node has an empty cache and still pulls from the
+  registry, and pause pods can increase how often new nodes join the cluster.
+  On runners shared between users, `IfNotPresent` can let a
+  job use a cached private image without registry credentials. For more information,
+  see [security considerations](../../security/_index.md#usage-of-private-docker-images-with-if-not-present-pull-policy).
+  
+- Kubelet pull rate: The kubelet limits registry pulls per node with
+  [`registryPullQPS`](https://kubernetes.io/docs/reference/config-api/kubelet-config.v1beta1/#kubelet-config-k8s-io-v1beta1-KubeletConfiguration),
+  which defaults to `5` pulls per second. On a new node, job image pulls compete with
+  `DaemonSet` image pulls against this limit.
+
+> [!note]
+> Increasing `idle_count` or `max_pause_pods` does not reduce image pull time.
+> Because it can increase how often nodes are created, it might increase the
+> proportion of jobs that pull images on a node with an empty cache. Establish
+> where job startup latency is spent before you increase these values.
+
+To pre-pull images onto new nodes, run a `DaemonSet` on the node pools that 
+serve CI/CD jobs. The `DaemonSet` pulls the helper image and your most 
+frequently used build images when a node joins the cluster. Pause pods reserve 
+the capacity, and the `DaemonSet` warms the image cache in that capacity.
+
+`pull_policy` applies to all containers in the job pod. You cannot set a different
+pull policy for the helper image than for the user-specified build image.
+
 ### Configure pause pods
 
 To enable pause pods, add a `[runners.kubernetes.autoscaler]` section to your
