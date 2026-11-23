@@ -259,10 +259,8 @@ them - they will be planned for one of the upcoming releases.
 
 ## Releasing GitLab Runner
 
-All the technical details of how the Runner is released can be found in
-the [Release
-Checklist](https://gitlab.com/gitlab-org/ci-cd/runner-release-helper/-/tree/main/templates/issues)
-which is split into multiple templates.
+All the technical details of how the Runner is released are in the
+[`releases` project README](https://gitlab.com/gitlab-org/ci-cd/runner-tools/releases/-/blob/main/README.md).
 
 ### Security release
 
