@@ -617,14 +617,20 @@ func TestDockerCommandMissingTag(t *testing.T) {
 func TestDockerCommandMissingServiceImage(t *testing.T) {
 	helpers.SkipIntegrationTests(t, "docker", "info")
 
-	build := getBuildForOS(t, common.GetSuccessfulBuild)
-	build.Services = spec.Services{
-		{
-			Name: "some/non-existing/image",
-		},
+	const serviceImage = "some/non-existing/image:latest"
+	runBuild := func() error {
+		build := getBuildForOS(t, common.GetSuccessfulBuild)
+		build.Services = spec.Services{{Name: serviceImage}}
+		return build.Run(context.Background(), &common.Config{}, &common.Trace{Writer: os.Stdout})
 	}
 
-	err := build.Run(context.Background(), &common.Config{}, &common.Trace{Writer: os.Stdout})
+	err := runBuild()
+	require.Error(t, err)
+	if common.ClassifyImagePullFailure(err.Error()) == common.RunnerExternalDependencyFailure {
+		t.Log("Transient image pull failure; retrying the build once")
+		err = runBuild()
+	}
+
 	require.Error(t, err)
 	assert.ErrorIs(t, err, &common.BuildError{FailureReason: common.ConfigurationError})
 	assert.Regexp(t, regexp.MustCompile("not found|repository does not exist|invalid repository name"), err.Error())
