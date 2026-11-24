@@ -64,6 +64,7 @@ const (
 	DockerMachineJSONOutput              string = "FF_DOCKER_MACHINE_JSON_OUTPUT"
 	KubernetesHealthCheckInspectImages   string = "FF_KUBERNETES_HEALTH_CHECK_INSPECT_IMAGES"
 	KubernetesAnchorOverwriteAllowed     string = "FF_KUBERNETES_ANCHOR_OVERWRITE_ALLOWED"
+	UseFastzipStableFileOrder            string = "FF_USE_FASTZIP_STABLE_FILE_ORDER"
 )
 
 type FeatureFlag struct {
@@ -561,6 +562,15 @@ var flags = []FeatureFlag{
 			"[`[runners.feature_flags]` configuration](#enable-feature-flag-in-runner-configuration), " +
 			"which a job cannot override. Where that configuration does not set it, " +
 			"a job can turn it on for itself with a CI/CD variable.",
+	},
+	{
+		Name:         UseFastzipStableFileOrder,
+		DefaultValue: false,
+		Deprecated:   false,
+		Description: "When enabled, the fastzip archiver writes entries in sorted order instead of the order " +
+			"in which their compression finishes, so archiving unchanged files again produces an identical archive. " +
+			"A retried artifact upload then has the same checksum as the stored artifact, and GitLab accepts it " +
+			"instead of failing the job. Peak archiver memory can double, and archiving many small files can be slower.",
 	},
 }
 
