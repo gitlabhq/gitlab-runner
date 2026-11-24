@@ -431,10 +431,10 @@ github.com/mitchellh/mapstructure v1.5.0 h1:jeMsZIYE/09sWLaz43PL7Gy6RuMjD2eJVyua
 github.com/mitchellh/mapstructure v1.5.0/go.mod h1:bFUtVrKA4DC2yAKiSyO/QUcy7e+RRV2QTWOzhPopBRo=
 github.com/moby/docker-image-spec v1.3.1 h1:jMKff3w6PgbfSa69GfNg+zN/XLhfXJGnEx3Nl2EsFP0=
 github.com/moby/docker-image-spec v1.3.1/go.mod h1:eKmb5VW8vQEh/BAr2yvVNvuiJuY6UIocYsFu/DxxRpo=
-github.com/moby/moby/api v1.56.1 h1:PpWkvVPB7Fr/No8w+TfyJ/I6rWZ2YPZhT3JorIg+06c=
-github.com/moby/moby/api v1.56.1/go.mod h1:sZ+THbVWkjOmBPPfbnzdD/G1LuIexWhqlSHHPTDQ1Uk=
-github.com/moby/moby/client v0.6.2 h1:ekSPlMccrZGcw6Scb8T9D39qE0mB+XupU/yS0zNw9N4=
-github.com/moby/moby/client v0.6.2/go.mod h1:DGcnO7qmPJrqobx/ggQgQ/AUk+2wgVdQv7uxB0/mEsc=
+github.com/moby/moby/api v1.57.0 h1:K2ykv5UZjwFCtmtL486T+SUEVrQ46w3v7isf214RCcw=
+github.com/moby/moby/api v1.57.0/go.mod h1:pRZ1QRtx6AVhdckeFYo4DUX4ASNF0SCllhyY6aj2mgg=
+github.com/moby/moby/client v0.6.3 h1:XJn2T8YdXBdMgQl7JrOx09NEBuzIpVXcsN2KDHufAKY=
+github.com/moby/moby/client v0.6.3/go.mod h1:7CXNAnAhcwwqjwjXqLembJczRorLfM+5mu0d5363lCc=
 github.com/moby/spdystream v0.5.1 h1:9sNYeYZUcci9R6/w7KDaFWEWeV4LStVG78Mpyq/Zm/Y=
 github.com/moby/spdystream v0.5.1/go.mod h1:xBAYlnt/ay+11ShkdFKNAG7LsyK/tmNBVvVOwrfMgdI=
 github.com/moby/term v0.5.2 h1:6qk3FJAFDs6i/q3W/pQ97SX192qKfZgGjCQqfCJkgzQ=
@@ -760,8 +760,6 @@ k8s.io/utils v0.0.0-20260626114624-be93311217bd h1:Ea7fgQ5we8Y9T0OX5o0dAHzQOBRI0
 k8s.io/utils v0.0.0-20260626114624-be93311217bd/go.mod h1:xDxuJ0whA3d0I4mf/C4ppKHxXynQ+fxnkmQH0vTHnuk=
 mvdan.cc/sh/v3 v3.14.1 h1:bXkhQWNHCs0KZEChF8hYS6FC+T2N9mUZLbQv9blditI=
 mvdan.cc/sh/v3 v3.14.1/go.mod h1:syYCoFET8w9tvevxiXUtY8/ICrU+l26jHmhJDra3Vwo=
-pgregory.net/rapid v1.2.0 h1:keKAYRcjm+e1F0oAuU5F5+YPAWcyxNNRK2wud503Gnk=
-pgregory.net/rapid v1.2.0/go.mod h1:PY5XlDGj0+V1FCq0o192FdRhpKHGTRIWBgqjDBTrq04=
 resenje.org/singleflight v0.4.3 h1:l7foFYg8X/VEHPxWs1K/Pw77807RMVzvXgWGb0J1sdM=
 resenje.org/singleflight v0.4.3/go.mod h1:lAgQK7VfjG6/pgredbQfmV0RvG/uVhKo6vSuZ0vCWfk=
 sigs.k8s.io/json v0.0.0-20250730193827-2d320260d730 h1:IpInykpT6ceI+QxKBbEflcR5EXP7sU1kvOlxwZh5txg=
