@@ -56,6 +56,11 @@ func (c *configTemplate) MergeTo(config *common.RunnerConfig) error {
 }
 
 func (c *configTemplate) loadConfigTemplate() error {
+	// LoadConfig treats a missing file as empty, but a template the user asked for must exist.
+	if _, err := os.Stat(c.ConfigFile); err != nil {
+		return err
+	}
+
 	config := common.NewConfig()
 
 	err := config.LoadConfig(c.ConfigFile)

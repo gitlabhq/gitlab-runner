@@ -6,6 +6,8 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"dario.cat/mergo"
@@ -217,6 +219,14 @@ func TestConfigTemplate_MergeTo(t *testing.T) {
 			tc.assertConfiguration(t, tc.config)
 		})
 	}
+}
+
+func TestConfigTemplate_MergeToMissingFile(t *testing.T) {
+	configTemplate := &configTemplate{ConfigFile: filepath.Join(t.TempDir(), "missing.toml")}
+
+	err := configTemplate.MergeTo(&common.RunnerConfig{})
+
+	assert.ErrorIs(t, err, os.ErrNotExist)
 }
 
 func TestSetFipsHelperImageFlavor(t *testing.T) {
