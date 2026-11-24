@@ -667,7 +667,9 @@ func TestVerifyRunnerOnLegacyServer(t *testing.T) {
 			name:        "valid glrt token",
 			token:       validGlrtToken,
 			url:         s.URL,
-			expectedLog: `level=info msg="Verifying runner... is valid"`,
+			expectedNil: true,
+			expectedErr: true,
+			expectedLog: `level=error msg="Verifying runner... failed"`,
 		},
 		{
 			name:  "invalid token",
@@ -727,6 +729,52 @@ func TestVerifyRunnerOnLegacyServer(t *testing.T) {
 			logMsg, err := hook.LastEntry().String()
 			require.NoError(t, err)
 			assert.Contains(t, logMsg, tc.expectedLog)
+		})
+	}
+}
+
+func TestVerifyRunnerLegacyFallbackRequestCount(t *testing.T) {
+	t.Parallel()
+
+	testCases := map[string]struct {
+		token            string
+		expectedRequests int32
+		expectedErr      string
+	}{
+		"non-created token falls back to plain text": {
+			token:            validToken,
+			expectedRequests: 2,
+		},
+		"created token does not fall back": {
+			token:            validGlrtToken,
+			expectedRequests: 1,
+			expectedErr:      "application/json",
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			var requests atomic.Int32
+			s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				requests.Add(1)
+				mockVerifyRunnerHandler(t, w, r, true)
+			}))
+			defer s.Close()
+
+			_, err := NewGitLabClient().VerifyRunner(
+				t.Context(),
+				RunnerConfig{RunnerCredentials: RunnerCredentials{URL: s.URL, Token: tc.token}},
+				"",
+			)
+
+			if tc.expectedErr == "" {
+				require.NoError(t, err)
+			} else {
+				require.ErrorContains(t, err, tc.expectedErr)
+			}
+			assert.Equal(t, tc.expectedRequests, requests.Load())
 		})
 	}
 }
