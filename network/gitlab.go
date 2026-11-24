@@ -438,7 +438,8 @@ func (n *GitLabClient) VerifyRunner(ctx context.Context, runner common.RunnerCon
 		&request,
 		&response,
 	)
-	if result == -1 {
+	// Servers that issue created runner tokens always answer in JSON, and register needs the runner ID from it.
+	if result == -1 && !TokenIsCreatedRunnerToken(runner.Token) {
 		// if server is not able to return JSON, let's try plain text (the legacy response format)
 		//nolint:bodyclose
 		// body is closed with closeResponseBody function call
