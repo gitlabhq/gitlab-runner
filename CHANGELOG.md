@@ -1,3 +1,16 @@
+## v19.5.4 (2026-11-24)
+
+### Security fixes
+
+- Apply allowed_users to Docker service containers [!7903](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/7903)
+
+### Maintenance
+
+- go: Update module github.com/saracen/fastzip to v0.2.1 [!7887](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/7887)
+- Update RUNNER_IMAGES_VERSION to 0.0.62 for 19.5 [!7849](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/7849)
+- Update Go modules and base images for 19.5 with security fixes [!7830](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/7830)
+- Update Go, base images and Go modules for 19.5 with security fixes [!7909](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/7909)
+
 ## v19.5.3 (2026-11-05)
 
 ### Bug fixes
