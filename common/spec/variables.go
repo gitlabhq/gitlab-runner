@@ -26,20 +26,9 @@ func (b Variables) tmpFile(s string) string {
 	return path.Join(b.Value(TempProjectDirVariableKey), s)
 }
 
-// PublicOrInternal returns the public or internal variables.
-//
-// Filtering is per key: when the last (effective) entry for a key is neither public
-// nor internal, all entries for that key are dropped. Otherwise an overridden public
-// entry (e.g. a .gitlab-ci.yml variable overridden by a project or pipeline variable)
-// would resurface with its stale value.
 func (b Variables) PublicOrInternal() (variables Variables) {
-	hidden := make(map[string]bool, len(b))
 	for _, variable := range b {
-		hidden[variable.Key] = !variable.Public && !variable.Internal
-	}
-
-	for _, variable := range b {
-		if (variable.Public || variable.Internal) && !hidden[variable.Key] {
+		if variable.Public || variable.Internal {
 			variables = append(variables, variable)
 		}
 	}

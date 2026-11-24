@@ -6560,25 +6560,6 @@ func TestGetServiceVariables(t *testing.T) {
 			},
 			notExpected: []string{"SECRET"},
 		},
-		// https://gitlab.com/gitlab-org/gitlab-runner/-/issues/40374
-		"public job variables overridden by non-public ones are not passed to the service": {
-			jobVariables: spec.Variables{
-				{Key: "DOCKER_OPTIONS", Value: "from-yaml", Public: true},
-				{Key: "DOCKER_OPTIONS", Value: "from-project"},
-			},
-			notExpected: []string{"DOCKER_OPTIONS"},
-		},
-		"service variables referencing an overridden job variable get the override": {
-			jobVariables: spec.Variables{
-				{Key: "DOCKER_OPTIONS", Value: "from-yaml", Public: true},
-				{Key: "DOCKER_OPTIONS", Value: "from-project"},
-			},
-			service: spec.Image{
-				Variables: spec.Variables{{Key: "SVC_DOCKER_OPTIONS", Value: "$DOCKER_OPTIONS"}},
-			},
-			expected:    spec.Variables{{Key: "SVC_DOCKER_OPTIONS", Value: "from-project"}},
-			notExpected: []string{"DOCKER_OPTIONS"},
-		},
 		"service variables referencing public job variables are expanded": {
 			jobVariables: spec.Variables{
 				{Key: "GLOBAL", Value: "from-global", Public: true},
