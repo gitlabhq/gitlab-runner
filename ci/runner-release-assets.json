@@ -1,0 +1,192 @@
+[
+  {
+    "name": "binary: Linux amd64",
+    "s3_path": "/binaries/gitlab-runner-linux-amd64",
+    "direct_asset_path": "/binaries/gitlab-runner-linux-amd64"
+  },
+  {
+    "name": "binary: Linux amd64-fips",
+    "s3_path": "/binaries/gitlab-runner-linux-amd64-fips",
+    "direct_asset_path": "/binaries/gitlab-runner-linux-amd64-fips"
+  },
+  {
+    "name": "binary: Linux 386",
+    "s3_path": "/binaries/gitlab-runner-linux-386",
+    "direct_asset_path": "/binaries/gitlab-runner-linux-386"
+  },
+  {
+    "name": "binary: Linux arm",
+    "s3_path": "/binaries/gitlab-runner-linux-arm",
+    "direct_asset_path": "/binaries/gitlab-runner-linux-arm"
+  },
+  {
+    "name": "binary: Linux ppc64le",
+    "s3_path": "/binaries/gitlab-runner-linux-ppc64le",
+    "direct_asset_path": "/binaries/gitlab-runner-linux-ppc64le"
+  },
+  {
+    "name": "binary: Linux s390x",
+    "s3_path": "/binaries/gitlab-runner-linux-s390x",
+    "direct_asset_path": "/binaries/gitlab-runner-linux-s390x"
+  },
+  {
+    "name": "binary: Linux riscv64",
+    "s3_path": "/binaries/gitlab-runner-linux-riscv64",
+    "direct_asset_path": "/binaries/gitlab-runner-linux-riscv64"
+  },
+  {
+    "name": "binary: Linux loong64",
+    "s3_path": "/binaries/gitlab-runner-linux-loong64",
+    "direct_asset_path": "/binaries/gitlab-runner-linux-loong64"
+  },
+  {
+    "name": "binary: macOS amd64",
+    "s3_path": "/binaries/gitlab-runner-darwin-amd64",
+    "direct_asset_path": "/binaries/gitlab-runner-darwin-amd64"
+  },
+  {
+    "name": "binary: macOS arm64",
+    "s3_path": "/binaries/gitlab-runner-darwin-arm64",
+    "direct_asset_path": "/binaries/gitlab-runner-darwin-arm64"
+  },
+  {
+    "name": "binary: FreeBSD amd64",
+    "s3_path": "/binaries/gitlab-runner-freebsd-amd64",
+    "direct_asset_path": "/binaries/gitlab-runner-freebsd-amd64"
+  },
+  {
+    "name": "binary: FreeBSD arm",
+    "s3_path": "/binaries/gitlab-runner-freebsd-arm",
+    "direct_asset_path": "/binaries/gitlab-runner-freebsd-arm"
+  },
+  {
+    "name": "binary: FreeBSD 386",
+    "s3_path": "/binaries/gitlab-runner-freebsd-386",
+    "direct_asset_path": "/binaries/gitlab-runner-freebsd-386"
+  },
+  {
+    "name": "binary: Windows amd64",
+    "s3_path": "/binaries/gitlab-runner-windows-amd64.zip",
+    "direct_asset_path": "/binaries/gitlab-runner-windows-amd64.zip"
+  },
+  {
+    "name": "binary: Windows arm64",
+    "s3_path": "/binaries/gitlab-runner-windows-arm64.zip",
+    "direct_asset_path": "/binaries/gitlab-runner-windows-arm64.zip"
+  },
+  {
+    "name": "binary: Windows i386",
+    "s3_path": "/binaries/gitlab-runner-windows-386.zip",
+    "direct_asset_path": "/binaries/gitlab-runner-windows-386.zip"
+  },
+  {
+    "name": "package: DEB amd64",
+    "s3_path": "/deb/gitlab-runner_amd64.deb",
+    "direct_asset_path": "/packages/deb/gitlab-runner_amd64.deb"
+  },
+  {
+    "name": "package: DEB i386",
+    "s3_path": "/deb/gitlab-runner_i386.deb",
+    "direct_asset_path": "/packages/deb/gitlab-runner_i386.deb"
+  },
+  {
+    "name": "package: DEB armhf",
+    "s3_path": "/deb/gitlab-runner_armhf.deb",
+    "direct_asset_path": "/packages/deb/gitlab-runner_armhf.deb"
+  },
+  {
+    "name": "package: DEB arm64",
+    "s3_path": "/deb/gitlab-runner_arm64.deb",
+    "direct_asset_path": "/packages/deb/gitlab-runner_arm64.deb"
+  },
+  {
+    "name": "package: DEB ppc64el",
+    "s3_path": "/deb/gitlab-runner_ppc64el.deb",
+    "direct_asset_path": "/packages/deb/gitlab-runner_ppc64el.deb"
+  },
+  {
+    "name": "package: DEB s390x",
+    "s3_path": "/deb/gitlab-runner_s390x.deb",
+    "direct_asset_path": "/packages/deb/gitlab-runner_s390x.deb"
+  },
+  {
+    "name": "package: DEB riscv64",
+    "s3_path": "/deb/gitlab-runner_riscv64.deb",
+    "direct_asset_path": "/packages/deb/gitlab-runner_riscv64.deb"
+  },
+  {
+    "name": "package: DEB loong64",
+    "s3_path": "/deb/gitlab-runner_loong64.deb",
+    "direct_asset_path": "/packages/deb/gitlab-runner_loong64.deb"
+  },
+  {
+    "name": "package: DEB helper images",
+    "s3_path": "/deb/gitlab-runner-helper-images.deb",
+    "direct_asset_path": "/packages/deb/gitlab-runner-helper-images.deb"
+  },
+  {
+    "name": "package: RPM x86_64",
+    "s3_path": "/rpm/gitlab-runner_x86_64.rpm",
+    "direct_asset_path": "/packages/rpm/gitlab-runner_x86_64.rpm"
+  },
+  {
+    "name": "package: RPM x86_64-fips",
+    "s3_path": "/rpm/gitlab-runner_x86_64-fips.rpm",
+    "direct_asset_path": "/packages/rpm/gitlab-runner_x86_64-fips.rpm"
+  },
+  {
+    "name": "package: RPM i686",
+    "s3_path": "/rpm/gitlab-runner_i686.rpm",
+    "direct_asset_path": "/packages/rpm/gitlab-runner_i686.rpm"
+  },
+  {
+    "name": "package: RPM armhfp",
+    "s3_path": "/rpm/gitlab-runner_armhfp.rpm",
+    "direct_asset_path": "/packages/rpm/gitlab-runner_armhfp.rpm"
+  },
+  {
+    "name": "package: RPM aarch64",
+    "s3_path": "/rpm/gitlab-runner_aarch64.rpm",
+    "direct_asset_path": "/packages/rpm/gitlab-runner_aarch64.rpm"
+  },
+  {
+    "name": "package: RPM ppc64le",
+    "s3_path": "/rpm/gitlab-runner_ppc64le.rpm",
+    "direct_asset_path": "/packages/rpm/gitlab-runner_ppc64le.rpm"
+  },
+  {
+    "name": "package: RPM s390x",
+    "s3_path": "/rpm/gitlab-runner_s390x.rpm",
+    "direct_asset_path": "/packages/rpm/gitlab-runner_s390x.rpm"
+  },
+  {
+    "name": "package: RPM riscv64",
+    "s3_path": "/rpm/gitlab-runner_riscv64.rpm",
+    "direct_asset_path": "/packages/rpm/gitlab-runner_riscv64.rpm"
+  },
+  {
+    "name": "package: RPM loongarch64",
+    "s3_path": "/rpm/gitlab-runner_loongarch64.rpm",
+    "direct_asset_path": "/packages/rpm/gitlab-runner_loongarch64.rpm"
+  },
+  {
+    "name": "package: RPM helper images",
+    "s3_path": "/rpm/gitlab-runner-helper-images.rpm",
+    "direct_asset_path": "/packages/rpm/gitlab-runner-helper-images.rpm"
+  },
+  {
+    "name": "checksums",
+    "s3_path": "/release.sha256",
+    "direct_asset_path": "/release.sha256"
+  },
+  {
+    "name": "checksums GPG signature",
+    "s3_path": "/release.sha256.asc",
+    "direct_asset_path": "/release.sha256.asc"
+  },
+  {
+    "name": "other release artifacts",
+    "s3_path": "/index.html",
+    "direct_asset_path": "/index.html"
+  }
+]

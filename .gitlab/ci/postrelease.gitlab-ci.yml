@@ -152,154 +152,33 @@ stable gitlab release:
     - .rules:release:stable-or-rc
     - .kubernetes runner
   dependencies: []
-  image: registry.gitlab.com/gitlab-org/release-cli:latest
+  image: python:3.13-alpine
   variables:
     CHANGELOG: https://gitlab.com/gitlab-org/gitlab-runner/blob/$CI_COMMIT_TAG/CHANGELOG.md
     S3: https://gitlab-runner-downloads.s3.amazonaws.com/$CI_COMMIT_TAG
-    # Setting the CI_PROJECT_ID variable explicitly because we're running this job
-    # also from the https://gitlab.com/gitlab-org/security/gitlab-runner fork. But it
-    # should still create the release entry in the canonical one.
-    CI_PROJECT_ID: 250833
+    # The security fork also publishes releases to the canonical project.
+    RELEASE_PROJECT_ID: "250833"
   environment:
     name: stable/gitlab
     url: https://gitlab.com/gitlab-org/gitlab-runner/-/releases
   before_script: []
+  retry:
+    max: 2
+    when:
+      - script_failure
+      - runner_system_failure
+      - runner_interrupted
   script:
-    - echo "Releasing to $S3"
-  release:
-    name: "$CI_COMMIT_TAG"
-    description: |
-      See [the changelog]($CHANGELOG) :rocket:
+    - |
+      release_description="See [the changelog]($CHANGELOG) :rocket:
 
-      GitLab Runner documentation can be found at https://docs.gitlab.com/runner/.
-    tag_name: "$CI_COMMIT_TAG"
-    ref: "$CI_COMMIT_TAG"
-    assets:
-      links:
-        # binaries
-        - name: "binary: Linux amd64"
-          url: "$S3/binaries/gitlab-runner-linux-amd64"
-          filepath: "/binaries/gitlab-runner-linux-amd64"
-        - name: "binary: Linux amd64-fips"
-          url: "$S3/binaries/gitlab-runner-linux-amd64-fips"
-          filepath: "/binaries/gitlab-runner-linux-amd64-fips"
-        - name: "binary: Linux 386"
-          url: "$S3/binaries/gitlab-runner-linux-386"
-          filepath: "/binaries/gitlab-runner-linux-386"
-        - name: "binary: Linux arm"
-          url: "$S3/binaries/gitlab-runner-linux-arm"
-          filepath: "/binaries/gitlab-runner-linux-arm"
-        - name: "binary: Linux ppc64le"
-          url: "$S3/binaries/gitlab-runner-linux-ppc64le"
-          filepath: "/binaries/gitlab-runner-linux-ppc64le"
-        - name: "binary: Linux s390x"
-          url: "$S3/binaries/gitlab-runner-linux-s390x"
-          filepath: "/binaries/gitlab-runner-linux-s390x"
-        - name: "binary: Linux riscv64"
-          url: "$S3/binaries/gitlab-runner-linux-riscv64"
-          filepath: "/binaries/gitlab-runner-linux-riscv64"
-        - name: "binary: Linux loong64"
-          url: "$S3/binaries/gitlab-runner-linux-loong64"
-          filepath: "/binaries/gitlab-runner-linux-loong64"
-
-        - name: "binary: macOS amd64"
-          url: "$S3/binaries/gitlab-runner-darwin-amd64"
-          filepath: "/binaries/gitlab-runner-darwin-amd64"
-        - name: "binary: macOS arm64"
-          url: "$S3/binaries/gitlab-runner-darwin-arm64"
-          filepath: "/binaries/gitlab-runner-darwin-arm64"
-
-        - name: "binary: FreeBSD amd64"
-          url: "$S3/binaries/gitlab-runner-freebsd-amd64"
-          filepath: "/binaries/gitlab-runner-freebsd-amd64"
-        - name: "binary: FreeBSD arm"
-          url: "$S3/binaries/gitlab-runner-freebsd-arm"
-          filepath: "/binaries/gitlab-runner-freebsd-arm"
-        - name: "binary: FreeBSD 386"
-          url: "$S3/binaries/gitlab-runner-freebsd-386"
-          filepath: "/binaries/gitlab-runner-freebsd-386"
-
-        - name: "binary: Windows amd64"
-          url: "$S3/binaries/gitlab-runner-windows-amd64.zip"
-          filepath: "/binaries/gitlab-runner-windows-amd64.zip"
-        - name: "binary: Windows arm64"
-          url: "$S3/binaries/gitlab-runner-windows-arm64.zip"
-          filepath: "/binaries/gitlab-runner-windows-arm64.zip"
-        - name: "binary: Windows i386"
-          url: "$S3/binaries/gitlab-runner-windows-386.zip"
-          filepath: "/binaries/gitlab-runner-windows-386.zip"
-
-        # DEB packages
-        - name: "package: DEB amd64"
-          url: "$S3/deb/gitlab-runner_amd64.deb"
-          filepath: "/packages/deb/gitlab-runner_amd64.deb"
-        - name: "package: DEB i386"
-          url: "$S3/deb/gitlab-runner_i386.deb"
-          filepath: "/packages/deb/gitlab-runner_i386.deb"
-        - name: "package: DEB armhf"
-          url: "$S3/deb/gitlab-runner_armhf.deb"
-          filepath: "/packages/deb/gitlab-runner_armhf.deb"
-        - name: "package: DEB arm64"
-          url: "$S3/deb/gitlab-runner_arm64.deb"
-          filepath: "/packages/deb/gitlab-runner_arm64.deb"
-        - name: "package: DEB ppc64el"
-          url: "$S3/deb/gitlab-runner_ppc64el.deb"
-          filepath: "/packages/deb/gitlab-runner_ppc64el.deb"
-        - name: "package: DEB s390x"
-          url: "$S3/deb/gitlab-runner_s390x.deb"
-          filepath: "/packages/deb/gitlab-runner_s390x.deb"
-        - name: "package: DEB riscv64"
-          url: "$S3/deb/gitlab-runner_riscv64.deb"
-          filepath: "/packages/deb/gitlab-runner_riscv64.deb"
-        - name: "package: DEB loong64"
-          url: "$S3/deb/gitlab-runner_loong64.deb"
-          filepath: "/packages/deb/gitlab-runner_loong64.deb"
-        - name: "package: DEB helper images"
-          url: "$S3/deb/gitlab-runner-helper-images.deb"
-          filepath: "/packages/deb/gitlab-runner-helper-images.deb"
-
-        # RPM packages
-        - name: "package: RPM x86_64"
-          url: "$S3/rpm/gitlab-runner_x86_64.rpm"
-          filepath: "/packages/rpm/gitlab-runner_x86_64.rpm"
-        - name: "package: RPM x86_64-fips"
-          url: "$S3/rpm/gitlab-runner_x86_64-fips.rpm"
-          filepath: "/packages/rpm/gitlab-runner_x86_64-fips.rpm"
-        - name: "package: RPM i686"
-          url: "$S3/rpm/gitlab-runner_i686.rpm"
-          filepath: "/packages/rpm/gitlab-runner_i686.rpm"
-        - name: "package: RPM armhfp"
-          url: "$S3/rpm/gitlab-runner_armhfp.rpm"
-          filepath: "/packages/rpm/gitlab-runner_armhfp.rpm"
-        - name: "package: RPM aarch64"
-          url: "$S3/rpm/gitlab-runner_aarch64.rpm"
-          filepath: "/packages/rpm/gitlab-runner_aarch64.rpm"
-        - name: "package: RPM ppc64le"
-          url: "$S3/rpm/gitlab-runner_ppc64le.rpm"
-          filepath: "/packages/rpm/gitlab-runner_ppc64le.rpm"
-        - name: "package: RPM s390x"
-          url: "$S3/rpm/gitlab-runner_s390x.rpm"
-          filepath: "/packages/rpm/gitlab-runner_s390x.rpm"
-        - name: "package: RPM riscv64"
-          url: "$S3/rpm/gitlab-runner_riscv64.rpm"
-          filepath: "/packages/rpm/gitlab-runner_riscv64.rpm"
-        - name: "package: RPM loongarch64"
-          url: "$S3/rpm/gitlab-runner_loongarch64.rpm"
-          filepath: "/packages/rpm/gitlab-runner_loongarch64.rpm"
-        - name: "package: RPM helper images"
-          url: "$S3/rpm/gitlab-runner-helper-images.rpm"
-          filepath: "/packages/rpm/gitlab-runner-helper-images.rpm"
-
-        # Other files
-        - name: "checksums"
-          url: "$S3/release.sha256"
-          filepath: "/release.sha256"
-        - name: "checksums GPG signature"
-          url: "$S3/release.sha256.asc"
-          filepath: "/release.sha256.asc"
-        - name: "other release artifacts"
-          url: "$S3/index.html"
-          filepath: "/index.html"
+      GitLab Runner documentation can be found at https://docs.gitlab.com/runner/."
+      python3 ci/publish-runner-release.py \
+        --api-url "$CI_API_V4_URL" \
+        --project-id "$RELEASE_PROJECT_ID" \
+        --tag "$CI_COMMIT_TAG" \
+        --description "$release_description" \
+        --s3-base-url "$S3"
 
 # One Slack message per pipeline when any pulp job fails. Covers main, vX.Y.Z-rcN tags and
 # N-N-stable on the canonical project, and vX.Y.Z tags on both projects. Excludes feature/* and
