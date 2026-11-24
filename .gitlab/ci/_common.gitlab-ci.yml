@@ -1,7 +1,7 @@
 variables:
   RUBY_VERSION: "4.0.9"
-  GO_VERSION: "1.26.10"
-  GOLANGLINT_VERSION: "2.14.0"
+  GO_VERSION: "1.26.11"
+  GOLANGLINT_VERSION: "2.15.0"
   RUNNER_LINTERS_IMAGE: registry.gitlab.com/gitlab-org/ci-cd/runner-tools/runner-linters:${GOLANGLINT_VERSION}-go${GO_VERSION}
   RUNNER_IMAGES_REGISTRY: registry.gitlab.com/gitlab-org/ci-cd/runner-tools/base-images
   RUNNER_IMAGES_VERSION: "0.0.64"
