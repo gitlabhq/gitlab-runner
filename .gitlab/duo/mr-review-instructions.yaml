@@ -22,3 +22,15 @@ instructions:
       2. For any new fields being added to log messages:
         - Check to ensure that these fields are not dynamically generated
         - Remind: "We're aiming to standardise the fields that we emit across all of our services at GitLab through this approach. Read more about this in https://handbook.gitlab.com/handbook/engineering/architecture/design-documents/observability_field_standardisation/"
+  - name: Document new config.toml settings
+    fileFilters:
+      - "**/*.go"
+      - "!**/*_test.go"
+      - "!commands/**"
+    instructions: |
+      If this MR adds a `config.toml` setting (an exported field on a struct decoded
+      from `config.toml`, usually with a `toml` tag; fields tagged `toml:"-"` are not
+      settings), check that it is documented in the matching section table of
+      `docs/configuration/advanced-configuration.md`, or for most Kubernetes settings,
+      `docs/executors/kubernetes/_index.md`. If it isn't, ask the author to document
+      it, or to say why it is internal.
