@@ -10,8 +10,10 @@ import (
 
 	"github.com/klauspost/compress/zstd"
 	"github.com/saracen/fastzip"
+	"github.com/sirupsen/logrus"
 
 	"gitlab.com/gitlab-org/gitlab-runner/commands/helpers/archive"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 )
 
 var flateLevels = map[archive.CompressionLevel]int{
@@ -131,6 +133,10 @@ func getArchiverOptionsFromEnvironment() ([]fastzip.ArchiverOption, error) {
 		}
 
 		opts = append(opts, fastzip.WithArchiverBufferSize(int(bufferSize)))
+	}
+
+	if featureflags.IsOnFromEnv(logrus.StandardLogger(), featureflags.UseFastzipStableFileOrder) {
+		opts = append(opts, fastzip.WithStableFileOrder())
 	}
 
 	return opts, nil
