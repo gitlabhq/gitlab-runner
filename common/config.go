@@ -2997,23 +2997,8 @@ func (c *RunnerConfig) loadConfig(globalCfg *Config, hasLimit, hasConcurrency bo
 	// Expand environment variables in credentials
 	c.Token = os.ExpandEnv(c.Token)
 	c.URL = os.ExpandEnv(c.URL)
-	if c.APIURL != "" {
-		c.APIURL = os.ExpandEnv(c.APIURL)
-		if c.APIURL == "" {
-			c.Log().Warning("api_url expanded to an empty string; falling back to url for API requests")
-		}
-	}
-	if c.JobRouterURL != "" {
-		c.JobRouterURL = os.ExpandEnv(c.JobRouterURL)
-		if c.JobRouterURL == "" {
-			c.Log().Warning("job_router_url expanded to an empty string; using the Job Router URL GitLab advertises")
-		} else {
-			if err := validateJobRouterURL(c.JobRouterURL); err != nil {
-				return fmt.Errorf("job_router_url: %w", err)
-			}
-			c.Log().WithField("job_router_url", c.JobRouterURL).
-				Info("job_router_url is set; connecting to it instead of the Job Router address GitLab advertises")
-		}
+	if err := c.expandEndpointURLs(); err != nil {
+		return err
 	}
 
 	c.applyConcurrencyAlias(hasLimit, hasConcurrency)
@@ -3034,6 +3019,29 @@ func (c *RunnerConfig) loadConfig(globalCfg *Config, hasLimit, hasConcurrency bo
 	}
 
 	c.RunnerSettings.ComputeLabels(globalCfg.Labels)
+
+	return nil
+}
+
+func (c *RunnerConfig) expandEndpointURLs() error {
+	if c.APIURL != "" {
+		c.APIURL = os.ExpandEnv(c.APIURL)
+		if c.APIURL == "" {
+			c.Log().Warning("api_url expanded to an empty string; falling back to url for API requests")
+		}
+	}
+	if c.JobRouterURL != "" {
+		c.JobRouterURL = os.ExpandEnv(c.JobRouterURL)
+		if c.JobRouterURL == "" {
+			c.Log().Warning("job_router_url expanded to an empty string; using the Job Router URL GitLab advertises")
+		} else {
+			if err := validateJobRouterURL(c.JobRouterURL); err != nil {
+				return fmt.Errorf("job_router_url: %w", err)
+			}
+			c.Log().WithField("job_router_url", c.JobRouterURL).
+				Info("job_router_url is set; connecting to it instead of the Job Router address GitLab advertises")
+		}
+	}
 
 	return nil
 }
