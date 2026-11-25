@@ -1625,7 +1625,7 @@ func (s *executor) processLogs(ctx context.Context) {
 			if !ok {
 				return
 			}
-			s.forwardLogLine(logger, line)
+			s.forwardLogLine(ctx, logger, line)
 		case err, ok := <-errCh:
 			if !ok {
 				continue
@@ -1637,12 +1637,19 @@ func (s *executor) processLogs(ctx context.Context) {
 
 			exitCode := common.NormalizeExitCode(getExitCode(err))
 			// Script can be kept to nil as not being used after the exitStatus is received
-			s.remoteProcessTerminated <- shells.StageCommandStatus{CommandExitCode: &exitCode}
+			s.sendStageStatus(ctx, shells.StageCommandStatus{CommandExitCode: &exitCode})
 		}
 	}
 }
 
-func (s *executor) forwardLogLine(w io.Writer, line string) {
+func (s *executor) sendStageStatus(ctx context.Context, status shells.StageCommandStatus) {
+	select {
+	case s.remoteProcessTerminated <- status:
+	case <-ctx.Done():
+	}
+}
+
+func (s *executor) forwardLogLine(ctx context.Context, w io.Writer, line string) {
 	var status shells.StageCommandStatus
 	if !status.TryUnmarshal(line) {
 		if _, err := w.Write([]byte(line)); err != nil {
@@ -1658,7 +1665,7 @@ func (s *executor) forwardLogLine(w io.Writer, line string) {
 	s.remoteStageStatusMutex.Unlock()
 
 	if status.IsExited() {
-		s.remoteProcessTerminated <- status
+		s.sendStageStatus(ctx, status)
 	}
 }
 
@@ -3740,10 +3747,9 @@ func (s *executor) runInContainer(
 	name string,
 	command []string,
 ) <-chan error {
+	// Not closed: when ctx ends first, runWithAttach would read a nil error from a closed channel.
 	errCh := make(chan error, 1)
 	go func() {
-		defer close(errCh)
-
 		attach := AttachOptions{
 			PodName:       s.pod.Name,
 			Namespace:     s.pod.Namespace,
@@ -3752,7 +3758,7 @@ func (s *executor) runInContainer(
 
 			Config:     s.kubeConfig,
 			KubeClient: s.kubeClient,
-			Executor:   &DefaultRemoteExecutor{},
+			Executor:   s.remoteExecutor,
 
 			Context: ctx,
 		}
@@ -3765,9 +3771,13 @@ func (s *executor) runInContainer(
 
 		if err := kubeRequest.Run(); err != nil {
 			errCh <- s.classifyOOMKilledError(ctx, name, err)
+			return
 		}
 
-		exitStatus := <-s.remoteProcessTerminated
+		exitStatus, ok := s.waitForStageStatus(ctx, stage)
+		if !ok {
+			return
+		}
 		s.BuildLogger.Debugln("Remote process exited with the status:", exitStatus)
 
 		// CommandExitCode is guaranteed to be non nil when sent over the remoteProcessTerminated channel
@@ -3780,6 +3790,23 @@ func (s *executor) runInContainer(
 	}()
 
 	return errCh
+}
+
+// All stages share remoteProcessTerminated, and a stage that was cancelled can still print its status.
+func (s *executor) waitForStageStatus(ctx context.Context, stage common.BuildStage) (shells.StageCommandStatus, bool) {
+	for {
+		select {
+		case status := <-s.remoteProcessTerminated:
+			if statusStage := status.BuildStage(); statusStage != "" && statusStage != stage {
+				s.BuildLogger.Debugln(fmt.Sprintf("Dropping exit status of another stage while waiting for %v: %v", stage, status))
+				continue
+			}
+
+			return status, true
+		case <-ctx.Done():
+			return shells.StageCommandStatus{}, false
+		}
+	}
 }
 
 func (s *executor) runInContainerWithExec(
