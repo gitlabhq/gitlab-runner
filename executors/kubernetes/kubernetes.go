@@ -4136,7 +4136,11 @@ func (s *executor) waitForServices(ctx context.Context) error {
 		return nil
 	}
 
-	if err := s.ensurePodsReady(ctx); err != nil {
+	// Run's pull retry does not cover a pod created here.
+	err := s.withPullRetry(ctx, func() error {
+		return s.ensurePodsReady(ctx)
+	})
+	if err != nil {
 		return err
 	}
 

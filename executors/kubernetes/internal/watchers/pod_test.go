@@ -227,6 +227,23 @@ func TestPodWatcherNoConsumer(t *testing.T) {
 	}
 }
 
+func TestPodWatcherUpdatePodNameDropsBufferedError(t *testing.T) {
+	fakeLogger := newMockLogger(t)
+	fakeLogger.On("Debugln", `dropping the error of the previous pod: pod "first" failed`).Once()
+	podWatcher := NewPodWatcher(t.Context(), fakeLogger, fake.NewClientset(), defaultNamespace, defaultLabels, 0)
+
+	podWatcher.UpdatePodName("first")
+	podWatcher.emitError(fmt.Errorf("pod %q failed", "first"))
+
+	podWatcher.UpdatePodName("second")
+
+	select {
+	case err := <-podWatcher.Errors():
+		assert.Fail(t, "the error of the previous pod must be dropped", "got: %v", err)
+	default:
+	}
+}
+
 func TestPodWatcherWrongObject(t *testing.T) {
 	tests := map[string]struct {
 		object               any
