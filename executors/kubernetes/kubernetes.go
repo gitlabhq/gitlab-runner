@@ -3795,6 +3795,10 @@ func (s *executor) runInContainer(
 // All stages share remoteProcessTerminated, and a stage that was cancelled can still print its status.
 func (s *executor) waitForStageStatus(ctx context.Context, stage common.BuildStage) (shells.StageCommandStatus, bool) {
 	for {
+		if ctx.Err() != nil {
+			return shells.StageCommandStatus{}, false
+		}
+
 		select {
 		case status := <-s.remoteProcessTerminated:
 			if statusStage := status.BuildStage(); statusStage != "" && statusStage != stage {

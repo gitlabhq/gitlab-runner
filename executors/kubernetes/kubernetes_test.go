@@ -8104,6 +8104,63 @@ func TestRunInContainerStageStatus(t *testing.T) {
 	}
 }
 
+func TestRunInContainerCancelledStageDoesNotTakeNextStatus(t *testing.T) {
+	version, codec := testVersionAndCodec()
+
+	// Without the context check the select picks at random, and a single run passes half of the time.
+	for range 20 {
+		synctest.Test(t, func(t *testing.T) {
+			fakeClient := fake.CreateHTTPClient(func(*http.Request) (*http.Response, error) {
+				return &http.Response{StatusCode: http.StatusOK, Body: objBody(codec, execPod()), Header: map[string][]string{
+					common.ContentType: {"application/json"},
+				}}, nil
+			})
+
+			releasePreviousAttach := make(chan struct{})
+			ex := NewMockRemoteExecutor(t)
+			attach := func() *MockRemoteExecutor_Execute_Call {
+				return ex.EXPECT().Execute(mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything)
+			}
+			attach().RunAndReturn(func(context.Context, string, *url.URL, *restclient.Config, io.Reader, io.Writer, io.Writer, bool) error {
+				<-releasePreviousAttach
+				return nil
+			}).Once()
+			attach().Return(nil).Once()
+
+			e := newExecutor()
+			e.BuildLogger = buildlogger.New(nil, logrus.WithFields(logrus.Fields{}), buildlogger.Options{})
+			e.pod = execPod()
+			e.kubeClient = testKubernetesClient(version, fakeClient)
+			e.remoteExecutor = ex
+
+			previousCtx, cancelPrevious := context.WithCancel(t.Context())
+			defer cancelPrevious()
+
+			_ = e.runInContainer(previousCtx, "after_script", "bar", []string{"sh"})
+			synctest.Wait()
+			cancelPrevious()
+
+			exitCode := 0
+			script := "/scripts-1-2/cleanup_file_variables"
+			go func() {
+				e.remoteProcessTerminated <- shells.StageCommandStatus{CommandExitCode: &exitCode, Script: &script}
+			}()
+			synctest.Wait()
+
+			close(releasePreviousAttach)
+			synctest.Wait()
+
+			stage := e.runInContainer(t.Context(), "cleanup_file_variables", "bar", []string{"sh"})
+			select {
+			case err := <-stage:
+				assert.NoError(t, err)
+			case <-time.After(time.Minute):
+				assert.Fail(t, "the cancelled stage received the exit status of the next stage")
+			}
+		})
+	}
+}
+
 func TestRunAttachCheckPodStatus(t *testing.T) {
 	version, codec := testVersionAndCodec()
 
