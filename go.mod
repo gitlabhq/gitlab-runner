@@ -1,6 +1,6 @@
 module gitlab.com/gitlab-org/gitlab-runner
 
-go 1.26.10
+go 1.26.11
 
 require (
 	cloud.google.com/go/compute/metadata v0.9.0
@@ -26,7 +26,7 @@ require (
 	github.com/creack/pty v1.1.24
 	github.com/denisbrodbeck/machineid v1.0.1
 	github.com/distribution/reference v0.6.0
-	github.com/docker/cli v29.6.1+incompatible
+	github.com/docker/cli v29.7.2+incompatible
 	github.com/docker/docker-credential-helpers v0.9.7
 	github.com/docker/go-connections v0.7.0
 	github.com/docker/go-units v0.5.0
@@ -58,7 +58,7 @@ require (
 	github.com/minio/minio-go/v7 v7.0.98
 	github.com/moby/docker-image-spec v1.3.1
 	github.com/moby/moby/api v1.55.0
-	github.com/moby/moby/client v0.5.0
+	github.com/moby/moby/client v0.5.1
 	github.com/openbao/openbao/api/v2 v2.5.1
 	github.com/opencontainers/image-spec v1.1.1
 	github.com/prometheus/client_golang v1.23.2
@@ -67,14 +67,14 @@ require (
 	github.com/prometheus/procfs v0.19.2
 	github.com/samber/lo v1.52.0
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.2
-	github.com/saracen/fastzip v0.2.0
+	github.com/saracen/fastzip v0.2.1
 	github.com/sirupsen/logrus v1.9.4
 	github.com/sourcegraph/conc v0.3.0
-	github.com/stretchr/testify v1.11.1
+	github.com/stretchr/testify v1.12.1
 	github.com/urfave/cli v1.22.17
 	gitlab.com/ajwalker/phrasestream v0.0.0-20250306164532-3b0af7cb1452
 	gitlab.com/gitlab-org/fleeting/fleeting v0.0.0-20260423090250-d453cbd29c2d
-	gitlab.com/gitlab-org/fleeting/fleeting-artifact v0.0.0-20241018172108-3f6e6586dc5c
+	gitlab.com/gitlab-org/fleeting/fleeting-artifact v0.0.0-20260908171408-c00f7f9fe914
 	gitlab.com/gitlab-org/fleeting/fleeting/metrics/prometheus v0.0.0-20260423090250-d453cbd29c2d
 	gitlab.com/gitlab-org/fleeting/nesting v0.4.0
 	gitlab.com/gitlab-org/fleeting/taskscaler v0.0.0-20260427035514-507d821b1888
@@ -87,19 +87,19 @@ require (
 	gitlab.com/gitlab-org/moa v0.0.0-20260427132849-fad5ad756fe7
 	gitlab.com/gitlab-org/step-runner v0.39.0
 	go.mozilla.org/pkcs7 v0.9.0
-	go.opentelemetry.io/otel v1.45.0
+	go.opentelemetry.io/otel v1.47.0
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.45.0
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.45.0
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp v1.45.0
-	go.opentelemetry.io/otel/sdk v1.45.0
-	go.opentelemetry.io/otel/trace v1.45.0
-	go.yaml.in/yaml/v3 v3.0.4
+	go.opentelemetry.io/otel/sdk v1.47.0
+	go.opentelemetry.io/otel/trace v1.47.0
+	go.yaml.in/yaml/v3 v3.0.5
 	gocloud.dev v0.46.0
 	golang.org/x/crypto v0.58.0
 	golang.org/x/oauth2 v0.36.0
-	golang.org/x/sync v0.24.0
-	golang.org/x/sys v0.49.0
-	golang.org/x/text v0.43.0
+	golang.org/x/sync v0.25.0
+	golang.org/x/sys v0.50.0
+	golang.org/x/text v0.44.0
 	google.golang.org/api v0.284.0
 	google.golang.org/grpc v1.83.2
 	google.golang.org/protobuf v1.36.11
@@ -154,11 +154,9 @@ require (
 	github.com/cncf/xds/go v0.0.0-20260202195803-dba9d589def2 // indirect
 	github.com/containerd/errdefs/pkg v0.3.0 // indirect
 	github.com/containerd/log v0.1.0 // indirect
-	github.com/containerd/stargz-snapshotter/estargz v0.18.2 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.7 // indirect
 	github.com/cyphar/filepath-securejoin v0.7.0 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
-	github.com/docker/distribution v2.8.3+incompatible // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/emicklei/go-restful/v3 v3.13.0 // indirect
 	github.com/emirpasic/gods v1.18.1 // indirect
@@ -196,7 +194,7 @@ require (
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/google/gnostic-models v0.7.1 // indirect
 	github.com/google/go-cmp v0.7.0 // indirect
-	github.com/google/go-containerregistry v0.20.6 // indirect
+	github.com/google/go-containerregistry v0.22.0 // indirect
 	github.com/google/s2a-go v0.1.9 // indirect
 	github.com/google/safearchive v0.0.0-20241025131057-f7ce9d7b6f9c // indirect
 	github.com/google/wire v0.7.0 // indirect
@@ -232,7 +230,6 @@ require (
 	github.com/mattn/go-runewidth v0.0.16 // indirect
 	github.com/minio/crc64nvme v1.1.1 // indirect
 	github.com/minio/md5-simd v1.1.2 // indirect
-	github.com/mitchellh/go-homedir v1.1.0 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/moby/spdystream v0.5.1 // indirect
 	github.com/moby/term v0.5.2 // indirect
@@ -266,7 +263,6 @@ require (
 	github.com/stretchr/objx v0.5.3 // indirect
 	github.com/tidwall/transform v0.0.0-20201103190739-32f242e2dbde // indirect
 	github.com/tinylib/msgp v1.6.1 // indirect
-	github.com/vbatts/tar-split v0.12.3 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 	github.com/xanzy/ssh-agent v0.3.3 // indirect
 	gitlab.com/functions/docker/auth v0.0.1 // indirect
@@ -275,18 +271,19 @@ require (
 	go.opentelemetry.io/contrib/detectors/gcp v1.44.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.67.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.67.0 // indirect
-	go.opentelemetry.io/otel/metric v1.45.0 // indirect
-	go.opentelemetry.io/otel/sdk/metric v1.45.0 // indirect
+	go.opentelemetry.io/otel/log v1.47.0 // indirect
+	go.opentelemetry.io/otel/metric v1.47.0 // indirect
+	go.opentelemetry.io/otel/sdk/metric v1.47.0 // indirect
 	go.opentelemetry.io/proto/otlp v1.11.0 // indirect
 	go.shabbyrobe.org/gocovmerge v0.0.0-20230507111327-fa4f82cfbf4d // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.yaml.in/yaml/v2 v2.4.3 // indirect
 	go.yaml.in/yaml/v4 v4.0.0-rc.2 // indirect
-	golang.org/x/mod v0.41.0 // indirect
+	golang.org/x/mod v0.42.0 // indirect
 	golang.org/x/net v0.62.0 // indirect
-	golang.org/x/term v0.47.0 // indirect
+	golang.org/x/term v0.48.0 // indirect
 	golang.org/x/time v0.15.0 // indirect
-	golang.org/x/tools v0.51.0 // indirect
+	golang.org/x/tools v0.52.0 // indirect
 	golang.org/x/xerrors v0.0.0-20240903120638-7835f813f4da // indirect
 	google.golang.org/genproto v0.0.0-20260319201613-d00831a3d3e7 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20260803160001-6ac0973c030d // indirect
@@ -294,7 +291,6 @@ require (
 	gopkg.in/evanphx/json-patch.v4 v4.13.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
-	gopkg.in/yaml.v3 v3.0.1 // indirect
 	k8s.io/klog/v2 v2.130.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20251125145642-4e65d59e963e // indirect
 	k8s.io/utils v0.0.0-20251222233032-718f0e51e6d2 // indirect

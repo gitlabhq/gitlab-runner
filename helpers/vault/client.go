@@ -24,26 +24,30 @@ type InlineAuth struct {
 	Role string
 }
 
+func (a *InlineAuth) validate() error {
+	if a == nil {
+		return errors.New("inline auth is required")
+	}
+
+	var errs error
+	if a.Path == "" {
+		errs = errors.Join(errs, errors.New("inline auth path is required"))
+	}
+	if a.JWT == "" {
+		errs = errors.Join(errs, errors.New("inline auth JWT is required"))
+	}
+	if a.Role == "" {
+		errs = errors.Join(errs, errors.New("inline auth role is required"))
+	}
+
+	return errs
+}
+
 type ClientOption func(*api.Client) (*api.Client, error)
 
 func WithInlineAuth(auth *InlineAuth) ClientOption {
 	return func(c *api.Client) (*api.Client, error) {
-		var errs error
-		if auth == nil {
-			errs = errors.Join(errs, errors.New("inline auth is required"))
-		} else {
-			if auth.Path == "" {
-				errs = errors.Join(errs, errors.New("inline auth path is required"))
-			}
-			if auth.JWT == "" {
-				errs = errors.Join(errs, errors.New("inline auth JWT is required"))
-			}
-			if auth.Role == "" {
-				errs = errors.Join(errs, errors.New("inline auth role is required"))
-			}
-		}
-
-		if errs != nil {
+		if errs := auth.validate(); errs != nil {
 			return nil, fmt.Errorf("configuring inline auth: %w", errs)
 		}
 
