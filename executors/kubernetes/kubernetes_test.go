@@ -7969,6 +7969,141 @@ func getCommandExitStatus(exitCode int, script string) string {
 	return fmt.Sprintf(`{"command_exit_code": %v, "script": %q}`, exitCode, script)
 }
 
+func TestProcessLogsStopsSendingStatusWhenContextEnds(t *testing.T) {
+	ctx, cancel := context.WithCancel(t.Context())
+	defer cancel()
+
+	mockTrace := common.NewMockJobTrace(t)
+	mockTrace.On("IsStdout").Return(true).Maybe()
+	mockTrace.On("Write", mock.Anything).Return(0, nil).Maybe()
+
+	lineCh := make(chan string, 1)
+	lineCh <- getCommandExitStatus(0, "script")
+
+	mockLogProcessor := newMockLogProcessor(t)
+	mockLogProcessor.On("Process", mock.Anything).
+		Return((<-chan string)(lineCh), (<-chan error)(make(chan error))).
+		Once()
+
+	e := newExecutor()
+	e.BuildLogger = buildlogger.New(mockTrace, logrus.WithFields(logrus.Fields{}), buildlogger.Options{})
+	e.newLogProcessor = func() logProcessor {
+		return mockLogProcessor
+	}
+
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		e.processLogs(ctx)
+	}()
+
+	cancel()
+	close(lineCh)
+
+	select {
+	case <-done:
+	case <-time.After(3 * time.Second):
+		assert.Fail(t, "processLogs is still sending the exit status")
+	}
+}
+
+func TestRunInContainerStageStatus(t *testing.T) {
+	version, codec := testVersionAndCodec()
+
+	status := func(exitCode int, stage string) shells.StageCommandStatus {
+		script := "/scripts-1-2/" + stage
+		return shells.StageCommandStatus{CommandExitCode: &exitCode, Script: &script}
+	}
+	logProcessorExitCode := 2
+	errAttach := errors.New("unable to upgrade connection: The apiserver is shutting down, please try again later.")
+
+	tests := map[string]struct {
+		previousAttachErr error
+		statuses          []shells.StageCommandStatus
+		expectedExitCode  int
+	}{
+		"attach of the previous stage failed": {
+			previousAttachErr: errAttach,
+			statuses:          []shells.StageCommandStatus{status(0, "cleanup_file_variables")},
+		},
+		"previous stage was cancelled": {
+			statuses: []shells.StageCommandStatus{status(0, "cleanup_file_variables")},
+		},
+		"previous stage reports its exit status late": {
+			statuses: []shells.StageCommandStatus{status(143, "after_script"), status(0, "cleanup_file_variables")},
+		},
+		"stage exits with an error": {
+			statuses:         []shells.StageCommandStatus{status(3, "cleanup_file_variables")},
+			expectedExitCode: 3,
+		},
+		"log processor reports an error without a script": {
+			statuses:         []shells.StageCommandStatus{{CommandExitCode: &logProcessorExitCode}},
+			expectedExitCode: logProcessorExitCode,
+		},
+	}
+
+	for tn, tt := range tests {
+		t.Run(tn, func(t *testing.T) {
+			synctest.Test(t, func(t *testing.T) {
+				fakeClient := fake.CreateHTTPClient(func(*http.Request) (*http.Response, error) {
+					return &http.Response{StatusCode: http.StatusOK, Body: objBody(codec, execPod()), Header: map[string][]string{
+						common.ContentType: {"application/json"},
+					}}, nil
+				})
+
+				ex := NewMockRemoteExecutor(t)
+				attach := func() *MockRemoteExecutor_Execute_Call {
+					return ex.EXPECT().Execute(mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything)
+				}
+				attach().Return(tt.previousAttachErr).Once()
+				attach().Return(nil).Once()
+
+				e := newExecutor()
+				e.BuildLogger = buildlogger.New(nil, logrus.WithFields(logrus.Fields{}), buildlogger.Options{})
+				e.pod = execPod()
+				e.kubeClient = testKubernetesClient(version, fakeClient)
+				e.remoteExecutor = ex
+
+				previousCtx, cancelPrevious := context.WithCancel(t.Context())
+				defer cancelPrevious()
+
+				previous := e.runInContainer(previousCtx, "after_script", "bar", []string{"sh"})
+				if tt.previousAttachErr != nil {
+					require.ErrorIs(t, <-previous, tt.previousAttachErr)
+				}
+				synctest.Wait()
+				cancelPrevious()
+				synctest.Wait()
+
+				select {
+				case err, ok := <-previous:
+					assert.Fail(t, "the stage that stopped waiting reported a result", "err=%v ok=%v", err, ok)
+				default:
+				}
+
+				stage := e.runInContainer(t.Context(), "cleanup_file_variables", "bar", []string{"sh"})
+				for _, s := range tt.statuses {
+					e.remoteProcessTerminated <- s
+				}
+
+				select {
+				case err := <-stage:
+					if tt.expectedExitCode == 0 {
+						assert.NoError(t, err)
+						return
+					}
+
+					var terminatedErr *commandTerminatedError
+					require.ErrorAs(t, err, &terminatedErr)
+					assert.Equal(t, tt.expectedExitCode, terminatedErr.exitCode)
+				case <-time.After(time.Minute):
+					assert.Fail(t, "the stage did not receive its exit status")
+				}
+			})
+		})
+	}
+}
+
 func TestRunAttachCheckPodStatus(t *testing.T) {
 	version, codec := testVersionAndCodec()
 
