@@ -11915,6 +11915,93 @@ func TestWaitForServicesArgs(t *testing.T) {
 	}, e.serviceImageReferences(t.Context(), inspectServices))
 }
 
+func TestWaitForServicesRetriesImagePull(t *testing.T) {
+	build := &common.Build{
+		Job: spec.Job{
+			Services: spec.Services{
+				{Name: "postgres:16", Variables: spec.Variables{{Key: "HEALTHCHECK_TCP_PORT", Value: "5432"}}},
+			},
+		},
+		Runner: &common.RunnerConfig{
+			RunnerSettings: common.RunnerSettings{
+				Kubernetes: &common.KubernetesConfig{
+					Image:      "some-build-image",
+					Namespace:  "some-namespace",
+					PullPolicy: common.StringOrArray{common.PullPolicyAlways, common.PullPolicyAlways},
+				},
+			},
+		},
+	}
+
+	fakeKubeClient := testclient.NewClientset()
+	fakeKubeClient.PrependReactor("get", "pods", func(action k8stesting.Action) (bool, kuberuntime.Object, error) {
+		return true, &api.Pod{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      action.(k8stesting.GetAction).GetName(),
+				Namespace: action.GetNamespace(),
+			},
+			Status: api.PodStatus{
+				Phase: api.PodPending,
+				ContainerStatuses: []api.ContainerStatus{{
+					Name:  buildContainerName,
+					Image: "some-build-image",
+					State: api.ContainerState{Waiting: &api.ContainerStateWaiting{
+						Reason:  "ErrImagePull",
+						Message: "read: connection reset by peer",
+					}},
+				}},
+			},
+		}, nil
+	})
+
+	mockPodWatcher := newMockPodWatcher(t)
+	mockPodWatcher.On("Start").Return(nil).Once()
+	mockPodWatcher.On("UpdatePodName", mock.AnythingOfType("string"))
+	mockPodWatcher.On("Stop").Once()
+
+	ex := newExecutor()
+	ex.getKubeConfig = func(*common.KubernetesConfig, *overwrites) (*restclient.Config, error) {
+		return nil, nil
+	}
+	ex.newKubeClient = func(*restclient.Config) (kubernetes.Interface, error) {
+		return fakeKubeClient, nil
+	}
+	ex.newPodWatcher = func(podWatcherConfig) podWatcher {
+		return mockPodWatcher
+	}
+
+	mockTrace := buildlogger.NewMockTrace(t)
+	mockTrace.EXPECT().IsStdout().Return(true).Maybe()
+	mockTrace.EXPECT().Write(mock.Anything).Return(0, nil).Maybe()
+
+	err := ex.Prepare(common.ExecutorPrepareOptions{
+		Context:     t.Context(),
+		Build:       build,
+		Config:      build.Runner,
+		BuildLogger: buildlogger.New(mockTrace, logrus.WithFields(logrus.Fields{}), buildlogger.Options{}),
+	})
+	ex.Finish(nil)
+
+	var pullErr *pull.ImagePullError
+	require.ErrorAs(t, err, &pullErr)
+	assert.Equal(t, buildContainerName, pullErr.Container)
+
+	var created, deleted int
+	for _, action := range fakeKubeClient.Actions() {
+		if action.GetResource().Resource != "pods" {
+			continue
+		}
+		switch action.GetVerb() {
+		case "create":
+			created++
+		case "delete":
+			deleted++
+		}
+	}
+	assert.Equal(t, 2, created, "one pod per entry in pull_policy")
+	assert.Equal(t, 1, deleted, "the first pod is deleted before the second attempt")
+}
+
 func TestValidateServiceHealthCheckPorts(t *testing.T) {
 	tests := map[string]struct {
 		port    string

@@ -85,6 +85,13 @@ func (p *PodWatcher) Start() error {
 // UpdatePodName sets the pod name we are interested in
 func (p *PodWatcher) UpdatePodName(podName string) {
 	p.podName.Store(podName)
+
+	// A buffered error belongs to the previous pod.
+	select {
+	case err := <-p.errors:
+		p.logger.Debugln(fmt.Sprintf("dropping the error of the previous pod: %s", err))
+	default:
+	}
 }
 
 // Stop shuts down the pod watcher by shutting down its dependants: the informer factory and thus the

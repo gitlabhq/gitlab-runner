@@ -13,7 +13,9 @@ import (
 	"github.com/stretchr/testify/require"
 	api "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	kuberuntime "k8s.io/apimachinery/pkg/runtime"
 	testclient "k8s.io/client-go/kubernetes/fake"
+	k8stesting "k8s.io/client-go/testing"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/common/buildlogger"
@@ -556,6 +558,52 @@ func TestStepsWaitForServices_NoProbeWhenNoHealthCheckPort(t *testing.T) {
 
 	require.NoError(t, ex.stepsWaitForServices(t.Context()),
 		"with no HEALTHCHECK_TCP_PORT the Concrete probe must return nil early")
+}
+
+func TestStepsWaitForServices_RetriesImagePull(t *testing.T) {
+	ex, fakeClient := newStepsTestExecutorWithFakes(t)
+	ex.options.Services = map[string]*spec.Image{
+		"db": {
+			Name:      "postgres:15",
+			Variables: spec.Variables{{Key: "HEALTHCHECK_TCP_PORT", Value: "5432"}},
+		},
+	}
+	ex.pullManager = pull.NewPullManager(map[string][]api.PullPolicy{
+		buildContainerName: {api.PullAlways, api.PullAlways},
+	}, &ex.BuildLogger)
+
+	fakeClient.PrependReactor("get", "pods", func(action k8stesting.Action) (bool, kuberuntime.Object, error) {
+		return true, &api.Pod{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      action.(k8stesting.GetAction).GetName(),
+				Namespace: action.GetNamespace(),
+			},
+			Status: api.PodStatus{
+				Phase: api.PodPending,
+				ContainerStatuses: []api.ContainerStatus{{
+					Name:  buildContainerName,
+					Image: ex.options.Image.Name,
+					State: api.ContainerState{Waiting: &api.ContainerStateWaiting{
+						Reason:  "ErrImagePull",
+						Message: "read: connection reset by peer",
+					}},
+				}},
+			},
+		}, nil
+	})
+
+	err := ex.stepsWaitForServices(t.Context())
+
+	var pullErr *pull.ImagePullError
+	require.ErrorAs(t, err, &pullErr)
+
+	var created int
+	for _, action := range fakeClient.Actions() {
+		if action.GetVerb() == "create" && action.GetResource().Resource == "pods" {
+			created++
+		}
+	}
+	assert.Equal(t, 2, created, "one pod per entry in pull_policy")
 }
 
 func containerNames(cs []api.Container) []string {

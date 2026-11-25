@@ -509,7 +509,11 @@ func (s *executor) stepsWaitForServices(ctx context.Context) error {
 		return nil
 	}
 
-	if err := s.ensureStepsPod(ctx); err != nil {
+	// Connect's pull retry does not cover a pod created here.
+	err := s.withPullRetry(ctx, func() error {
+		return s.ensureStepsPod(ctx)
+	})
+	if err != nil {
 		return err
 	}
 
