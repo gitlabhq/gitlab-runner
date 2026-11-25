@@ -2043,14 +2043,6 @@ func TestAbstractShell_writeSubmoduleUpdateCmd(t *testing.T) {
 							tc.ExpectedGitForEachFlags...,
 						)
 					}
-					expectedGitSubmoduleForEachArgsFn := func() []any {
-						args := []any{"submodule", "foreach"}
-						if !tc.Recursive {
-							args = append(args, "--recursive")
-						}
-						return append(args, tc.ExpectedGitForEachFlags...)
-					}
-
 					expectedSubmoduleCleanArgsFn := func() []any {
 						args := append(expectedGitForEachArgsFn(), "git", "clean")
 						for _, f := range tc.ExpectedGitCleanFlags {
@@ -2110,7 +2102,19 @@ func TestAbstractShell_writeSubmoduleUpdateCmd(t *testing.T) {
 
 					mockWriter.EXPECT().Noticef("Configuring submodules to use parent git credentials...").Once()
 					mockWriter.EXPECT().EnvVariableKey("GLR_EXT_GIT_CONFIG_PATH").Return("$GLR_EXT_GIT_CONFIG_PATH").Once()
-					mockWriter.EXPECT().CommandArgExpand("git", slices.Concat(expectedGitSubmoduleForEachArgsFn(), []any{"git", "config", "--replace-all", "include.path", "$GLR_EXT_GIT_CONFIG_PATH"})...).Once()
+					configArgs := []any{"git", "config", "--replace-all", "include.path", "$GLR_EXT_GIT_CONFIG_PATH"}
+					if tc.Recursive {
+						mockWriter.EXPECT().CommandArgExpand("git", slices.Concat(expectedGitForEachArgsFn(), configArgs)...).Once()
+					} else {
+						mock.InOrder(
+							mockWriter.EXPECT().IfCmdWithOutputArgExpand("git", slices.Concat(expectedGitForEachArgsFn(), []any{"--recursive"}, configArgs)...).Once(),
+							mockWriter.EXPECT().Noticef("Configured nested submodules").Once(),
+							mockWriter.EXPECT().Else().Once(),
+							mockWriter.EXPECT().Warningf("Configuring nested submodules failed. Configuring only the top-level submodules...").Once(),
+							mockWriter.EXPECT().CommandArgExpand("git", slices.Concat(expectedGitForEachArgsFn(), configArgs)...).Once(),
+							mockWriter.EXPECT().EndIf().Once(),
+						)
+					}
 
 					mockWriter.EXPECT().IfCmd("git", "lfs", "version").Once()
 					mockWriter.EXPECT().Noticef("Pulling LFS files...").Once()
@@ -3333,7 +3337,14 @@ func TestAbstractShell_writeSubmoduleUpdateCmdPath(t *testing.T) {
 
 					mockWriter.EXPECT().Noticef("Configuring submodules to use parent git credentials...").Once()
 					mockWriter.EXPECT().EnvVariableKey("GLR_EXT_GIT_CONFIG_PATH").Return("$GLR_EXT_GIT_CONFIG_PATH").Once()
-					mockWriter.EXPECT().CommandArgExpand("git", "submodule", "foreach", "--recursive", "git", "config", "--replace-all", "include.path", "$GLR_EXT_GIT_CONFIG_PATH").Once()
+					mock.InOrder(
+						mockWriter.EXPECT().IfCmdWithOutputArgExpand("git", "submodule", "foreach", "--recursive", "git", "config", "--replace-all", "include.path", "$GLR_EXT_GIT_CONFIG_PATH").Once(),
+						mockWriter.EXPECT().Noticef("Configured nested submodules").Once(),
+						mockWriter.EXPECT().Else().Once(),
+						mockWriter.EXPECT().Warningf("Configuring nested submodules failed. Configuring only the top-level submodules...").Once(),
+						mockWriter.EXPECT().CommandArgExpand("git", "submodule", "foreach", "git", "config", "--replace-all", "include.path", "$GLR_EXT_GIT_CONFIG_PATH").Once(),
+						mockWriter.EXPECT().EndIf().Once(),
+					)
 
 					mockWriter.EXPECT().IfCmd("git", "lfs", "version").Once()
 					mockWriter.EXPECT().Noticef("Pulling LFS files...").Once()

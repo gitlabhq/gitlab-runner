@@ -1666,14 +1666,20 @@ func (b *AbstractShell) writeSubmoduleUpdateNoticeMsg(w ShellWriter, recursive b
 // from the parent repository. This allows git operations inside submodule directories
 // (e.g., cd patches && git pull) to authenticate properly using the parent repo's credentials.
 func (b *AbstractShell) configureSubmoduleCredentials(w ShellWriter, foreachArgs []string, recursive bool) {
-	args := slices.Clip(foreachArgs)
-	// Even if `GIT_SUBMODULE_STRATEGY: normal` is used, we should set up the credentials
-	// for all the Git submodules to preserve existing workflows.
-	if !recursive {
-		args = append(args, "--recursive")
+	configArgs := []string{"git", "config", "--replace-all", "include.path", w.EnvVariableKey(envVarExternalGitConfigFile)}
+	if recursive {
+		w.CommandArgExpand("git", slices.Concat(foreachArgs, configArgs)...)
+		return
 	}
-	args = append(args, "git", "config", "--replace-all", "include.path", w.EnvVariableKey(envVarExternalGitConfigFile))
-	w.CommandArgExpand("git", args...)
+
+	// Even if `GIT_SUBMODULE_STRATEGY: normal` is used, we set up the credentials for nested submodules too, to
+	// preserve existing workflows. They aren't checked out with this strategy, so an invalid one mustn't fail the job.
+	w.IfCmdWithOutputArgExpand("git", slices.Concat(foreachArgs, []string{"--recursive"}, configArgs)...)
+	w.Noticef("Configured nested submodules")
+	w.Else()
+	w.Warningf("Configuring nested submodules failed. Configuring only the top-level submodules...")
+	w.CommandArgExpand("git", slices.Concat(foreachArgs, configArgs)...)
+	w.EndIf()
 }
 
 func (b *AbstractShell) writeRestoreCacheScript(

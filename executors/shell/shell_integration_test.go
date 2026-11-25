@@ -1467,6 +1467,76 @@ func TestBuildWithGitFetchSubmoduleStrategyRecursiveStaleSubmodule(t *testing.T)
 	})
 }
 
+// With GIT_SUBMODULE_STRATEGY=normal, nested submodules are not checked out, so an invalid one must not fail the job.
+// See: https://gitlab.com/gitlab-org/gitlab-runner/-/issues/40257
+func TestBuildWithGitSubmoduleStrategyNormalInvalidNestedSubmodule(t *testing.T) {
+	runGit := func(t *testing.T, dir string, args ...string) string {
+		t.Helper()
+
+		cmd := exec.Command("git", append([]string{"-c", "protocol.file.allow=always"}, args...)...)
+		cmd.Dir = dir
+		out, err := cmd.CombinedOutput()
+		require.NoError(t, err, string(out))
+
+		return strings.TrimSpace(string(out))
+	}
+
+	newRepo := func(t *testing.T) string {
+		dir := tempDir(t)
+		runGit(t, dir, "init", "-q", "-b", "main")
+		runGit(t, dir, "config", "user.email", "test@example.com")
+		runGit(t, dir, "config", "user.name", "Test")
+
+		return dir
+	}
+
+	leaf := newRepo(t)
+	runGit(t, leaf, "commit", "-q", "--allow-empty", "-m", "leaf")
+	leafSHA := runGit(t, leaf, "rev-parse", "HEAD")
+
+	// mid has a gitlink without a .gitmodules entry, so `git submodule foreach --recursive` fails in it.
+	mid := newRepo(t)
+	runGit(t, mid, "update-index", "--add", "--cacheinfo", "160000,"+leafSHA+",leaf")
+	runGit(t, mid, "commit", "-q", "-m", "mid")
+
+	top := newRepo(t)
+	runGit(t, top, "submodule", "add", fileURL(mid), "mid")
+	runGit(t, top, "commit", "-q", "-m", "top")
+	topSHA := runGit(t, top, "rev-parse", "HEAD")
+
+	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
+		jobResponse, err := common.GetRemoteBuildResponse(`echo "Hello World"`)
+		require.NoError(t, err)
+		build := newBuild(t, jobResponse, shell)
+
+		build.GitInfo = spec.GitInfo{
+			RepoURL:  fileURL(top),
+			Ref:      "main",
+			Sha:      topSHA,
+			RefType:  spec.RefTypeBranch,
+			Refspecs: []string{"+refs/heads/main:refs/remotes/origin/main"},
+		}
+
+		// Only local repositories are used, so the redirects to a test git server are not needed. git blocks local
+		// repositories as submodule sources unless protocol.file.allow is set.
+		build.Variables = slices.DeleteFunc(build.Variables, func(v spec.Variable) bool {
+			return strings.HasPrefix(v.Key, "GIT_CONFIG_")
+		})
+		build.Variables = append(
+			build.Variables,
+			spec.Variable{Key: "GIT_SUBMODULE_STRATEGY", Value: "normal"},
+			spec.Variable{Key: "GIT_CONFIG_COUNT", Value: "1"},
+			spec.Variable{Key: "GIT_CONFIG_KEY_0", Value: "protocol.file.allow"},
+			spec.Variable{Key: "GIT_CONFIG_VALUE_0", Value: "always"},
+		)
+
+		out, err := buildtest.RunBuildReturningOutput(t, build)
+		require.NoError(t, err, out)
+		assert.Contains(t, out, "Configuring nested submodules failed. Configuring only the top-level submodules...")
+		assert.NotEmpty(t, runGit(t, filepath.Join(build.FullProjectDir(), "mid"), "config", "--get-all", "include.path"))
+	})
+}
+
 func TestBuildGitCloneStrategyCleanup(t *testing.T) {
 	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
 		successfulBuild, err := common.GetSuccessfulBuild()
