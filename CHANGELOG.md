@@ -354,6 +354,20 @@
 - Document installing the Helm chart from an OCI registry [!7398](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/7398)
 - go: Update module github.com/aws/aws-sdk-go-v2/service/s3 to v1.111.0 [!7362](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/7362)
 
+## v19.4.5 (2026-11-24)
+
+### Security fixes
+
+- Apply allowed_users to Docker service containers [!7904](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/7904)
+
+### Maintenance
+
+- go: Update module github.com/saracen/fastzip to v0.2.1 [!7888](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/7888)
+- Update RUNNER_IMAGES_VERSION to 0.0.62 for 19.4 [!7850](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/7850)
+- Update Go modules and base images for 19.4 with security fixes [!7831](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/7831)
+- Backport: Publish deb packages to Pulp (19.4) [!7803](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/7803) (Giannis Kepas @gkepas)
+- Update Go, base images and Go modules for 19.4 with security fixes [!7910](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/7910)
+
 ## v19.4.4 (2026-11-05)
 
 ### Bug fixes
