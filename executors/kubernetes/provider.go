@@ -9,14 +9,19 @@ import (
 )
 
 type executorData struct {
-	PodName string
+	PodName  string
+	NodeName string
 }
 
 func (d *executorData) LogFields() map[string]string {
 	if d.PodName == "" {
 		return nil
 	}
-	return map[string]string{"pod_name": d.PodName}
+	fields := map[string]string{"pod_name": d.PodName}
+	if d.NodeName != "" {
+		fields["node_name"] = d.NodeName
+	}
+	return fields
 }
 
 func podExecutorData(data common.ExecutorData) (*executorData, bool) {

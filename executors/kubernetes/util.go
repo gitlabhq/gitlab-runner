@@ -219,7 +219,7 @@ func getPodPhase(ctx context.Context, client kubernetes.Interface, pod *api.Pod,
 
 	containerStatuses := slices.Concat(pod.Status.ContainerStatuses, pod.Status.InitContainerStatuses)
 	if err := watchers.CheckTerminalContainerErrors(containerStatuses); err != nil {
-		return podPhaseResponse{done: true, phase: api.PodUnknown, err: err}
+		return podPhaseResponse{done: true, phase: api.PodUnknown, err: err, nodeName: pod.Spec.NodeName}
 	}
 
 	if podUsesUserNamespaces(pod) && sandboxCheck.due(pod, time.Now()) {
@@ -230,7 +230,7 @@ func getPodPhase(ctx context.Context, client kubernetes.Interface, pod *api.Pod,
 		sandboxCheck.lastCheck = time.Now() // pace from when the LIST returns
 		sandboxCheck.spent += sandboxCheck.lastCheck.Sub(start)
 		if err != nil {
-			return podPhaseResponse{done: true, phase: api.PodUnknown, err: err}
+			return podPhaseResponse{done: true, phase: api.PodUnknown, err: err, nodeName: pod.Spec.NodeName}
 		}
 	}
 
@@ -385,18 +385,21 @@ func triggerPodPhaseCheck(ctx context.Context, c kubernetes.Interface, pod *api.
 // The timeout and polling values are configurable through KubernetesConfig
 // parameters.
 // The containers parameter is optional and can be used to wait for a specific containers' readiness
+//
+//nolint:gocognit
 func waitForPodRunning(
 	ctx context.Context,
 	c kubernetes.Interface,
 	pod *api.Pod,
 	out io.Writer,
 	config *common.KubernetesConfig,
-	onScheduled func(),
+	onScheduled func(nodeName string),
 	containers ...string,
 ) (api.PodPhase, error) {
 	pollInterval := config.GetPollInterval()
 	pollAttempts := config.GetPollAttempts()
 	var lastPhase api.PodPhase
+	var printedNode string
 	var sandboxCheck *sandboxCheckPacer
 	if podUsesUserNamespaces(pod) {
 		pollTimeout := time.Duration(config.GetPollTimeout()) * time.Second
@@ -409,13 +412,18 @@ func waitForPodRunning(
 		select {
 		case r := <-triggerPodPhaseCheck(ctx, c, pod, out, config.GetPrintPodWarningEvents(), sandboxCheck, containers...):
 			if r.nodeName != "" && onScheduled != nil {
-				onScheduled()
+				onScheduled(r.nodeName)
 				onScheduled = nil
 			}
 			if !r.done {
 				lastPhase = r.phase
+				printedNode = r.nodeName
 				time.Sleep(time.Duration(pollInterval) * time.Second)
 				continue
+			}
+			// No "Waiting for pod" line had the node: scheduled and ready or failed between two polls.
+			if r.nodeName != "" && r.nodeName != printedNode {
+				_, _ = fmt.Fprintf(out, "Pod %s/%s was scheduled on the node %s\n", pod.Namespace, pod.Name, r.nodeName)
 			}
 			return r.phase, r.err
 		case <-ctx.Done():

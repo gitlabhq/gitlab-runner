@@ -204,6 +204,26 @@ func TestWaitForPodRunning(t *testing.T) {
 			}, nil
 		}
 	}
+	plainPod := &api.Pod{ObjectMeta: metav1.ObjectMeta{Name: "test-pod", Namespace: "test-ns"}}
+	podPolls := func(scheduledFrom, runningFrom int, mutate func(*api.Pod)) func(*http.Request) (*http.Response, error) {
+		return func(*http.Request) (*http.Response, error) {
+			pod := plainPod.DeepCopy()
+			pod.Status.Phase = api.PodPending
+			if retries >= scheduledFrom {
+				pod.Spec.NodeName = "node-1"
+				mutate(pod)
+			}
+			if retries >= runningFrom {
+				pod.Status = api.PodStatus{Phase: api.PodRunning, ContainerStatuses: []api.ContainerStatus{{Ready: true}}}
+			}
+			retries++
+			return &http.Response{
+				StatusCode: http.StatusOK,
+				Body:       objBody(codec, pod),
+				Header:     map[string][]string{common.ContentType: {"application/json"}},
+			}, nil
+		}
+	}
 
 	tests := []struct {
 		Name              string
@@ -217,6 +237,7 @@ func TestWaitForPodRunning(t *testing.T) {
 		ExactRetries      bool
 		ExpectContains    []string
 		ExpectNotContains []string
+		ExpectOutput      string
 		VerifyError       func(t *testing.T, err error)
 		// ExpectNoEventsList asserts the namespace-wide events LIST was never
 		// issued. That scan filters on an unindexed field, so the API server
@@ -280,8 +301,58 @@ func TestWaitForPodRunning(t *testing.T) {
 					return nil, fmt.Errorf("unexpected request")
 				}
 			},
+			PodEndPhase:       api.PodRunning,
+			Retries:           2,
+			ExpectNotContains: []string{"was scheduled on the node"},
+		},
+		{
+			Name:        "ensure the node is printed for a pod scheduled and ready between two polls",
+			Pod:         plainPod,
+			Config:      &common.KubernetesConfig{},
+			ClientFunc:  podPolls(1, 1, func(*api.Pod) {}),
 			PodEndPhase: api.PodRunning,
-			Retries:     2,
+			ExpectOutput: "Waiting for pod test-ns/test-pod to be running on the node <unknown>, status is Pending\n" +
+				"Pod test-ns/test-pod was scheduled on the node node-1\n",
+		},
+		{
+			Name:         "ensure the node is printed for a pod ready at the first poll",
+			Pod:          plainPod,
+			Config:       &common.KubernetesConfig{},
+			ClientFunc:   podPolls(0, 0, func(*api.Pod) {}),
+			PodEndPhase:  api.PodRunning,
+			ExpectOutput: "Pod test-ns/test-pod was scheduled on the node node-1\n",
+		},
+		{
+			Name:         "ensure the node is printed once",
+			Pod:          plainPod,
+			Config:       &common.KubernetesConfig{},
+			ClientFunc:   podPolls(0, 1, func(*api.Pod) {}),
+			PodEndPhase:  api.PodRunning,
+			ExpectOutput: "Waiting for pod test-ns/test-pod to be running on the node node-1, status is Pending\n",
+		},
+		{
+			Name:   "ensure the node is printed for a pod scheduled and failed between two polls",
+			Pod:    plainPod,
+			Config: &common.KubernetesConfig{},
+			ClientFunc: podPolls(1, math.MaxInt, func(pod *api.Pod) {
+				pod.Status.Phase = api.PodFailed
+			}),
+			PodEndPhase: api.PodFailed,
+			Error:       true,
+			ExpectOutput: "Waiting for pod test-ns/test-pod to be running on the node <unknown>, status is Pending\n" +
+				"Pod test-ns/test-pod was scheduled on the node node-1\n",
+		},
+		{
+			Name:   "ensure the node is printed for a pod whose image pull failed at the first poll",
+			Pod:    plainPod,
+			Config: &common.KubernetesConfig{},
+			ClientFunc: podPolls(0, math.MaxInt, func(pod *api.Pod) {
+				waiting := &api.ContainerStateWaiting{Reason: "ErrImagePull"}
+				pod.Status.ContainerStatuses = []api.ContainerStatus{{State: api.ContainerState{Waiting: waiting}}}
+			}),
+			PodEndPhase:  api.PodUnknown,
+			Error:        true,
+			ExpectOutput: "Pod test-ns/test-pod was scheduled on the node node-1\n",
 		},
 		{
 			Name: "ensure function errors if pod already succeeded",
@@ -909,6 +980,9 @@ func TestWaitForPodRunning(t *testing.T) {
 						t.Errorf("[%s] Expected output to contain %q. Got: %s", test.Name, s, output.String())
 					}
 				}
+				if test.ExpectOutput != "" {
+					assert.Equal(t, test.ExpectOutput, output.String())
+				}
 				for _, s := range test.ExpectNotContains {
 					if strings.Contains(output.String(), s) {
 						t.Errorf("[%s] Expected output not to contain %q. Got: %s", test.Name, s, output.String())
@@ -928,6 +1002,28 @@ func TestWaitForPodRunning(t *testing.T) {
 			})
 		})
 	}
+}
+
+func TestWaitForPodLogsNodeName(t *testing.T) {
+	pod := &api.Pod{
+		ObjectMeta: metav1.ObjectMeta{Name: "test-pod", Namespace: "test-ns"},
+		Spec:       api.PodSpec{NodeName: "node-1"},
+		Status: api.PodStatus{
+			Phase:             api.PodRunning,
+			ContainerStatuses: []api.ContainerStatus{{Name: buildContainerName, Ready: true}},
+		},
+	}
+	e := newExecutor()
+	e.pod = pod
+	e.kubeClient = testclient.NewClientset(pod)
+	e.Build = &common.Build{
+		Runner:       &common.RunnerConfig{},
+		ExecutorData: &executorData{PodName: pod.Name},
+	}
+
+	require.NoError(t, e.waitForPod(t.Context(), nopWriteCloser{}))
+	fields := common.GetExecutorLogFields(e.Build.ExecutorData)
+	assert.Equal(t, map[string]string{"pod_name": "test-pod", "node_name": "node-1"}, fields)
 }
 
 func TestCreateResourceList(t *testing.T) {
