@@ -1298,7 +1298,10 @@ func (b *Build) run(ctx, prepareCtx context.Context, trace JobTrace, executor Ex
 // process exists.
 func (b *Build) waitForBuildFinish(buildFinish <-chan error, timeout time.Duration) {
 	select {
-	case <-buildFinish:
+	case err := <-buildFinish:
+		if err != nil {
+			b.logger.Debugln("Build finished after it was canceled:", err)
+		}
 		return
 	case <-time.After(timeout):
 		b.logger.Warningln("Timed out waiting for the build to finish")
