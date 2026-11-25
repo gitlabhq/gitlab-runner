@@ -45,8 +45,8 @@ projects that are run on this server. Use it only for running trusted builds.
 such a configuration more secure, run jobs as a non-root user in Docker
 containers with disabled `sudo` or dropped `SETUID` and `SETGID` capabilities.
 
-More granular permissions can be configured in non-privileged mode via the
-`cap_add`/`cap_drop` settings.
+More granular permissions can be configured in non-privileged mode through the
+`cap_add` and `cap_drop` settings.
 
 > [!warning]
 > Privileged containers in Docker have all the root capabilities of the host VM.
