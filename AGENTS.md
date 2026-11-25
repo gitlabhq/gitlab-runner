@@ -76,12 +76,12 @@ non-nil zero-value struct where callers expect nil on error can trigger downstre
 ## Verification
 
 After making changes, always run these in order before pushing. All must pass:
-- `make tools` — installs golangci-lint and other dev tools into `.tmp/bin/` (required before linting)
+- `make tools` — installs protoc, mage, gitlab-changelog and other dev tools; not needed for `make lint`
 - `make development_setup` — clones the fixture repository that some integration tests use (idempotent, optional: see "Fixture repositories" in `docs/development/_index.md` for serving the fixtures locally)
 - `go build ./...` — must compile clean
 - `go vet ./...` — must pass clean
 - `go test -race ./... -count=1 -timeout 30m` — fix any failures your changes introduced; `-race` adds ~10× overhead so the timeout must be generous
-- `make lint` — runs golangci-lint via the Makefile (version is pinned in `GOLANGLINT_VERSION` in the Makefile; always use `make lint` rather than calling the binary directly so the pinned version is used)
+- `make lint` — runs golangci-lint from `PATH` (mise locally, the runner-linters image in CI and Duo sessions); `GOLANGLINT_VERSION` in `.gitlab/ci/_common.gitlab-ci.yml` sets the version and `mise.toml` must match
 - If you change the Go version, run `scripts/check-go-version-consistency`.
 
 Do not log `CI_JOB_TOKEN`, API tokens, or any secret value to stdout. If you need to
