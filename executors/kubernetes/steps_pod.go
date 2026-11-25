@@ -209,6 +209,7 @@ func (s *executor) setupStepsPod(ctx context.Context, initContainers []api.Conta
 
 	if data, ok := podExecutorData(s.Build.ExecutorData); ok {
 		data.PodName = s.pod.GetName()
+		data.NodeName = ""
 	}
 
 	ownerReferences := s.buildPodReferences()

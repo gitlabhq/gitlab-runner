@@ -1356,9 +1356,13 @@ func (s *executor) buildInitContainers() ([]api.Container, error) {
 }
 
 func (s *executor) waitForPod(ctx context.Context, writer io.WriteCloser) error {
-	var onScheduled func()
-	if c, ok := s.Build.ExecutorData.(interface{ PodScheduled() }); ok {
-		onScheduled = c.PodScheduled
+	onScheduled := func(nodeName string) {
+		if data, ok := podExecutorData(s.Build.ExecutorData); ok {
+			data.NodeName = nodeName
+		}
+		if c, ok := s.Build.ExecutorData.(interface{ PodScheduled() }); ok {
+			c.PodScheduled()
+		}
 	}
 
 	status, err := waitForPodRunning(ctx, s.kubeClient, s.pod, writer, s.Config.Kubernetes, onScheduled, buildContainerName)
@@ -2670,6 +2674,7 @@ func (s *executor) setupBuildPod(ctx context.Context, initContainers []api.Conta
 
 	if data, ok := podExecutorData(s.Build.ExecutorData); ok {
 		data.PodName = s.pod.GetName()
+		data.NodeName = ""
 	}
 
 	ownerReferences := s.buildPodReferences()
