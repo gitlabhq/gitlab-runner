@@ -68,8 +68,6 @@ go:lint:
     OUT_FORMAT: "--output.code-climate.path=gl-golangci-lint-report.json"
   before_script:
     - !reference [.go-cache, before_script]
-    # Ensure the goargs linter plugin is available at .tmp/bin/goargs.so to suit .golangci.yml
-    - mkdir -p .tmp/bin && ln -s /usr/lib/goargs.so .tmp/bin/goargs.so
   script:
     - make --silent lint
   timeout: 20 minutes

@@ -63,7 +63,6 @@ SPLITIC = splitic
 MAGE = $(localBin)/mage
 
 GOLANGLINT ?= golangci-lint
-GOLANGLINT_GOARGS ?= $(localBin)/goargs.so
 # Labkit validate-log-fields version
 LABKIT_VALIDATE_VERSION     := v2.26.1
 
@@ -369,16 +368,6 @@ generate_changelog: $(GITLAB_CHANGELOG)
 		-config-file .gitlab/changelog.yml \
 		-changelog-file CHANGELOG.md
 
-check-tags-in-changelog:
-	# Looking for tags in CHANGELOG
-	@git status | grep "On branch main" 2>&1 >/dev/null || echo "Check should be done on main branch only. Skipping."
-	@for tag in $$(git tag | grep -E "^v[0-9]+\.[0-9]+\.[0-9]+$$" | sed 's|v||' | sort -g); do \
-		state="MISSING"; \
-		grep "^v $$tag" CHANGELOG.md 2>&1 >/dev/null; \
-		[ "$$?" -eq 1 ] || state="OK"; \
-		echo "$$tag:   \t $$state"; \
-	done
-
 development_setup:
 	test -d tmp/gitlab-test || git clone https://gitlab.com/gitlab-org/ci-cd/gitlab-runner-pipeline-tests/gitlab-test tmp/gitlab-test
 	if prlctl --version ; then $(MAKE) -C tests/ubuntu parallels ; fi
@@ -426,15 +415,6 @@ $(MAGE): .tmp
 	# Go intentionally makes module cache directories read-only to prevent accidental modifications
 	GOPATH=$(local) go clean -modcache
 	rm -rf .tmp/mage .tmp/pkg
-
-
-$(GOLANGLINT_GOARGS): TOOL_BUILD_DIR := .tmp/build/goargs
-$(GOLANGLINT_GOARGS):
-	rm -rf $(TOOL_BUILD_DIR)
-	git clone https://gitlab.com/gitlab-org/language-tools/go/linters/goargs.git --no-tags --depth 1 $(TOOL_BUILD_DIR)
-	cd $(TOOL_BUILD_DIR) && \
-	CGO_ENABLED=1 go build --trimpath --buildmode=plugin -o $(GOLANGLINT_GOARGS) plugin/analyzer.go
-	rm -rf $(TOOL_BUILD_DIR)
 
 .PHONY: $(MOCKERY)
 $(MOCKERY):
@@ -504,7 +484,7 @@ print_image_tags:
 	echo "$$tags"
 
 .PHONY: tools # Install dev tool and dependency binaries for local development.
-tools: $(GITLAB_CHANGELOG) $(GOCOVER_COBERTURA) $(GOLANGLINT_GOARGS) $(MAGE) $(MOCKERY) $(PROTOC) $(PROTOC_GEN_GO) $(PROTOC_GEN_GO_GRPC) $(RELEASE_INDEX_GENERATOR)
+tools: $(GITLAB_CHANGELOG) $(GOCOVER_COBERTURA) $(MAGE) $(MOCKERY) $(PROTOC) $(PROTOC_GEN_GO) $(PROTOC_GEN_GO_GRPC) $(RELEASE_INDEX_GENERATOR)
 
 .PHONY: sync-updated-go-version # Sync the go version in CI files to development docs and scripts
 sync-updated-go-version:

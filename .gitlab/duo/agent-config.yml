@@ -36,5 +36,5 @@ cache:
     - .cache/node/        # Node.js runtime — version-checked, skips download on hit
     - .cache/gomod/       # Go module cache (GOMODCACHE redirected here)
     - .cache/npm-global/  # duo-cli and other global npm packages
-    - .tmp/               # make tools: golangci-lint, mockery, etc.
+    - .tmp/               # make tools: protoc, mage, gitlab-changelog, etc.
     - tmp/                # make development_setup: test git fixtures
