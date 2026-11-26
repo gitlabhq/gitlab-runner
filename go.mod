@@ -97,7 +97,7 @@ require (
 	go.yaml.in/yaml/v3 v3.0.6
 	go.yaml.in/yaml/v4 v4.0.0
 	gocloud.dev v0.47.0
-	golang.org/x/crypto v0.58.0
+	golang.org/x/crypto v0.58.1-0.20261009181718-2f1f834330b2
 	golang.org/x/oauth2 v0.38.0
 	golang.org/x/sync v0.25.0
 	golang.org/x/sys v0.50.0
