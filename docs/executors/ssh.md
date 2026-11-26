@@ -72,5 +72,79 @@ connecting to through SSH.
 ## Configure strict host key checking
 
 SSH `StrictHostKeyChecking` is [enabled](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/28192) by default.
-To disable SSH `StrictHostKeyChecking`, set `[runners.ssh.disable_strict_host_key_checking]` to `true`.
-The current default value is `false`.
+GitLab Runner checks the host key of the remote server against a `known_hosts` file.
+By default, GitLab Runner uses `.ssh/known_hosts` in the home directory of the user that runs GitLab Runner.
+To use a different file, set `known_hosts_file` in the `[runners.ssh]` section:
+
+```toml
+[runners.ssh]
+  host = "example.com"
+  port = "22"
+  user = "root"
+  identity_file = "/path/to/identity/file"
+  known_hosts_file = "/path/to/known_hosts"
+```
+
+Use an absolute path for `known_hosts_file`. GitLab Runner does not expand `~`.
+
+If the job fails, check the error message:
+
+- `knownhosts: key is unknown`: The host key is not in the `known_hosts` file. Add the host key.
+- `knownhosts: key mismatch`: The `known_hosts` file has an entry for the host, but none of its keys match the key that the server presented. The host key might have changed, or the file might not contain every key type that the server offers. Verify the fingerprints, then replace the host key.
+- `getting host key callback: open <path>: no such file or directory`: The `known_hosts` file does not exist. Add the host key, which creates the file.
+
+### Add the host key of the remote server
+
+To add the host key of the remote server to the `known_hosts` file:
+
+1. On the GitLab Runner host, as the user that runs GitLab Runner, scan the remote server.
+   Replace `example.com` and `22` with the `host` and `port` values from `[runners.ssh]`:
+
+   ```shell
+   ssh-keyscan -p 22 example.com > host_keys.txt
+   ssh-keygen -lf host_keys.txt
+   ```
+
+   Do not limit the scan with `-t`. The file must contain every host key type that the server offers.
+
+1. On the remote server, run `ssh-keygen -lf <public_host_key_file>` for each public host key.
+   These files are usually in `/etc/ssh/` and named `ssh_host_*_key.pub`.
+   Confirm that every fingerprint from the previous step appears in this output.
+   If one does not, do not continue.
+
+1. Add the keys to the `known_hosts` file:
+
+   ```shell
+   mkdir -p ~/.ssh
+   cat host_keys.txt >> ~/.ssh/known_hosts
+   ```
+
+   The commands create the `.ssh` directory and the `known_hosts` file if they do not exist.
+
+   If you set `known_hosts_file`, replace `~/.ssh/known_hosts` with that path and make sure its parent directory exists.
+
+### Replace a changed host key
+
+To replace the host key of the remote server after it changes:
+
+1. On the GitLab Runner host, as the user that runs GitLab Runner, remove the old entry.
+   Replace `<host>` with the `host` value from `[runners.ssh]`.
+   For a port other than `22`, use `[<host>]:<port>`.
+
+   ```shell
+   ssh-keygen -R <host>
+   ```
+
+   If you set `known_hosts_file`, add `-f <known_hosts_file>`.
+
+1. Add the new host key by repeating the steps to add the host key of the remote server.
+
+### Disable strict host key checking
+
+> [!warning]
+> When you disable strict host key checking, GitLab Runner does not verify the identity of the
+> remote server. This setting makes the connection vulnerable to man-in-the-middle attacks.
+> Add the host key to the `known_hosts` file instead.
+
+To disable strict host key checking, set `disable_strict_host_key_checking` to `true` in the `[runners.ssh]` section.
+The default value is `false`.
