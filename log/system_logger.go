@@ -15,24 +15,15 @@ type systemService interface {
 
 type SystemServiceLogHook struct {
 	systemLogger
-	Level logrus.Level
 }
 
+// Levels returns all levels: logrus only fires hooks for levels the logger
+// currently has enabled, so log_level changes on config reload apply here too.
 func (s *SystemServiceLogHook) Levels() []logrus.Level {
-	return []logrus.Level{
-		logrus.PanicLevel,
-		logrus.FatalLevel,
-		logrus.ErrorLevel,
-		logrus.WarnLevel,
-		logrus.InfoLevel,
-	}
+	return logrus.AllLevels
 }
 
 func (s *SystemServiceLogHook) Fire(entry *logrus.Entry) error {
-	if entry.Level > s.Level {
-		return nil
-	}
-
 	msg, err := entry.String()
 	if err != nil {
 		return err
@@ -43,11 +34,10 @@ func (s *SystemServiceLogHook) Fire(entry *logrus.Entry) error {
 		return s.Error(msg)
 	case logrus.WarnLevel:
 		return s.Warning(msg)
-	case logrus.InfoLevel:
+	default:
+		// service.Logger has no debug or trace method
 		return s.Info(msg)
 	}
-
-	return nil
 }
 
 func SetSystemLogger(logrusLogger *logrus.Logger, svc systemService) {
@@ -56,7 +46,6 @@ func SetSystemLogger(logrusLogger *logrus.Logger, svc systemService) {
 	if err == nil {
 		hook := new(SystemServiceLogHook)
 		hook.systemLogger = logger
-		hook.Level = logrus.GetLevel()
 
 		logrusLogger.AddHook(hook)
 	} else {
