@@ -1352,7 +1352,8 @@ The following parameters define the SSH connection.
 | `user`                             | Username.   |
 | `password`                         | Password.   |
 | `identity_file`                    | File path to SSH private key (`id_rsa`, `id_dsa`, or `id_edcsa`). The file must be stored unencrypted. |
-| `disable_strict_host_key_checking` | This value determines if the runner should use strict host key checking. Default is `true`. In GitLab 15.0, the default value, or the value if it's not specified, is `false`. |
+| `disable_strict_host_key_checking` | If `true`, the runner does not check the host key of the remote server. Default is `false`. For more information, see [configure strict host key checking](../executors/ssh.md#configure-strict-host-key-checking). |
+| `known_hosts_file`                 | Path to the `known_hosts` file that the runner uses to check the host key of the remote server. Default is `.ssh/known_hosts` in the home directory of the user that runs GitLab Runner. |
 
 Example:
 
