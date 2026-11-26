@@ -311,6 +311,9 @@ order:
 1. `upload_artifacts_on_success` OR `upload_artifacts_on_failure`
 1. `cleanup_file_variables`
 
+The `prepare_script` sub-stage runs through `run_exec`.
+It runs after the separate [`prepare_exec`](#prepare) executable has prepared the environment.
+
 For each stage mentioned above, the `run_exec` executable is
 executed with:
 
@@ -512,7 +515,7 @@ Below is a table of what stages are retried, and by how many times.
 
 | Stage Name           | Number of attempts                                          | Duration to wait between each retry |
 |----------------------|-------------------------------------------------------------|-------------------------------------|
-| `prepare_exec`       | 3                                                           | 3 seconds                           |
+| [`prepare_exec`](#prepare) | 3                                                       | 3 seconds                           |
 | `get_sources`        | Value of `GET_SOURCES_ATTEMPTS` variable. (Default 1)       | 0 seconds                           |
 | `restore_cache`      | Value of `RESTORE_CACHE_ATTEMPTS` variable. (Default 1)     | 0 seconds                           |
 | `download_artifacts` | Value of `ARTIFACT_DOWNLOAD_ATTEMPTS` variable. (Default 1) | 0 seconds                           |
