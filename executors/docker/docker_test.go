@@ -51,6 +51,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/volumes/parser"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/volumes/permission"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/container/helperimage"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/container/windows"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/test"
@@ -5308,4 +5309,112 @@ func TestCleanup_ReleaseOnCleanup_ReleasesByLabel(t *testing.T) {
 			assert.Equal(t, tt.wantError, bytes.Contains(trace.Bytes(), []byte("Label-based release failed")), trace.String())
 		})
 	}
+}
+
+// TestPrepareHelperImageWindows covers prepareHelperImage behaviour for
+// unsupported, fallback, and exact-match Windows kernel versions across the
+// relevant isolation combinations.
+func TestPrepareHelperImageWindows(t *testing.T) {
+	const (
+		fbKernel     = "10.0 26400 (26400.1.amd64fre.ge_release.240331-1435)"
+		exactKernel  = "10.0 26100 (26100.1.amd64fre.ge_release.240331-1435)"
+		unsupKernel  = "10.0 17134 (17134.1)" // below the oldest known build (10.0.17763)
+		fallbackNote = "Windows build 10.0.26400 is not a known build"
+		fallbackWarn = "WARNING: Windows build 10.0.26400"
+		processHint  = "Process isolation may not run"
+		overrideWarn = "WARNING: unsupported Windows version"
+	)
+
+	tests := []struct {
+		name            string
+		kernelVersion   string
+		configIsolation string
+		daemonIsolation container.Isolation
+		helperImage     string
+		wantErr         bool
+		contains        []string
+		notContains     []string
+	}{
+		{name: "fallback + daemon hyperv: info only", kernelVersion: fbKernel, daemonIsolation: container.IsolationHyperV,
+			contains:    []string{fallbackNote},
+			notContains: []string{fallbackWarn, processHint},
+		},
+		{name: "fallback + daemon process: warning + hint", kernelVersion: fbKernel, daemonIsolation: container.IsolationProcess,
+			contains: []string{fallbackWarn, processHint},
+		},
+		{name: "fallback + daemon unknown: warning + hint", kernelVersion: fbKernel,
+			contains: []string{fallbackWarn, processHint},
+		},
+		{name: "hyperv config overrides process daemon: info only", kernelVersion: fbKernel, configIsolation: "hyperv", daemonIsolation: container.IsolationProcess,
+			contains:    []string{fallbackNote},
+			notContains: []string{fallbackWarn, processHint},
+		},
+		{name: "default config + hyperv daemon: info only", kernelVersion: fbKernel, configIsolation: "default", daemonIsolation: container.IsolationHyperV,
+			contains:    []string{fallbackNote},
+			notContains: []string{fallbackWarn},
+		},
+		{name: "process config overrides hyperv daemon: warning + hint", kernelVersion: fbKernel, configIsolation: "process", daemonIsolation: container.IsolationHyperV,
+			contains: []string{fallbackWarn, processHint},
+		},
+		{name: "exact match kernel: no fallback note", kernelVersion: exactKernel, daemonIsolation: container.IsolationProcess,
+			notContains: []string{"is not a known build", processHint},
+		},
+		{name: "unsupported + no helper_image: error", kernelVersion: unsupKernel, wantErr: true},
+		{name: "unsupported + helper_image: override warning, no hint", kernelVersion: unsupKernel, helperImage: "my.registry.com/helper:latest",
+			contains:    []string{overrideWarn},
+			notContains: []string{processHint},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var buf bytes.Buffer
+			e := &executor{}
+			e.Build = &common.Build{}
+			e.info = system.Info{OSType: helperimage.OSTypeWindows, KernelVersion: tt.kernelVersion, Isolation: tt.daemonIsolation}
+			e.Config.Docker = &common.DockerConfig{Isolation: tt.configIsolation, HelperImage: tt.helperImage}
+			e.BuildLogger = buildlogger.New(&common.Trace{Writer: &buf}, logrus.NewEntry(logrus.New()), buildlogger.Options{})
+
+			info, err := e.prepareHelperImage()
+
+			if tt.wantErr {
+				require.Error(t, err)
+				assert.ErrorIs(t, err, windows.ErrUnsupportedWindowsVersion)
+				return
+			}
+			require.NoError(t, err)
+			assert.Equal(t, helperimage.OSTypeWindows, info.OSType)
+			got := buf.String()
+			for _, s := range tt.contains {
+				assert.Contains(t, got, s)
+			}
+			for _, s := range tt.notContains {
+				assert.NotContains(t, got, s)
+			}
+		})
+	}
+}
+
+// TestGetHelperImageLogLineWhenTagEmpty verifies that when helper_image is
+// configured but no default tag could be determined (Info.Tag == ""), the log
+// says "default could not be determined" rather than "default would be :".
+func TestGetHelperImageLogLineWhenTagEmpty(t *testing.T) {
+	const helperImg = "my.registry.com/helper:latest"
+	var buf bytes.Buffer
+
+	p := pull.NewMockManager(t)
+	p.On("GetDockerImage", helperImg, spec.ImageDockerOptions{}, []common.DockerPullPolicy(nil)).
+		Return(&image.InspectResponse{ID: "img"}, nil).Once()
+
+	e := executorWithMockClient(docker.NewMockClient(t))
+	e.pullManager = p
+	e.BuildLogger = buildlogger.New(&common.Trace{Writer: &buf}, logrus.NewEntry(logrus.New()), buildlogger.Options{})
+	e.Config.Docker = &common.DockerConfig{HelperImage: helperImg}
+	e.helperImageInfo = helperimage.Info{OSType: helperimage.OSTypeWindows}
+
+	got, err := e.getHelperImage()
+	require.NoError(t, err)
+	require.NotNil(t, got)
+	assert.NotContains(t, buf.String(), "default would be")
+	assert.Contains(t, buf.String(), "default could not be determined")
 }

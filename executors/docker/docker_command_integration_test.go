@@ -212,10 +212,11 @@ func getRunnerConfigForOS(t *testing.T) *common.RunnerConfig {
 // UnsupportedWindowsVersionError is returned when no supported Windows version
 // is found in the string.
 func windowsDockerImageTag(version string, tagMap map[string]string) (string, error) {
-	version, err := windows.Version(version)
+	res, err := windows.Resolve(version)
 	if err != nil {
 		return "", err
 	}
+	version = res.Version
 
 	dockerTag, ok := tagMap[version]
 	if !ok {

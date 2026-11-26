@@ -1,6 +1,7 @@
 package helperimage
 
 import (
+	"errors"
 	"fmt"
 
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/container/windows"
@@ -18,20 +19,12 @@ var ltsc = map[string]string{
 type windowsInfo struct{}
 
 func (w *windowsInfo) Create(revision string, cfg Config) (Info, error) {
-	version, err := windows.Version(cfg.KernelVersion)
-	if err != nil {
-		return Info{}, fmt.Errorf("detecting base image: %w", err)
-	}
-
-	ltscYear, ok := ltsc[version]
-	if !ok {
-		return Info{}, fmt.Errorf("detecting base image: %w: %v", windows.ErrUnsupportedWindowsVersion, version)
-	}
-
 	// Normalise the architecture reported by the Docker daemon (or config) to
 	// the token used in helper image names. Any architecture other than arm64
 	// (including an unspecified one) resolves to x86_64, preserving the
 	// historical behaviour of always serving the x86_64 Windows helper image.
+	// This and cmd are computed before the version lookup so they are also
+	// available on the helper_image override path, where the version is unknown.
 	arch := cfg.Architecture
 	switch arch {
 	case platformAarch64, archArm64:
@@ -40,25 +33,57 @@ func (w *windowsInfo) Create(revision string, cfg Config) (Info, error) {
 		arch = archX8664
 	}
 
-	// Microsoft only publishes arm64 base images for Windows Server 2025 (24H2)
-	// and later. On earlier versions, fall back to x86_64 to preserve the
-	// previous behaviour instead of failing.
-	if arch != archX8664 && !armSupportedForWindowsVersion(version) {
-		arch = archX8664
-	}
-
 	cmd := getPowerShellCmd(cfg.Shell)
 	if cfg.ProxyExec {
 		cmd = append([]string{"gitlab-runner-helper", "proxy-exec", "--bootstrap"}, cmd...)
 	}
 
-	return Info{
+	res, err := windows.Resolve(cfg.KernelVersion)
+	if err != nil {
+		if cfg.HelperImageOverridden && errors.Is(err, windows.ErrUnsupportedWindowsVersion) {
+			// arch is metadata only here: helper_image fixes the image, so the
+			// version-based arm64→x86_64 demotion (armSupportedForWindowsVersion)
+			// is intentionally skipped — there is no version to base it on.
+			return Info{
+				Architecture: arch,
+				Cmd:          cmd,
+				Warnings:     []string{fmt.Sprintf("%v; using the configured helper_image", err)},
+			}, nil
+		}
+		return Info{}, fmt.Errorf("detecting base image: %w", err)
+	}
+
+	ltscYear, ok := ltsc[res.Version]
+	if !ok {
+		return Info{}, fmt.Errorf("detecting base image: %w: %v", windows.ErrUnsupportedWindowsVersion, res.Version)
+	}
+
+	// Microsoft only publishes arm64 base images for Windows Server 2025 (24H2)
+	// and later. On earlier versions, fall back to x86_64 to preserve the
+	// previous behaviour instead of failing.
+	if arch != archX8664 && !armSupportedForWindowsVersion(res.Version) {
+		arch = archX8664
+	}
+
+	info := Info{
 		Architecture: arch,
 		Name:         GitLabRegistryName,
-		Tag:          fmt.Sprintf("%s-%s-servercore%s", arch, revision, version),
+		Tag:          fmt.Sprintf("%s-%s-servercore%s", arch, revision, res.Version),
 		Cmd:          cmd,
 		Prebuilt:     fmt.Sprintf("prebuilt-windows-servercore-%s-%s", ltscYear, arch),
-	}, nil
+	}
+
+	if res.IsFallback() && !cfg.HelperImageOverridden {
+		info.VersionFallback = true
+		info.Warnings = []string{fmt.Sprintf(
+			"Windows build %s is not a known build; using the servercore%s helper image "+
+				"(closest known build %s). "+
+				"If the helper container fails to start, configure helper_image explicitly.",
+			res.HostBuild, res.Version, res.MatchedBuild,
+		)}
+	}
+
+	return info, nil
 }
 
 // armSupportedForWindowsVersion reports whether Microsoft publishes arm64 base
