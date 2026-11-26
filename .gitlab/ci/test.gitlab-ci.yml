@@ -301,17 +301,24 @@ fuzz variable mask:
         Write-Host "Job failed. Host state follows."
         $os = Get-CimInstance Win32_OperatingSystem
         Write-Host ("Memory MB: free {0} of {1}. Last boot: {2}" -f [math]::Round($os.FreePhysicalMemory / 1KB), [math]::Round($os.TotalVisibleMemorySize / 1KB), $os.LastBootUpTime)
+        if ($env:CI_JOB_STARTED_AT) {
+          $jobAge = (Get-Date).ToUniversalTime() - [datetime]::Parse($env:CI_JOB_STARTED_AT, [cultureinfo]::InvariantCulture).ToUniversalTime()
+          if (((Get-Date) - $os.LastBootUpTime) -lt $jobAge) {
+            Write-Host "The host restarted during this job. The data below describes the host after the restart."
+          }
+        }
+        $showEvent = {
+          $text = ($_.Message -replace '\s+', ' ')
+          "{0:u} {1} id={2} {3}" -f $_.TimeCreated, $_.ProviderName, $_.Id, $text.Substring(0, [math]::Min(600, $text.Length))
+        }
+        $since = (Get-Date).AddMinutes(-90)
         Get-PSDrive -PSProvider FileSystem | Format-Table Name, @{n="UsedGB";e={[math]::Round($_.Used/1GB,1)}}, @{n="FreeGB";e={[math]::Round($_.Free/1GB,1)}} | Out-String | Write-Host
         Get-Process | Sort-Object WorkingSet64 -Descending | Select-Object -First 8 | Format-Table Name, Id, @{n="MemMB";e={[math]::Round($_.WorkingSet64/1MB)}} | Out-String | Write-Host
-        Get-WinEvent -FilterHashtable @{LogName = 'Application', 'System'; Level = 1, 2; StartTime = (Get-Date).AddMinutes(-90)} -MaxEvents 30 -ErrorAction SilentlyContinue | ForEach-Object {
-          $text = ($_.Message -replace '\s+', ' ')
-          "{0:u} {1} id={2} {3}" -f $_.TimeCreated, $_.ProviderName, $_.Id, $text.Substring(0, [math]::Min(300, $text.Length))
-        } | Write-Host
-        Get-WinEvent -FilterHashtable @{LogName = 'System'; ProviderName = 'Microsoft-Windows-Resource-Exhaustion-Detector'; StartTime = (Get-Date).AddMinutes(-90)} -MaxEvents 5 -ErrorAction SilentlyContinue | ForEach-Object {
-          $text = ($_.Message -replace '\s+', ' ')
-          "{0:u} {1} id={2} {3}" -f $_.TimeCreated, $_.ProviderName, $_.Id, $text.Substring(0, [math]::Min(300, $text.Length))
-        } | Write-Host
+        Get-WinEvent -FilterHashtable @{LogName = 'Application', 'System'; Level = 1, 2; StartTime = $since} -MaxEvents 30 -ErrorAction SilentlyContinue | ForEach-Object $showEvent | Write-Host
+        Get-WinEvent -FilterHashtable @{LogName = 'System'; Id = 41, 1074, 6005, 6006, 6008; StartTime = $since} -MaxEvents 10 -ErrorAction SilentlyContinue | ForEach-Object $showEvent | Write-Host
+        Get-WinEvent -FilterHashtable @{LogName = 'System'; ProviderName = 'Microsoft-Windows-Resource-Exhaustion-Detector'; StartTime = $since} -MaxEvents 5 -ErrorAction SilentlyContinue | ForEach-Object $showEvent | Write-Host
       }
+      exit 0
   artifacts:
     paths:
       - .splitic/
