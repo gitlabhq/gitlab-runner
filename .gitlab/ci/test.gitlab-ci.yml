@@ -294,6 +294,24 @@ fuzz variable mask:
     - go env GOCACHE
     - go install gitlab.com/gitlab-org/ci-cd/runner-tools/splitic@latest
     - $env:Path += ";$(go env GOPATH)/bin"
+  after_script:
+    - |
+      if ($env:CI_JOB_STATUS -eq 'failed') {
+        $ErrorActionPreference = 'Continue'
+        Write-Host "Job failed. Host state follows."
+        $os = Get-CimInstance Win32_OperatingSystem
+        Write-Host ("Memory MB: free {0} of {1}. Last boot: {2}" -f [math]::Round($os.FreePhysicalMemory / 1KB), [math]::Round($os.TotalVisibleMemorySize / 1KB), $os.LastBootUpTime)
+        Get-PSDrive -PSProvider FileSystem | Format-Table Name, @{n="UsedGB";e={[math]::Round($_.Used/1GB,1)}}, @{n="FreeGB";e={[math]::Round($_.Free/1GB,1)}} | Out-String | Write-Host
+        Get-Process | Sort-Object WorkingSet64 -Descending | Select-Object -First 8 | Format-Table Name, Id, @{n="MemMB";e={[math]::Round($_.WorkingSet64/1MB)}} | Out-String | Write-Host
+        Get-WinEvent -FilterHashtable @{LogName = 'Application', 'System'; Level = 1, 2; StartTime = (Get-Date).AddMinutes(-90)} -MaxEvents 30 -ErrorAction SilentlyContinue | ForEach-Object {
+          $text = ($_.Message -replace '\s+', ' ')
+          "{0:u} {1} id={2} {3}" -f $_.TimeCreated, $_.ProviderName, $_.Id, $text.Substring(0, [math]::Min(300, $text.Length))
+        } | Write-Host
+        Get-WinEvent -FilterHashtable @{LogName = 'System'; ProviderName = 'Microsoft-Windows-Resource-Exhaustion-Detector'; StartTime = (Get-Date).AddMinutes(-90)} -MaxEvents 5 -ErrorAction SilentlyContinue | ForEach-Object {
+          $text = ($_.Message -replace '\s+', ' ')
+          "{0:u} {1} id={2} {3}" -f $_.TimeCreated, $_.ProviderName, $_.Id, $text.Substring(0, [math]::Min(300, $text.Length))
+        } | Write-Host
+      }
   artifacts:
     paths:
       - .splitic/
@@ -336,7 +354,17 @@ fuzz variable mask:
       7z e -y $zstdZip -o"$zstdDir" zstd.exe -r > $null
       $env:Path = "$zstdDir;$env:Path"
     - zstd -d --rm out/helper-images/prebuilt-windows-${WINDOWS_PREBUILT}-x86_64.docker.tar.zst
-    - $output = docker load --input "out/helper-images/prebuilt-windows-${WINDOWS_PREBUILT}-x86_64.docker.tar" 2>&1
+    - |
+      $output = cmd /c "docker load --input out\helper-images\prebuilt-windows-${WINDOWS_PREBUILT}-x86_64.docker.tar 2>&1"
+      $loadExitCode = $LASTEXITCODE
+      $output | Write-Host
+      if ($loadExitCode -ne 0) {
+        Write-Host "docker load failed with exit code $loadExitCode"
+        Get-PSDrive -PSProvider FileSystem | Format-Table Name, @{n="UsedGB";e={[math]::Round($_.Used/1GB,1)}}, @{n="FreeGB";e={[math]::Round($_.Free/1GB,1)}} | Out-String | Write-Host
+        cmd /c "docker info 2>&1"
+        cmd /c "docker system df 2>&1"
+        exit 1
+      }
     # The loaded tarball is several gigabytes; the tests have run out of disk
     # with it left behind.
     - Remove-Item -Force "out/helper-images/prebuilt-windows-${WINDOWS_PREBUILT}-x86_64.docker.tar"
