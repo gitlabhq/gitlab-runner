@@ -75,7 +75,7 @@ func (cf *ConfigFile) Load(opts ...LoadOption) error {
 	}
 
 	if cf.systemID == "" {
-		systemIDState, err := newSystemIDState(filepath.Join(filepath.Dir(cf.pathname), ".runner_system_id"))
+		systemIDState, err := newSystemIDState(filepath.Join(filepath.Dir(cf.pathname), ".runner_system_id"), !options.SkipSystemIDSave)
 		if err != nil {
 			return fmt.Errorf("loading system ID file: %w", err)
 		}

@@ -29,7 +29,8 @@ func WithSystemID(systemID string) Option {
 }
 
 type loadOptions struct {
-	Mutate []func(cfg *common.Config) error
+	Mutate           []func(cfg *common.Config) error
+	SkipSystemIDSave bool
 }
 
 type LoadOption func(*loadOptions)
@@ -37,5 +38,16 @@ type LoadOption func(*loadOptions)
 func WithMutateOnLoad(fn func(cfg *common.Config) error) LoadOption {
 	return func(o *loadOptions) {
 		o.Mutate = append(o.Mutate, fn)
+	}
+}
+
+// WithoutSavingSystemID keeps a newly generated system ID in memory only, for
+// commands that must not leave a .runner_system_id file behind. Commands that
+// send the system ID to GitLab to create or verify a runner manager (run,
+// run-single, register, verify) must not use it, or GitLab would track a
+// manager whose ID changes on every start.
+func WithoutSavingSystemID() LoadOption {
+	return func(o *loadOptions) {
+		o.SkipSystemIDSave = true
 	}
 }

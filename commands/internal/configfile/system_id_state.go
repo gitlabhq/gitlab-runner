@@ -20,7 +20,7 @@ type systemIDState struct {
 	systemID string
 }
 
-func newSystemIDState(filePath string) (*systemIDState, error) {
+func newSystemIDState(filePath string, save bool) (*systemIDState, error) {
 	state := &systemIDState{}
 
 	err := state.loadFromFile(filePath)
@@ -34,6 +34,12 @@ func newSystemIDState(filePath string) (*systemIDState, error) {
 		if err != nil {
 			return nil, err
 		}
+
+		if !save {
+			return state, nil
+		}
+
+		logrus.WithField("system_id", state.GetSystemID()).Info("Created missing unique system ID")
 
 		err = state.saveConfig(filePath)
 		if err != nil {
@@ -104,8 +110,6 @@ func (s *systemIDState) ensureSystemID() error {
 	}
 
 	if systemID, err := GenerateUniqueSystemID(); err == nil {
-		logrus.WithField("system_id", systemID).Info("Created missing unique system ID")
-
 		s.systemID = systemID
 	} else {
 		return fmt.Errorf("generating unique system ID: %w", err)

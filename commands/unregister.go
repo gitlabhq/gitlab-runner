@@ -111,7 +111,7 @@ func (c *UnregisterCommand) Execute(context *cli.Context) {
 		}
 
 		return nil
-	})); err != nil {
+	}), configfile.WithoutSavingSystemID()); err != nil {
 		logrus.WithError(err).Fatalln("failed to unregister runner")
 	}
 

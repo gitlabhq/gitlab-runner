@@ -56,7 +56,7 @@ func TestSystemIDStateLoadFromFile(t *testing.T) {
 
 			defer func() { _ = os.Remove(stateFile.Name()) }()
 
-			state, err := newSystemIDState(stateFile.Name())
+			state, err := newSystemIDState(stateFile.Name(), true)
 			assert.NoError(t, err)
 			if tt.validateState != nil {
 				tt.validateState(t, state)
@@ -71,7 +71,7 @@ func TestSystemIDStateLoadFromMissingFile(t *testing.T) {
 	stateFileName := stateFile.Name()
 	_ = os.Remove(stateFileName)
 
-	state, err := newSystemIDState(stateFileName)
+	state, err := newSystemIDState(stateFileName, true)
 	assert.NoError(t, err)
 	assert.Regexp(t, regexp.MustCompile("[rs]_[0-9a-zA-Z]{12}"), state.GetSystemID())
 }
@@ -84,7 +84,7 @@ func TestSaveSystemIDState(t *testing.T) {
 
 	defer func() { _ = os.Remove(stateFileName) }()
 
-	state, err := newSystemIDState(stateFile.Name())
+	state, err := newSystemIDState(stateFile.Name(), true)
 	assert.NoError(t, err)
 
 	buf, err := os.ReadFile(stateFileName)
@@ -95,6 +95,6 @@ func TestSaveSystemIDState(t *testing.T) {
 func TestSaveSystemIDStateToNonFile(t *testing.T) {
 	stateFileName := os.TempDir() + "/."
 
-	_, err := newSystemIDState(stateFileName)
+	_, err := newSystemIDState(stateFileName, true)
 	assert.Error(t, err)
 }
