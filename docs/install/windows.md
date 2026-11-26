@@ -387,6 +387,13 @@ Operating System: Windows Server Datacenter
 The fix in this case is to upgrade the Docker version of similar age, or later,
 than the Windows Server release.
 
+> [!note]
+> This error occurs when the host build is earlier than the earliest supported build, has a
+> different major.minor version, or cannot be parsed. Newer unknown builds with the same
+> major.minor version use a fallback helper image and log a message instead.
+> For more information, see [Windows builds not in the supported list](../executors/docker.md#windows-builds-not-in-the-supported-list).
+> To bypass this error on the Docker and Kubernetes executors, configure `helper_image`.
+
 ### Kubernetes executor: `unsupported Windows Version`
 
 Kubernetes executor on Windows might fail with the following error:
@@ -407,6 +414,11 @@ of your GitLab Runner configuration file, For example:
      "kubernetes.io/os" = "windows"
      "node.kubernetes.io/windows-build" = "10.0.17763"
 ```
+
+> [!note]
+> For newer unknown builds with the same major.minor version, the runner uses a fallback
+> helper image and logs a warning instead of failing. For other unsupported versions,
+> configure `helper_image` to bypass this error.
 
 ### I'm using a mapped network drive and my build cannot find the correct path
 

@@ -1360,6 +1360,31 @@ You can use various Windows base images, including `Server Core`, `Nano Server`,
 - `mcr.microsoft.com/windows/servercore:1809-amd64`
 - `mcr.microsoft.com/windows/servercore:ltsc2019`
 
+#### Windows builds not in the supported list
+
+When a Windows host build is not in the list above, the runner selects the helper image for
+the nearest known build below. Both must share the same major.minor version. The job log
+includes a message similar to:
+
+```plaintext
+Windows build 10.0.26400 is not a known build; using the servercore24H2 helper image
+(closest known build 10.0.26300). If the helper container fails to start,
+configure helper_image explicitly.
+```
+
+The message severity depends on the effective isolation mode. The effective isolation is the
+`isolation` setting in `[runners.docker]`, or the Docker daemon default when `isolation` is
+unset or `default`:
+
+- Under Hyper-V isolation, the message is informational.
+- Under process isolation, the runner logs the message as a warning and adds a hint to set
+  `isolation = "hyperv"` or configure `helper_image`.
+
+When the runner cannot map the host build to a known build, the job fails. This occurs when the
+build is older than `10.0.17763`, has a different major.minor version, or cannot be parsed.
+For the Docker and Kubernetes executors, configure `helper_image` to use a specific image and bypass the check.
+For more information, see [Docker executor: `unsupported Windows Version`](../install/windows.md#docker-executor-unsupported-windows-version).
+
 ### Supported Docker versions
 
 GitLab Runner uses Docker to detect what version of Windows Server is running.

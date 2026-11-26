@@ -46,12 +46,14 @@ const (
 )
 
 type Info struct {
-	OSType       string
-	Architecture string
-	Name         string
-	Tag          string
-	Cmd          []string
-	Prebuilt     string
+	OSType          string
+	Architecture    string
+	Name            string
+	Tag             string
+	Cmd             []string
+	Prebuilt        string
+	Warnings        []string // non-fatal notes for the job log
+	VersionFallback bool     // default image chosen via build fallback
 }
 
 func (i Info) String() string {
@@ -70,6 +72,14 @@ type Config struct {
 	ProxyExec    bool
 	DisableUmask bool
 	Concrete     bool
+
+	// HelperImageOverridden is true when the caller has explicitly configured a
+	// helper image. It has two effects on the Windows path:
+	//   - an unsupported-version error is downgraded to a warning (the
+	//     configured image is used as-is);
+	//   - a nearest-build fallback warning is suppressed (the operator already
+	//     chose the image, so the diagnostic is noise).
+	HelperImageOverridden bool
 }
 
 type creator interface {

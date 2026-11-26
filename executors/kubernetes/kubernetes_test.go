@@ -4047,6 +4047,82 @@ func TestPrepare_HelperImageLogging(t *testing.T) {
 	}
 }
 
+// TestPrepare_HelperImageFallbackWarning: Windows node-selector build not in
+// supportedWindowsBuilds → fallback warning logged via BuildLogger.
+func TestPrepare_HelperImageFallbackWarning(t *testing.T) {
+	const fallbackWarning = "Windows build 10.0.26400 is not a known build; using the servercore24H2 helper image (closest known build 10.0.26300)"
+
+	tests := map[string]struct {
+		windowsBuild   string
+		helperImage    string
+		wantContains   string
+		wantNotContain string
+	}{
+		"unknown build falls back with a warning": {
+			windowsBuild: "10.0.26400",
+			wantContains: fallbackWarning,
+		},
+		"helper_image suppresses the fallback warning": {
+			windowsBuild:   "10.0.26400",
+			helperImage:    "registry.example.com/helper:custom",
+			wantNotContain: "is not a known build",
+		},
+		"helper_image bypasses an unsupported build": {
+			windowsBuild: "10.0.17134",
+			helperImage:  "registry.example.com/helper:custom",
+			wantContains: "unsupported Windows version: 10.0.17134; using the configured helper_image",
+		},
+		"helper_image on an unsupported build logs no default image": {
+			windowsBuild:   "10.0.17134",
+			helperImage:    "registry.example.com/helper:custom",
+			wantContains:   "Using helper image: registry.example.com/helper:custom (overridden; default could not be determined)",
+			wantNotContain: "default would be",
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			cfg := &common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Host:        "test-server",
+						HelperImage: tc.helperImage,
+						NodeSelector: map[string]string{
+							api.LabelArchStable:           "amd64",
+							api.LabelOSStable:             "windows",
+							nodeSelectorWindowsBuildLabel: tc.windowsBuild,
+						},
+					},
+				},
+			}
+			build := &common.Build{Job: spec.Job{Image: spec.Image{Name: "test-image"}}, Runner: cfg}
+
+			e := newExecutor()
+			e.newPodWatcher = func(c podWatcherConfig) podWatcher {
+				w := newMockPodWatcher(t)
+				w.On("Start").Return(nil).Maybe()
+				return w
+			}
+
+			var logs bytes.Buffer
+			err := e.Prepare(common.ExecutorPrepareOptions{
+				Config:      cfg,
+				Build:       build,
+				Context:     t.Context(),
+				BuildLogger: buildlogger.New(&common.Trace{Writer: &logs}, logrus.WithFields(logrus.Fields{}), buildlogger.Options{}),
+			})
+
+			require.NoError(t, err)
+			if tc.wantContains != "" {
+				assert.Contains(t, logs.String(), tc.wantContains)
+			}
+			if tc.wantNotContain != "" {
+				assert.NotContains(t, logs.String(), tc.wantNotContain)
+			}
+		})
+	}
+}
+
 func TestSetupDefaultExecutorOptions(t *testing.T) {
 	tests := map[string]func(*testing.T, *executor){
 		"windows": func(t *testing.T, e *executor) {

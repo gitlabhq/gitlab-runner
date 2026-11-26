@@ -14,7 +14,8 @@ import (
 func getImage() string {
 	v := syswindows.RtlGetVersion()
 	windowsVersion := fmt.Sprintf("%v.%v.%v", v.MajorVersion, v.MinorVersion, v.BuildNumber)
-	windowsVersion, _ = windows.Version(windowsVersion)
+	res, _ := windows.Resolve(windowsVersion)
+	windowsVersion = res.Version
 
 	return fmt.Sprintf(common.TestWindowsImage, "ltsc"+windowsVersion)
 }

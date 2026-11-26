@@ -24,6 +24,7 @@ func Test_windowsInfo_create(t *testing.T) {
 		tests := []struct {
 			kernelVersion string
 			architecture  string
+			overridden    bool
 			expectedInfo  Info
 			expectedErr   error
 		}{
@@ -118,6 +119,20 @@ func Test_windowsInfo_create(t *testing.T) {
 				expectedErr:   windows.ErrUnsupportedWindowsVersion,
 			},
 			{
+				// unsupported + overridden: partial Info with warning, empty Name/Tag/Prebuilt
+				kernelVersion: "10.0 17134 (17134.1)",
+				architecture:  "amd64",
+				overridden:    true,
+				expectedInfo:  Info{Architecture: "x86_64", Cmd: expectedPowershellCmdLine, Warnings: []string{"unsupported Windows version: 10.0 17134 (17134.1); using the configured helper_image"}},
+			},
+			{
+				// overridden on a supported kernel: full Info unchanged, Warnings nil
+				kernelVersion: "10.0 17763 (17763.1.amd64fre.rs5_release.180914-1434)",
+				architecture:  "amd64",
+				overridden:    true,
+				expectedInfo:  Info{Architecture: "x86_64", Name: GitLabRegistryName, Tag: fmt.Sprintf("x86_64-%s-servercore1809", revision), Prebuilt: "prebuilt-windows-servercore-ltsc2019-x86_64", Cmd: expectedPowershellCmdLine},
+			},
+			{
 				// An unspecified architecture preserves historical behaviour:
 				// the x86_64 helper image is selected.
 				kernelVersion: "10.0 20348 (20348.1.amd64fre.fe_release.210507-1500)",
@@ -130,19 +145,41 @@ func Test_windowsInfo_create(t *testing.T) {
 					Cmd:          expectedPowershellCmdLine,
 				},
 			},
+			{
+				// build 26400 falls back to V24H2 via 26300; VersionFallback=true, Warnings set
+				kernelVersion: "10.0 26400 (26400.1.amd64fre.ge_release.240331-1435)",
+				architecture:  "amd64",
+				expectedInfo: Info{
+					Architecture:    "x86_64",
+					Name:            GitLabRegistryName,
+					Tag:             fmt.Sprintf("x86_64-%s-servercore24H2", revision),
+					Prebuilt:        "prebuilt-windows-servercore-ltsc2025-x86_64",
+					Cmd:             expectedPowershellCmdLine,
+					VersionFallback: true,
+					Warnings:        []string{"Windows build 10.0.26400 is not a known build; using the servercore24H2 helper image (closest known build 10.0.26300). If the helper container fails to start, configure helper_image explicitly."},
+				},
+			},
+			{
+				// fallback + overridden: full Info (fallback tag), Warnings nil, VersionFallback false
+				kernelVersion: "10.0 26400 (26400.1.amd64fre.ge_release.240331-1435)",
+				architecture:  "amd64",
+				overridden:    true,
+				expectedInfo:  Info{Architecture: "x86_64", Name: GitLabRegistryName, Tag: fmt.Sprintf("x86_64-%s-servercore24H2", revision), Prebuilt: "prebuilt-windows-servercore-ltsc2025-x86_64", Cmd: expectedPowershellCmdLine},
+			},
 		}
 
 		t.Run(shell, func(t *testing.T) {
 			for _, test := range tests {
-				t.Run(test.kernelVersion+"/"+test.architecture, func(t *testing.T) {
+				t.Run(fmt.Sprintf("%s/%s/overridden=%v", test.kernelVersion, test.architecture, test.overridden), func(t *testing.T) {
 					w := new(windowsInfo)
 
 					image, err := w.Create(
 						revision,
 						Config{
-							KernelVersion: test.kernelVersion,
-							Architecture:  test.architecture,
-							Shell:         shell,
+							KernelVersion:         test.kernelVersion,
+							Architecture:          test.architecture,
+							Shell:                 shell,
+							HelperImageOverridden: test.overridden,
 						},
 					)
 

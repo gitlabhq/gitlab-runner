@@ -605,6 +605,9 @@ func (s *executor) prepareInfrastructure(ctx context.Context) error {
 			FailureReason: common.ConfigurationError,
 		}
 	}
+	for _, w := range s.helperImageInfo.Warnings {
+		s.BuildLogger.Warningln(w)
+	}
 
 	// setup default executor options based on OS type
 	s.setupDefaultExecutorOptions(s.helperImageInfo.OSType)
@@ -624,11 +627,7 @@ func (s *executor) prepareInfrastructure(ctx context.Context) error {
 		return err
 	}
 
-	if s.Config.Kubernetes.HelperImage != "" {
-		s.BuildLogger.Println(fmt.Sprintf("Using helper image: %s (overridden, default would be %s)", s.getHelperImage(), s.helperImageInfo))
-	} else {
-		s.BuildLogger.Println(fmt.Sprintf("Using helper image: %s", s.helperImageInfo))
-	}
+	s.logHelperImage()
 
 	if err = s.AbstractExecutor.PrepareBuildAndShell(); err != nil {
 		return &common.BuildError{
@@ -672,6 +671,17 @@ func (s *executor) prepareInfrastructure(ctx context.Context) error {
 	}
 
 	return s.waitForServices(ctx)
+}
+
+func (s *executor) logHelperImage() {
+	switch {
+	case s.Config.Kubernetes.HelperImage == "":
+		s.BuildLogger.Println(fmt.Sprintf("Using helper image: %s", s.helperImageInfo))
+	case s.helperImageInfo.Tag == "":
+		s.BuildLogger.Println(fmt.Sprintf("Using helper image: %s (overridden; default could not be determined)", s.getHelperImage()))
+	default:
+		s.BuildLogger.Println(fmt.Sprintf("Using helper image: %s (overridden, default would be %s)", s.getHelperImage(), s.helperImageInfo))
+	}
 }
 
 func (s *executor) Prepare(options common.ExecutorPrepareOptions) error {
@@ -814,7 +824,8 @@ func (s *executor) retrieveHelperImageConfig() helperimage.Config {
 		// steps bootstrap copies into the scripts emptyDir so get_sources
 		// does not depend on the user's build image. Mirrors the docker
 		// executor (executors/docker/docker.go).
-		Concrete: s.Build.IsFeatureFlagOn(featureflags.UseConcrete),
+		Concrete:              s.Build.IsFeatureFlagOn(featureflags.UseConcrete),
+		HelperImageOverridden: s.ExpandValue(s.Config.Kubernetes.HelperImage) != "",
 	}
 
 	if !s.Config.Kubernetes.HelperImageAutosetArchAndOS {

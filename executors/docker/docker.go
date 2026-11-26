@@ -301,13 +301,18 @@ func (e *executor) expandAndGetDockerImage(
 
 func (e *executor) getHelperImage() (*image.InspectResponse, error) {
 	if imageNameFromConfig := e.ExpandValue(e.Config.Docker.HelperImage); imageNameFromConfig != "" {
+		// This early return makes an empty helperImageInfo.Tag safe: the configured image is always pulled directly.
 		e.BuildLogger.Debugln(
 			"Pull configured helper_image for predefined container instead of import bundled image",
 			imageNameFromConfig,
 			"...",
 		)
 
-		e.BuildLogger.Println("Using helper image: ", imageNameFromConfig, " (overridden, default would be ", e.helperImageInfo, ")")
+		if e.helperImageInfo.Tag == "" {
+			e.BuildLogger.Println("Using helper image: ", imageNameFromConfig, " (overridden; default could not be determined)")
+		} else {
+			e.BuildLogger.Println("Using helper image: ", imageNameFromConfig, " (overridden, default would be ", e.helperImageInfo, ")")
+		}
 
 		return e.pullManager.GetDockerImage(imageNameFromConfig, spec.ImageDockerOptions{}, nil)
 	}
@@ -2014,15 +2019,57 @@ func (e *executor) setupDefaultExecutorOptions(os string) {
 }
 
 func (e *executor) prepareHelperImage() (helperimage.Info, error) {
-	return helperimage.Get(common.AppVersion.Version, helperimage.Config{
-		OSType:        e.info.OSType,
-		Architecture:  e.info.Architecture,
-		KernelVersion: e.info.KernelVersion,
-		Shell:         e.Config.Shell,
-		Flavor:        e.ExpandValue(e.Config.Docker.HelperImageFlavor),
-		ProxyExec:     e.Config.IsProxyExec(),
-		Concrete:      e.Build.IsFeatureFlagOn(featureflags.UseConcrete),
+	info, err := helperimage.Get(common.AppVersion.Version, helperimage.Config{
+		OSType:                e.info.OSType,
+		Architecture:          e.info.Architecture,
+		KernelVersion:         e.info.KernelVersion,
+		Shell:                 e.Config.Shell,
+		Flavor:                e.ExpandValue(e.Config.Docker.HelperImageFlavor),
+		ProxyExec:             e.Config.IsProxyExec(),
+		Concrete:              e.Build.IsFeatureFlagOn(featureflags.UseConcrete),
+		HelperImageOverridden: e.ExpandValue(e.Config.Docker.HelperImage) != "",
 	})
+	if err != nil {
+		return info, err
+	}
+	if info.VersionFallback {
+		e.logVersionFallback(info.Warnings)
+		return info, nil
+	}
+	for _, w := range info.Warnings {
+		e.BuildLogger.Warningln(w)
+	}
+	return info, nil
+}
+
+// logVersionFallback logs the note that an older helper image was chosen for an
+// unknown Windows build. Windows runs older container images on newer hosts under
+// Hyper-V isolation. Under process isolation it depends on the host: on Azure,
+// Server 2025 ran the 21H2 image but not 1809, Server 2022 did not run 1809, and
+// Windows 11 24H2 ran 21H2 but not 1809
+// (https://gitlab.com/gitlab-org/gitlab-runner/-/issues/39956).
+// Microsoft publishes no rule we can compute, so we fall back and warn rather
+// than block.
+// https://learn.microsoft.com/en-us/virtualization/windowscontainers/deploy-containers/version-compatibility
+func (e *executor) logVersionFallback(notes []string) {
+	iso := container.Isolation(e.Config.Docker.Isolation)
+	if iso.IsDefault() {
+		iso = e.info.Isolation
+	}
+	if iso.IsHyperV() {
+		for _, n := range notes {
+			e.BuildLogger.Println(n)
+		}
+		return
+	}
+	for _, n := range notes {
+		e.BuildLogger.Warningln(n)
+	}
+	e.BuildLogger.Warningln(
+		"Process isolation may not run an older Windows container image on this host." +
+			" If the helper container fails to start, set isolation = \"hyperv\"" +
+			" or configure helper_image.",
+	)
 }
 
 func (e *executor) prepareBuildsDir(options common.ExecutorPrepareOptions) error {
