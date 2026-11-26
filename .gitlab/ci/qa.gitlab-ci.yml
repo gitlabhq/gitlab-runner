@@ -100,18 +100,8 @@ shell:lint:
     - .kubernetes runner
   image: $RUNNER_LINTERS_IMAGE
   needs: []
-  variables:
-    SHELLCHECK_REPORT_FILE: gl-shellcheck-report.json
   script:
-    - make lint-shell-report
-    - if [ "$(cat "${SHELLCHECK_REPORT_FILE}")" != "[]" ]; then exit 1; fi
-  artifacts:
-    reports:
-      codequality: ${SHELLCHECK_REPORT_FILE}
-    paths:
-      - ${SHELLCHECK_REPORT_FILE}
-    when: always
-    expire_in: 7d
+    - make lint-shell
 
 pulp alert script test:
   stage: qa
@@ -135,18 +125,8 @@ dockerfile:lint:
   image: $RUNNER_LINTERS_IMAGE
   needs: []
   allow_failure: true # to be disabled once all linter issues are resolved
-  variables:
-    HADOLINT_REPORT_FILE: gl-hadolint-report.json
   script:
-    - make lint-dockerfiles-report
-    - if [ "$(cat "${HADOLINT_REPORT_FILE}")" != "[]" ]; then exit 1; fi
-  artifacts:
-    reports:
-      codequality: ${HADOLINT_REPORT_FILE}
-    paths:
-      - ${HADOLINT_REPORT_FILE}
-    when: always
-    expire_in: 7d
+    - make lint-dockerfiles
 
 build script tests:
   extends:
