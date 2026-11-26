@@ -91,7 +91,7 @@ func (c *ResetTokenCommand) Execute(_context *cli.Context) {
 		}
 
 		return nil
-	})); err != nil {
+	}), configfile.WithoutSavingSystemID()); err != nil {
 		logrus.WithError(err).Fatalln("Failed to load configuration")
 	}
 

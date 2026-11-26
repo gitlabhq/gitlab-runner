@@ -19,6 +19,7 @@ func Test_loadConfig(t *testing.T) {
 
 	testCases := map[string]struct {
 		runnerSystemID string
+		loadOpts       []LoadOption
 		prepareFn      func(t *testing.T, systemIDFile string)
 		assertFn       func(t *testing.T, err error, config *common.Config, systemIDFile string)
 	}{
@@ -61,6 +62,28 @@ func Test_loadConfig(t *testing.T) {
 				assert.Regexp(t, expectedSystemIDRegexPattern, config.Runners[0].SystemID)
 			},
 		},
+		"generates but does not save missing system IDs when saving is disabled": {
+			runnerSystemID: "",
+			loadOpts:       []LoadOption{WithoutSavingSystemID()},
+			prepareFn: func(t *testing.T, systemIDFile string) {
+				require.NoError(t, os.Remove(systemIDFile))
+			},
+			assertFn: func(t *testing.T, err error, config *common.Config, systemIDFile string) {
+				require.NoError(t, err)
+				require.Equal(t, 1, len(config.Runners))
+				assert.Regexp(t, expectedSystemIDRegexPattern, config.Runners[0].SystemID)
+				assert.NoFileExists(t, systemIDFile)
+			},
+		},
+		"reads an existing system ID when saving is disabled": {
+			runnerSystemID: "s_c2d22f638c25",
+			loadOpts:       []LoadOption{WithoutSavingSystemID()},
+			assertFn: func(t *testing.T, err error, config *common.Config, _ string) {
+				require.NoError(t, err)
+				require.Equal(t, 1, len(config.Runners))
+				assert.Equal(t, "s_c2d22f638c25", config.Runners[0].SystemID)
+			},
+		},
 	}
 
 	const config = `
@@ -87,7 +110,7 @@ func Test_loadConfig(t *testing.T) {
 			logGlobal := test.NewGlobal()
 
 			cfg := New(cfgName)
-			err := cfg.Load()
+			err := cfg.Load(tc.loadOpts...)
 
 			for _, entry := range logGlobal.AllEntries() {
 				assert.NotContains(t, entry.Message, "problem with your config based on jsonschema annotations")

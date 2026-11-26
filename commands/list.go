@@ -21,7 +21,7 @@ func NewListCommand() cli.Command {
 func (c *ListCommand) Execute(context *cli.Context) {
 	cfg := configfile.New(c.ConfigFile)
 
-	err := cfg.Load()
+	err := cfg.Load(configfile.WithoutSavingSystemID())
 	if err != nil {
 		logrus.Warningln(err)
 		return
