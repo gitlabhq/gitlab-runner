@@ -144,11 +144,33 @@ Now install GitLab Runner on the Ubuntu instance.
    ssh ubuntu@[ip_address] -i path/to/downloaded/key/file
    ```
 
-1. When you are connected successfully, run the following commands:
+1. When you are connected successfully, create the directories for GitLab Runner:
 
    ```shell
    sudo mkdir -p /opt/gitlab-runner/{metadata,builds,cache}
-   curl -s "https://packages.gitlab.com/install/repositories/runner/gitlab-runner/script.deb.sh" | sudo bash
+   ```
+
+1. Download the repository configuration script:
+
+   ```shell
+   curl -L "https://packages.gitlab.com/install/repositories/runner/gitlab-runner/script.deb.sh" -o script.deb.sh
+   ```
+
+1. Inspect the script before you run it:
+
+   ```shell
+   less script.deb.sh
+   ```
+
+1. Run the script:
+
+   ```shell
+   sudo bash script.deb.sh
+   ```
+
+1. Install GitLab Runner:
+
+   ```shell
    sudo apt install gitlab-runner
    ```
 
