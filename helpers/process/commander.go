@@ -26,8 +26,7 @@ type CommandOptions struct {
 	GracefulKillTimeout time.Duration
 	ForceKillTimeout    time.Duration
 
-	UseWindowsLegacyProcessStrategy bool
-	UseWindowsJobObject             bool
+	UseWindowsJobObject bool
 }
 
 // NewOSCmd creates a new implementation of Commander using the os.Cmd from

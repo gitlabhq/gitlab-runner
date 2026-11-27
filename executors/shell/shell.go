@@ -79,11 +79,10 @@ func (s *executor) Run(cmd common.ExecutorCommand) error {
 	defer stderr.Close()
 
 	cmdOpts := process.CommandOptions{
-		Env:                             os.Environ(),
-		Stdout:                          stdout,
-		Stderr:                          stderr,
-		UseWindowsLegacyProcessStrategy: s.Build.IsFeatureFlagOn(featureflags.UseWindowsLegacyProcessStrategy),
-		UseWindowsJobObject:             s.Build.IsFeatureFlagOn(featureflags.UseWindowsJobObject),
+		Env:                 os.Environ(),
+		Stdout:              stdout,
+		Stderr:              stderr,
+		UseWindowsJobObject: s.Build.IsFeatureFlagOn(featureflags.UseWindowsJobObject),
 	}
 
 	args := s.BuildShell.Arguments

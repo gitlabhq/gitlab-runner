@@ -245,15 +245,14 @@ func (e *executor) prepareCommand(ctx context.Context, opts prepareCommandOpts) 
 	logger := common.NewProcessLoggerAdapter(e.BuildLogger)
 
 	cmdOpts := process.CommandOptions{
-		Dir:                             e.tempDir,
-		Env:                             make([]string, 0),
-		Stdout:                          opts.out.stdout,
-		Stderr:                          opts.out.stderr,
-		Logger:                          logger,
-		GracefulKillTimeout:             e.config.GetGracefulKillTimeout(),
-		ForceKillTimeout:                e.config.GetForceKillTimeout(),
-		UseWindowsLegacyProcessStrategy: e.Build.IsFeatureFlagOn(featureflags.UseWindowsLegacyProcessStrategy),
-		UseWindowsJobObject:             e.Build.IsFeatureFlagOn(featureflags.UseWindowsJobObject),
+		Dir:                 e.tempDir,
+		Env:                 make([]string, 0),
+		Stdout:              opts.out.stdout,
+		Stderr:              opts.out.stderr,
+		Logger:              logger,
+		GracefulKillTimeout: e.config.GetGracefulKillTimeout(),
+		ForceKillTimeout:    e.config.GetForceKillTimeout(),
+		UseWindowsJobObject: e.Build.IsFeatureFlagOn(featureflags.UseWindowsJobObject),
 	}
 
 	// Append job_env defined variable first to avoid overwriting any CI/CD or predefined variables.

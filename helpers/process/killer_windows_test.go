@@ -5,7 +5,6 @@ package process
 import (
 	"errors"
 	"math"
-	"slices"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -16,11 +15,8 @@ import (
 const (
 	descDetachOwnConsole    = "detach the runner process from its console"
 	descAttachTargetConsole = "attach to the console of the process being terminated"
-	descDisableCtrlHandler  = "disable Ctrl-C event handler for runner process"
-	descSendCtrlC           = "send Ctrl-C event to process being terminated"
 	descDetachTargetConsole = "detach the runner process from the console of the terminated process"
 	descAttachParentConsole = "attach the runner process to the console of its parent process"
-	descRestoreCtrlHandler  = "restore Ctrl-C event handler for runner process"
 	descSendCtrlBreak       = "send Ctrl-Break event to process being terminated"
 	descCheckConsole        = "check whether the runner holds a console"
 
@@ -29,10 +25,6 @@ const (
 
 // testPID stands in for the process being terminated.
 const testPID = 1234
-
-// nullHandler is the uintptr(unsafe.Pointer(nil)) handler argument that
-// SetConsoleCtrlHandler takes to address the default handler.
-const nullHandler = 0
 
 // consoleCall is one call through the fake consoleAPI. field names the
 // consoleAPI member that was called, so a description cannot be recorded
@@ -62,7 +54,6 @@ func newFakeConsoleAPI(t *testing.T, calls *[]consoleCall, errs map[string]error
 	return consoleAPI{
 		freeConsole:              record("freeConsole"),
 		attachConsole:            record("attachConsole"),
-		setConsoleCtrlHandler:    record("setConsoleCtrlHandler"),
 		generateConsoleCtrlEvent: record("generateConsoleCtrlEvent"),
 		getConsoleWindow:         record("getConsoleWindow"),
 	}
@@ -104,56 +95,17 @@ func fallbackCalls() []consoleCall {
 	}
 }
 
-// legacyCalls is the full sequence the legacy strategy makes: take over the
-// console of the target process, signal it, then restore the runner's own
-// console state.
-func legacyCalls() []consoleCall {
-	return []consoleCall{
-		{field: "freeConsole", description: descDetachOwnConsole},
-		{field: "attachConsole", description: descAttachTargetConsole, args: []uintptr{testPID}},
-		{field: "setConsoleCtrlHandler", description: descDisableCtrlHandler, args: []uintptr{nullHandler, 1}},
-		{
-			field:       "generateConsoleCtrlEvent",
-			description: descSendCtrlC,
-			args:        []uintptr{windows.CTRL_C_EVENT, testPID},
-		},
-		{field: "freeConsole", description: descDetachTargetConsole},
-		{field: "attachConsole", description: descAttachParentConsole, args: []uintptr{math.MaxUint32}},
-		{field: "setConsoleCtrlHandler", description: descRestoreCtrlHandler, args: []uintptr{nullHandler, 0}},
-	}
-}
-
-// legacyRecoveryCalls is what the legacy strategy runs when the takeover stops
-// before the Ctrl-C handler is disabled: leave the console of the target
-// process if the runner reached it, then reattach to the console of its
-// parent. The handler was never changed, so it is not restored.
-func legacyRecoveryCalls(onTargetConsole bool) []consoleCall {
-	var calls []consoleCall
-	if onTargetConsole {
-		calls = append(calls, consoleCall{field: "freeConsole", description: descDetachTargetConsole})
-	}
-
-	return append(calls, consoleCall{
-		field:       "attachConsole",
-		description: descAttachParentConsole,
-		args:        []uintptr{math.MaxUint32},
-	})
-}
-
 func TestTerminateViaConsole(t *testing.T) {
 	errDelivery := errors.New("delivery failed")
 	errRestore := errors.New("restore failed")
 	errAttach := errors.New("attach failed")
-	errDetach := errors.New("detach failed")
-	errHandler := errors.New("handler failed")
 	errNoConsole := errors.New("the handle is invalid")
 
 	tests := map[string]struct {
-		legacyStrategy bool
-		errs           map[string]error
-		expectedErr    error
-		expectedCalls  []consoleCall
-		expectedWarns  int
+		errs          map[string]error
+		expectedErr   error
+		expectedCalls []consoleCall
+		expectedWarns int
 		// unexpectedErr is an error that must not reach the caller, such as a
 		// failed restore replacing the error that made the termination fail.
 		unexpectedErr error
@@ -209,6 +161,19 @@ func TestTerminateViaConsole(t *testing.T) {
 			expectedWarns: 1,
 			expectedCalls: fallbackCalls(),
 		},
+		"fallback reports a failed Ctrl-Break and not the failed restore calls": {
+			errs: map[string]error{
+				descSendCtrlBreak:       errNoConsole,
+				descCheckConsole:        errNoConsole,
+				descSendCtrlBreakTarget: errDelivery,
+				descDetachTargetConsole: errRestore,
+				descAttachParentConsole: errRestore,
+			},
+			expectedErr:   errDelivery,
+			unexpectedErr: errRestore,
+			expectedWarns: 2,
+			expectedCalls: fallbackCalls(),
+		},
 		"fallback stops when it cannot attach to the target console": {
 			errs: map[string]error{
 				descSendCtrlBreak:       errNoConsole,
@@ -218,84 +183,6 @@ func TestTerminateViaConsole(t *testing.T) {
 			expectedErr:   errAttach,
 			expectedWarns: 1,
 			expectedCalls: fallbackCalls()[:4],
-		},
-		"legacy strategy sends Ctrl-C and restores the console": {
-			legacyStrategy: true,
-			expectedCalls:  legacyCalls(),
-		},
-		// A runner that runs as a Windows service has no console of its own, so
-		// it cannot reattach to one after it signals the process. The process
-		// was signaled, so this is not a termination failure.
-		"legacy strategy accepts a failed console restore": {
-			legacyStrategy: true,
-			errs:           map[string]error{descAttachParentConsole: errRestore},
-			expectedWarns:  1,
-			expectedCalls:  legacyCalls(),
-		},
-		"legacy strategy reports a failed Ctrl-C": {
-			legacyStrategy: true,
-			errs:           map[string]error{descSendCtrlC: errDelivery},
-			expectedErr:    errDelivery,
-			expectedCalls:  legacyCalls(),
-		},
-		"legacy strategy reports a failed Ctrl-C and every failed restore call": {
-			legacyStrategy: true,
-			errs: map[string]error{
-				descSendCtrlC:           errDelivery,
-				descDetachTargetConsole: errRestore,
-				descAttachParentConsole: errRestore,
-				descRestoreCtrlHandler:  errRestore,
-			},
-			expectedErr:   errDelivery,
-			unexpectedErr: errRestore,
-			expectedWarns: 1,
-			expectedCalls: legacyCalls(),
-		},
-		// The runner has not left its console yet, so there is nothing to put back.
-		"legacy strategy stops without recovery when it cannot detach from its console": {
-			legacyStrategy: true,
-			errs:           map[string]error{descDetachOwnConsole: errDetach},
-			expectedErr:    errDetach,
-			expectedCalls:  legacyCalls()[:1],
-		},
-		// The runner has left its console and holds none, so it goes back to the
-		// console of its parent.
-		"legacy strategy reattaches to its parent console when it cannot attach to the target console": {
-			legacyStrategy: true,
-			errs:           map[string]error{descAttachTargetConsole: errAttach},
-			expectedErr:    errAttach,
-			expectedCalls:  slices.Concat(legacyCalls()[:2], legacyRecoveryCalls(false)),
-		},
-		"legacy strategy keeps the attach error when the parent reattach also fails": {
-			legacyStrategy: true,
-			errs: map[string]error{
-				descAttachTargetConsole: errAttach,
-				descAttachParentConsole: errRestore,
-			},
-			expectedErr:   errAttach,
-			unexpectedErr: errRestore,
-			expectedWarns: 1,
-			expectedCalls: slices.Concat(legacyCalls()[:2], legacyRecoveryCalls(false)),
-		},
-		// The runner holds the console of the target and the failed call did not
-		// disable its Ctrl-C handler, so it leaves that console and does not
-		// restore a handler it never changed.
-		"legacy strategy leaves the target console when it cannot disable the Ctrl-C handler": {
-			legacyStrategy: true,
-			errs:           map[string]error{descDisableCtrlHandler: errHandler},
-			expectedErr:    errHandler,
-			expectedCalls:  slices.Concat(legacyCalls()[:3], legacyRecoveryCalls(true)),
-		},
-		"legacy strategy keeps the handler error when leaving the target console also fails": {
-			legacyStrategy: true,
-			errs: map[string]error{
-				descDisableCtrlHandler:  errHandler,
-				descDetachTargetConsole: errRestore,
-			},
-			expectedErr:   errHandler,
-			unexpectedErr: errRestore,
-			expectedWarns: 1,
-			expectedCalls: slices.Concat(legacyCalls()[:3], legacyRecoveryCalls(true)),
 		},
 	}
 
@@ -309,7 +196,7 @@ func TestTerminateViaConsole(t *testing.T) {
 			var calls []consoleCall
 			api := newFakeConsoleAPI(t, &calls, tt.errs)
 
-			err := terminateViaConsole(logger, api, testPID, tt.legacyStrategy)
+			err := terminateViaConsole(logger, api, testPID)
 
 			if tt.expectedErr != nil {
 				assert.ErrorIs(t, err, tt.expectedErr)

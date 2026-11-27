@@ -40,15 +40,14 @@ func main() {
 	stage := flag.String("stage", "", "outer or inner")
 	sleepBinary := flag.String("sleep-binary", "", "path to the process to terminate")
 	resultPath := flag.String("result", "", "path to write the outcome to")
-	legacy := flag.Bool("legacy", false, "use the legacy Windows process strategy")
 	flag.Parse()
 
 	var err error
 	switch *stage {
 	case "outer":
-		err = runOuter(*sleepBinary, *resultPath, *legacy)
+		err = runOuter(*sleepBinary, *resultPath)
 	case "inner":
-		err = runInner(*sleepBinary, *resultPath, *legacy)
+		err = runInner(*sleepBinary, *resultPath)
 	default:
 		err = fmt.Errorf("unknown stage %q", *stage)
 	}
@@ -62,13 +61,12 @@ func main() {
 // runOuter starts the inner stage detached, then waits for it. The outer stage
 // stays alive so that the inner stage has a parent that holds no console,
 // rather than no parent at all.
-func runOuter(sleepBinary, resultPath string, legacy bool) error {
+func runOuter(sleepBinary, resultPath string) error {
 	cmd := exec.Command(
 		os.Args[0],
 		"-stage", "inner",
 		"-sleep-binary", sleepBinary,
 		"-result", resultPath,
-		fmt.Sprintf("-legacy=%t", legacy),
 	)
 	cmd.SysProcAttr = &syscall.SysProcAttr{CreationFlags: detachedProcess}
 
@@ -90,17 +88,16 @@ func runOuter(sleepBinary, resultPath string, legacy bool) error {
 	return cmd.Wait()
 }
 
-func runInner(sleepBinary, resultPath string, legacy bool) error {
-	// Read this before terminating anything: both strategies attach and detach
-	// consoles, so the state afterwards says nothing about the state we started
-	// in.
+func runInner(sleepBinary, resultPath string) error {
+	// Read this before terminating anything: the termination attaches and
+	// detaches consoles, so the state afterwards says nothing about the state
+	// we started in.
 	hadConsole := hasConsole()
 
 	logger := &collectingLogger{}
 
 	command := process.NewOSCmd(sleepBinary, []string{"30s"}, process.CommandOptions{
-		UseWindowsLegacyProcessStrategy: legacy,
-		Logger:                          logger,
+		Logger: logger,
 	})
 	if err := command.Start(); err != nil {
 		return fmt.Errorf("starting the process to terminate: %w", err)

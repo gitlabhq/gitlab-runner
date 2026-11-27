@@ -24,7 +24,6 @@ func newKillerWithLoggerAndCommand(
 	t *testing.T,
 	duration string,
 	skipTerminate bool,
-	useWindowsLegacyProcessStrategy bool,
 	useWindowsJobObject bool,
 ) (process.Killer, *process.MockLogger, process.Commander, func(), *dumbTestLogger) {
 	t.Helper()
@@ -41,9 +40,8 @@ func newKillerWithLoggerAndCommand(
 
 	command := process.NewOSCmd(sleepBinary, args,
 		process.CommandOptions{
-			UseWindowsLegacyProcessStrategy: useWindowsLegacyProcessStrategy,
-			UseWindowsJobObject:             useWindowsJobObject,
-			Logger:                          &logger,
+			UseWindowsJobObject: useWindowsJobObject,
+			Logger:              &logger,
 		})
 	err := command.Start()
 	require.NoError(t, err)
@@ -107,11 +105,10 @@ func buildTestBinary(t *testing.T, name string) string {
 // Unix and Windows have different test cases expecting different data, check
 // killer_unix_test.go and killer_windows_test.go for each system test case.
 type testKillerTestCase struct {
-	alreadyStopped                  bool
-	skipTerminate                   bool
-	expectedError                   string
-	useWindowsLegacyProcessStrategy bool
-	useWindowsJobObject             bool
+	alreadyStopped      bool
+	skipTerminate       bool
+	expectedError       string
+	useWindowsJobObject bool
 }
 
 func TestKiller(t *testing.T) {
@@ -119,7 +116,7 @@ func TestKiller(t *testing.T) {
 
 	for testName, testCase := range testKillerTestCases() {
 		t.Run(testName, func(t *testing.T) {
-			k, loggerMock, cmd, cleanup, logs := newKillerWithLoggerAndCommand(t, sleepDuration, testCase.skipTerminate, testCase.useWindowsLegacyProcessStrategy, testCase.useWindowsJobObject)
+			k, loggerMock, cmd, cleanup, logs := newKillerWithLoggerAndCommand(t, sleepDuration, testCase.skipTerminate, testCase.useWindowsJobObject)
 			defer cleanup()
 
 			waitCh := make(chan error)
