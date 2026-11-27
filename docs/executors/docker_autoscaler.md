@@ -76,14 +76,14 @@ This configuration supports:
 
 - A capacity per instance of 1
 - A use count of 1
-- An idle scale of 5
+- An idle count of 5
 - An idle time of 20 minutes
 - A maximum instance count of 10
 
 By setting the capacity and use count to both 1, each job is given a secure ephemeral instance that cannot be
 affected by other jobs. As soon the job is complete the instance it was executed on is immediately deleted.
 
-With an idle scale of 5, the runner tries to keep 5 whole instances (because the capacity per instance is 1)
+With an idle count of 5, the runner tries to keep 5 whole instances (because the capacity per instance is 1)
 available for future demand. These instances stay for at least 20 minutes.
 
 The runner `concurrent` field is set to 10 (maximum number instances * capacity per instance).
@@ -108,10 +108,7 @@ concurrent = 10
 
   # Autoscaler config
   [runners.autoscaler]
-    plugin = "aws" # in GitLab 16.11 and later, ensure you run `gitlab-runner fleeting install` to automatically install the plugin
-
-    # in GitLab 16.10 and earlier, manually install the plugin and use:
-    # plugin = "fleeting-plugin-aws"
+    plugin = "aws" # run `gitlab-runner fleeting install` to install the plugin
 
     capacity_per_instance = 1
     max_use_count = 1
@@ -158,14 +155,14 @@ This configuration supports:
 
 - A capacity per instance of 1
 - A use count of 1
-- An idle scale of 5
+- An idle count of 5
 - An idle time of 20 minutes
 - A maximum instance count of 10
 
 By setting the capacity and use count to both 1, each job is given a secure ephemeral instance that cannot be
 affected by other jobs. As soon the job is complete the instance it was executed on is immediately deleted.
 
-With an idle scale of 5, the runner tries to keep 5 whole instances (because the capacity per instance is 1)
+With an idle count of 5, the runner tries to keep 5 whole instances (because the capacity per instance is 1)
 available for future demand. These instances stay for at least 20 minutes.
 
 The runner `concurrent` field is set to 10 (maximum number instances * capacity per instance).
@@ -190,10 +187,7 @@ concurrent = 10
 
   # Autoscaler config
   [runners.autoscaler]
-    plugin = "googlecloud" # for >= 16.11, ensure you run `gitlab-runner fleeting install` to automatically install the plugin
-
-    # for versions < 17.0, manually install the plugin and use:
-    # plugin = "fleeting-plugin-googlecompute"
+    plugin = "googlecloud" # run `gitlab-runner fleeting install` to install the plugin
 
     capacity_per_instance = 1
     max_use_count = 1
@@ -202,7 +196,7 @@ concurrent = 10
     [runners.autoscaler.plugin_config] # plugin specific configuration (see plugin documentation)
       name             = "my-docker-instance-group" # Google Cloud Instance Group name
       project          = "my-gcp-project"
-      zone             = "europe-west1"
+      zone             = "europe-west1-c"
       credentials_file = "/home/user/.config/gcloud/application_default_credentials.json" # optional, default is '~/.config/gcloud/application_default_credentials.json'
 
     [runners.autoscaler.connector_config]
@@ -229,14 +223,14 @@ This configuration supports:
 
 - A capacity per instance of 1
 - A use count of 1
-- An idle scale of 5
+- An idle count of 5
 - An idle time of 20 minutes
 - A maximum instance count of 10
 
 When the capacity and use count are both set to `1`, each job is given a secure ephemeral instance that cannot be
 affected by other jobs. When the job completes, the instance it was executed on is immediately deleted.
 
-When the idle scale is set to `5`, the runner keeps 5 instances available for future demand (because the capacity per instance is 1).
+When the idle count is set to `5`, the runner keeps 5 instances available for future demand (because the capacity per instance is 1).
 These instances stay for at least 20 minutes.
 
 The runner `concurrent` field is set to 10 (maximum number instances * capacity per instance).
@@ -261,10 +255,7 @@ concurrent = 10
 
   # Autoscaler config
   [runners.autoscaler]
-    plugin = "azure" # for >= 16.11, ensure you run `gitlab-runner fleeting install` to automatically install the plugin
-
-    # for versions < 17.0, manually install the plugin and use:
-    # plugin = "fleeting-plugin-azure"
+    plugin = "azure" # run `gitlab-runner fleeting install` to install the plugin
 
     capacity_per_instance = 1
     max_use_count = 1
