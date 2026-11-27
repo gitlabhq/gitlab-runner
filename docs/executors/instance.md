@@ -101,14 +101,14 @@ This configuration supports:
 
 - A capacity of `1` for each instance.
 - A use count of `1`.
-- An idle scale of `5`.
+- An idle count of `5`.
 - An idle time of 20 minutes.
 - A maximum instance count of `10`.
 
 When the capacity and use count are set to `1`, each job is given a secure ephemeral instance that cannot be
 affected by other jobs. When the job completes, the instance it was executed on is deleted immediately.
 
-When the capacity for each instance is `1`, and the idle scale is `5`, the runner keeps 5 whole instances
+When the capacity for each instance is `1`, and the idle count is `5`, the runner keeps 5 whole instances
 available for future demand. These instances remain for at least 20 minutes.
 
 The runner `concurrent` field is set to 10 (maximum number of instances * capacity per instance).
@@ -126,10 +126,7 @@ concurrent = 10
 
   # Autoscaler config
   [runners.autoscaler]
-    plugin = "aws" # in GitLab 16.11 and later, ensure you run `gitlab-runner fleeting install` to automatically install the plugin
-
-    # in GitLab 16.10 and earlier, manually install the plugin and use:
-    # plugin = "fleeting-plugin-aws"
+    plugin = "aws" # run `gitlab-runner fleeting install` to install the plugin
 
     capacity_per_instance = 1
     max_use_count = 1
@@ -162,15 +159,15 @@ This configuration supports:
 
 - A capacity of `5` for each instance.
 - An unlimited use count.
-- An idle scale of `5`.
+- An idle count of `5`.
 - An idle time of 20 minutes.
 - A maximum instance count of `10`.
 
 When you set the capacity per instance to `5` with unlimited use count, each instance concurrently
 executes five jobs throughout the instance lifetime.
 
-When the idle scale is `5` and idle capacity of instance is `5`, one idle instance is created
-whenever the in-use capacity falls below five. Idle instances remain for at least 20 minutes.
+When the idle count is `5` and the capacity for each instance is `5`, a new instance is created
+whenever the idle capacity falls below five. Idle instances remain for at least 20 minutes.
 
 Jobs executed in these environments should be **trusted** as there is little isolation between
 them and each job can affect the performance of another.
@@ -190,10 +187,7 @@ concurrent = 50
 
   # Autoscaler config
   [runners.autoscaler]
-    plugin = "aws" # in GitLab 16.11 and later, ensure you run `gitlab-runner fleeting install` to automatically install the plugin
-
-    # in GitLab 16.10 and earlier, manually install the plugin and use:
-    # plugin = "fleeting-plugin-aws"
+    plugin = "aws" # run `gitlab-runner fleeting install` to install the plugin
 
     capacity_per_instance = 5
     max_use_count = 0
@@ -233,14 +227,14 @@ This configuration supports:
 - An unlimited use count.
 - Nested virtualization to support isolated jobs. Nested virtualization is only available
   for Apple silicon instances with [nesting](https://gitlab.com/gitlab-org/fleeting/nesting) installed.
-- An idle scale of `5`.
-- An idle time of 20 minutes.
-- A maximum instance count of `10`.
+- An idle count of `2`.
+- An idle time of 24 hours.
+- A maximum instance count of `4`.
 
 When the capacity for each instance is `2` and the use count is unlimited, each instance concurrently
 executes 2 jobs for the lifetime of the instance.
 
-When the idle scale is `2`, one idle instance is created whenever the in-use capacity falls below `2`.
+When the idle count is `2`, a new instance is created whenever the idle capacity falls below `2`.
 Idle instances remain for at
 least 24 hours. This time frame is due to the 24 hour minimal allocation period of AWS MacOS instance hosts.
 
@@ -267,10 +261,7 @@ concurrent = 8
     max_use_count = 0
     max_instances = 4
 
-    plugin = "aws" # in GitLab 16.11 and later, ensure you run `gitlab-runner fleeting install` to automatically install the plugin
-
-    # in GitLab 16.10 and earlier, manually install the plugin and use:
-    # plugin = "fleeting-plugin-aws"
+    plugin = "aws" # run `gitlab-runner fleeting install` to install the plugin
 
     [[runners.autoscaler.policy]]
       idle_count = 2
@@ -313,14 +304,14 @@ This configuration supports:
 
 - A capacity per instance of 1
 - A use count of 1
-- An idle scale of 5
+- An idle count of 5
 - An idle time of 20 minutes
 - A maximum instance count of 10
 
 When the capacity and use count are both set to `1`, each job is given a secure ephemeral instance that cannot be
 affected by other jobs. When the job completes, the instance it was executed on is immediately deleted.
 
-When the idle scale is set to `5`, the runner keeps 5 instances available for future demand (because the capacity per instance is 1).
+When the idle count is set to `5`, the runner keeps 5 instances available for future demand (because the capacity per instance is 1).
 These instances stay for at least 20 minutes.
 
 The runner `concurrent` field is set to 10 (maximum number instances * capacity per instance).
@@ -338,10 +329,7 @@ concurrent = 10
 
   # Autoscaler config
   [runners.autoscaler]
-    plugin = "googlecloud" # for >= 16.11, ensure you run `gitlab-runner fleeting install` to automatically install the plugin
-
-    # for versions < 17.0, manually install the plugin and use:
-    # plugin = "fleeting-plugin-googlecompute"
+    plugin = "googlecloud" # run `gitlab-runner fleeting install` to install the plugin
 
     capacity_per_instance = 1
     max_use_count = 1
@@ -374,7 +362,7 @@ This configuration supports:
 
 - A capacity per instance of 5
 - An unlimited use count
-- An idle scale of 5
+- An idle count of 5
 - An idle time of 20 minutes
 - A maximum instance count of 10
 
@@ -384,7 +372,7 @@ executes 5 jobs for the lifetime of the instance.
 Jobs executed in these environments should be **trusted** as there is little isolation between them and each job
 can affect the performance of another.
 
-When the idle scale is `5`, one idle instance is created whenever the in-use capacity falls below `5`.
+When the idle count is `5`, a new instance is created whenever the idle capacity falls below `5`.
 Idle instances stay for at least 20 minutes.
 
 The runner `concurrent` field is set to 50 (maximum number instances * capacity per instance).
@@ -402,10 +390,7 @@ concurrent = 50
 
   # Autoscaler config
   [runners.autoscaler]
-    plugin = "googlecloud" # for >= 16.11, ensure you run `gitlab-runner fleeting install` to automatically install the plugin
-
-    # for versions < 17.0, manually install the plugin and use:
-    # plugin = "fleeting-plugin-googlecompute"
+    plugin = "googlecloud" # run `gitlab-runner fleeting install` to install the plugin
 
     capacity_per_instance = 5
     max_use_count = 0
@@ -440,14 +425,14 @@ This configuration supports:
 
 - A capacity per instance of 1
 - A use count of 1
-- An idle scale of 5
+- An idle count of 5
 - An idle time of 20 minutes
 - A maximum instance count of 10
 
 When the capacity and use count are both set to `1`, each job is given a secure ephemeral instance that cannot be
 affected by other jobs. When the job completes, the instance it was executed on is immediately deleted.
 
-When the idle scale is set to `5`, the runner keeps 5 instances available for future demand (because the capacity per instance is 1).
+When the idle count is set to `5`, the runner keeps 5 instances available for future demand (because the capacity per instance is 1).
 These instances stay for at least 20 minutes.
 
 The runner `concurrent` field is set to 10 (maximum number instances * capacity per instance).
@@ -465,10 +450,7 @@ concurrent = 10
 
   # Autoscaler config
   [runners.autoscaler]
-    plugin = "azure" # for >= 16.11, ensure you run `gitlab-runner fleeting install` to automatically install the plugin
-
-    # for versions < 17.0, manually install the plugin and use:
-    # plugin = "fleeting-plugin-azure"
+    plugin = "azure" # run `gitlab-runner fleeting install` to install the plugin
 
     capacity_per_instance = 1
     max_use_count = 1
@@ -502,7 +484,7 @@ This configuration supports:
 
 - A capacity per instance of 5
 - An unlimited use count
-- An idle scale of 5
+- An idle count of 5
 - An idle time of 20 minutes
 - A maximum instance count of 10
 
@@ -512,7 +494,7 @@ executes 5 jobs for the lifetime of the instance.
 Jobs executed in these environments should be **trusted** as there is little isolation between them and each job
 can affect the performance of another.
 
-When the idle scale is `2`, one idle instance is created whenever the in-use capacity falls below `5`.
+When the idle count is `5`, a new instance is created whenever the idle capacity falls below `5`.
 Idle instances stay for at least 20 minutes.
 
 The runner `concurrent` field is set to 50 (maximum number instances * capacity per instance).
@@ -530,10 +512,7 @@ concurrent = 50
 
   # Autoscaler config
   [runners.autoscaler]
-    plugin = "azure" # for >= 16.11, ensure you run `gitlab-runner fleeting install` to automatically install the plugin
-
-    # for versions < 17.0, manually install the plugin and use:
-    # plugin = "fleeting-plugin-azure"
+    plugin = "azure" # run `gitlab-runner fleeting install` to install the plugin
 
     capacity_per_instance = 5
     max_use_count = 0

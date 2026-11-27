@@ -51,7 +51,7 @@ flowchart LR
     Platform -->|Cloud<br/>VMs| OS1{OS?}
 
     OS1 -->|Linux| L1[Fleeting:<br/>Docker Autoscaler<br/>or Instance]
-    OS1 -->|macOS| M1[Fleeting:<br/>Docker Autoscaler<br/>or Instance]
+    OS1 -->|macOS| M1[Fleeting:<br/>Instance]
     OS1 -->|Windows| W1[Fleeting:<br/>Docker Autoscaler<br/>or Instance]
 
     BuildType -->|Container| OS2{OS?}

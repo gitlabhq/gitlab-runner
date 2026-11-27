@@ -1636,7 +1636,7 @@ The following parameters configure the autoscaler feature. You can only use thes
 | `log_internal_ip`                | Specifies whether the CI/CD output logs the internal IP address of the VM. Default: `false`. Introduced in [GitLab Runner 18.1](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5519). |
 | `log_external_ip`                | Specifies whether the CI/CD output logs the external IP address of the VM. Default: `false`. Introduced in [GitLab Runner 18.1](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5519). |
 
-If the `instance_ready_command` frequently fails with idle scale rules, instances might be removed and created
+If the `instance_ready_command` frequently fails with idle scaling policies, instances might be removed and created
 faster than the runner accepts jobs. To support scale throttling, an exponential backoff was added in
 [GitLab 17.0](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/37497).
 
@@ -1700,7 +1700,7 @@ the empty values that the plugin cannot determine.
 | `protocol_port`          | The port used to establish connection based on the specified protocol. Defaults to `ssh:22`, `winrm+http:5985`, `winrm+https:5986`. |
 | `username`               | The username used to connect with. |
 | `password`               | The password used to connect with. |
-| `key_path`               | The TLS key used to connect with or dynamically provision credentials with. |
+| `key_path`               | The path to a private key file. The key is used to connect to instances over SSH, or by the plugin to dynamically provision credentials. |
 | `use_static_credentials` | Disabled automatic credential provisioning. Default: `false`. |
 | `keepalive`              | The connection keepalive duration. |
 | `timeout`                | The connection timeout duration. |

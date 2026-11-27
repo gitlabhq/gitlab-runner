@@ -73,3 +73,7 @@ These cloud instances are supported by the GitLab Runner Docker Machine autoscal
 |----------------------------|--------------------------------------|--------------------------------------|--------------------------------------|
 | Instance executor          | {{< icon name="check-circle" >}} Yes | {{< icon name="check-circle" >}} Yes | {{< icon name="check-circle" >}} Yes |
 | Docker Autoscaler executor | {{< icon name="check-circle" >}} Yes | {{< icon name="dotted-circle" >}} No | {{< icon name="check-circle" >}} Yes |
+
+Docker on macOS runs Linux containers in a Linux virtual machine. Docker Autoscaler jobs on
+macOS instances can't use macOS tools such as Xcode. To build macOS apps, use the instance executor.
+To run Linux containers, use Linux instances.
