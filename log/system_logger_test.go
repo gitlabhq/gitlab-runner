@@ -72,39 +72,27 @@ func TestServiceLogHook(t *testing.T) {
 	}
 }
 
-func TestServiceLogHookWithSpecifiedLevel(t *testing.T) {
-	// Disable colors to avoid any OS specific formatting.
-	formatter := &logrus.TextFormatter{DisableColors: true}
+func TestServiceLogHookFollowsLoggerLevel(t *testing.T) {
+	sysLogger := newMockSystemLogger(t)
+	sysService := newMockSystemService(t)
+	sysService.On("SystemLogger", mock.Anything).Return(sysLogger, nil).Once()
 
 	logger := logrus.New()
-	logger.Formatter = formatter
+	logger.SetLevel(logrus.InfoLevel)
+	logger.SetOutput(io.Discard)
 
-	entry := logrus.NewEntry(logger)
-	entry.Message = "test message"
+	SetSystemLogger(logger, sysService)
 
-	sysLogger := newMockSystemLogger(t)
-	assertSysLoggerMethod := func(args mock.Arguments) {
-		msg := args.Get(0)
-		assert.Contains(t, msg, `msg="test message"`)
-	}
+	logger.Debug("dropped at info level")
 
-	sysLogger.On("Error", mock.Anything).Return(nil).Once().Run(assertSysLoggerMethod)
-	sysLogger.On("Warning", mock.Anything).Return(nil).Once().Run(assertSysLoggerMethod)
+	// log_level from config.toml is applied after the hook is installed
+	logger.SetLevel(logrus.DebugLevel)
 
-	hook := new(SystemServiceLogHook)
-	hook.systemLogger = sysLogger
-	hook.Level = logrus.WarnLevel
+	sysLogger.On("Info", mock.Anything).Return(nil).Once().Run(func(args mock.Arguments) {
+		assert.Contains(t, args.Get(0), `level=debug msg="debug message"`)
+	})
 
-	for _, level := range []logrus.Level{
-		logrus.ErrorLevel,
-		logrus.WarnLevel,
-		logrus.InfoLevel,
-	} {
-		entry.Level = level
-		err := hook.Fire(entry)
-
-		assert.NoError(t, err)
-	}
+	logger.Debug("debug message")
 }
 
 func TestSetSystemLogger_ErrorOnInitialization(t *testing.T) {
