@@ -65,20 +65,20 @@ func (*builtinFunc) Spec() *proto.Spec {
 	}
 }
 
-func (*builtinFunc) Run(ctx context.Context, builtinCtx runner.BuiltinContext) error {
+func (*builtinFunc) Run(ctx context.Context, builtinCtx runner.BuiltinContext) (runner.BuiltinResult, error) {
 	configRaw, err := builtinCtx.GetInput("config", runner.KindString)
 	if err != nil {
-		return err
+		return runner.BuiltinResult{}, err
 	}
 
 	var config run.Config
 	if err := json.Unmarshal([]byte(configRaw.GetStringValue()), &config); err != nil {
-		return err
+		return runner.BuiltinResult{}, err
 	}
 
-	runner, err := run.New(config, builtinCtx)
+	stageRunner, err := run.New(config, builtinCtx)
 	if err != nil {
-		return err
+		return runner.BuiltinResult{}, err
 	}
 
 	cancelCtx, cancel := builtinCtx.ListenCancel(ctx)
@@ -87,9 +87,9 @@ func (*builtinFunc) Run(ctx context.Context, builtinCtx runner.BuiltinContext) e
 		select {
 		case <-ctx.Done(): // no-op, the main context was cancelled OR the Close API was called.
 		case <-cancelCtx.Done(): // the cancel API was called.
-			runner.Cancel()
+			stageRunner.Cancel()
 		}
 	}()
 
-	return runner.Run(ctx)
+	return runner.BuiltinResult{}, stageRunner.Run(ctx)
 }
