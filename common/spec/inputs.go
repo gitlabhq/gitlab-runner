@@ -10,6 +10,7 @@ import (
 
 	"gitlab.com/gitlab-org/moa"
 	"gitlab.com/gitlab-org/moa/ast"
+	"gitlab.com/gitlab-org/moa/limits"
 	"gitlab.com/gitlab-org/moa/value"
 	"gitlab.com/gitlab-org/step-runner/pkg/api/expression"
 )
@@ -18,6 +19,9 @@ type Inputs struct {
 	inputs           []expression.Input
 	evaluator        *expression.Evaluator
 	metricsCollector *JobInputsMetricsCollector
+	// budget bounds the total output of expressions across every field of a
+	// job, so that many expressions cannot add up to an out-of-memory crash.
+	budget limits.Budget
 }
 
 type JobInput struct {
@@ -43,6 +47,10 @@ type InputInterpolationError struct {
 
 func (e *InputInterpolationError) Error() string {
 	return fmt.Sprintf("failed to interpolate job inputs: %s", e.err.Error())
+}
+
+func (e *InputInterpolationError) Unwrap() error {
+	return e.err
 }
 
 const (
@@ -171,6 +179,7 @@ func NewJobInputs(inputs []JobInput) (Inputs, error) {
 		return Inputs{}, err
 	}
 	i.evaluator = e
+	i.budget = limits.NewBudget(limits.DefaultMaxOutputBytes)
 
 	return i, nil
 }
@@ -272,7 +281,25 @@ func (i *Inputs) Expand(text string) (string, error) {
 		return "", ErrSensitiveUnsupported
 	}
 
-	resultString := result.String()
+	// Render through the shared budget rather than result.String(): a lone
+	// ${{ ... }} can evaluate to a container, whose construction moa does not
+	// charge, and result.String() would flatten it in full and OOM the runner.
+	resultString, err := result.Format(&i.budget)
+	if err != nil {
+		i.metricsCollector.recordEvalError()
+		return "", &InputInterpolationError{err: err}
+	}
+
+	// Format only checks the budget. Charging the kept result is what makes
+	// the budget shared across every field of the job. A field with no
+	// expression is not charged. A field with an expression is charged in
+	// full, including the literal text around it.
+	if _, plainText := expr.(*ast.Literal); !plainText {
+		if err := i.budget.Charge(len(resultString)); err != nil {
+			i.metricsCollector.recordEvalError()
+			return "", &InputInterpolationError{err: err}
+		}
+	}
 
 	if _, walkErr := expr.Walk(&interpolationDetector{}); errors.Is(walkErr, errInterpolationFound) {
 		// Only count as an interpolation if at least one interpolation was actually present in the AST
