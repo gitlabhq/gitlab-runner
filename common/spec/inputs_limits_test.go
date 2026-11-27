@@ -5,6 +5,7 @@ package spec
 import (
 	"encoding/json"
 	"fmt"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -114,4 +115,23 @@ func TestJobInputs_Expand_PlainTextIsNotCharged(t *testing.T) {
 
 	_, err := inputs.Expand(`${{ job.inputs.big + "x" }}`)
 	require.NoError(t, err)
+}
+
+func TestJobInputs_Expand_ContainerFlatteningStopsAtTheBudget(t *testing.T) {
+	// Not parallel: it measures the bytes that Expand allocates.
+	const references = 512
+	inputs := inputsWithStringInput(t, 512<<10)
+	text := "${{ [" + strings.Repeat("job.inputs.big, ", references) + "] }}"
+
+	var before, after runtime.MemStats
+	runtime.GC()
+	runtime.ReadMemStats(&before)
+
+	_, err := inputs.Expand(text)
+
+	runtime.ReadMemStats(&after)
+
+	require.ErrorIs(t, err, limits.ErrOutputTooLarge)
+	// Flattening the whole container would allocate about 256 MiB.
+	assert.Less(t, after.TotalAlloc-before.TotalAlloc, uint64(64<<20))
 }

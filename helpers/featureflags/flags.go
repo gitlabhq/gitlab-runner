@@ -443,7 +443,7 @@ var flags = []FeatureFlag{
 		Name:         EnableJobInputsInterpolation,
 		DefaultValue: true,
 		Deprecated:   false,
-		Description:  "When enabled, job inputs are interpolated. For more information, see [&17833](https://gitlab.com/groups/gitlab-org/-/work_items/17833).",
+		Description:  "When enabled, job inputs are interpolated. For more information, see [&17833](https://gitlab.com/groups/gitlab-org/-/work_items/17833). All job input expressions in one job can render at most 8 MiB in total. A job that goes over fails with an `output too large` error.",
 	},
 	{
 		Name:         UseJobRouter,
