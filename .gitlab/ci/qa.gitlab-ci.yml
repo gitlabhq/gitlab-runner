@@ -124,7 +124,6 @@ dockerfile:lint:
     - .kubernetes runner
   image: $RUNNER_LINTERS_IMAGE
   needs: []
-  allow_failure: true # to be disabled once all linter issues are resolved
   script:
     - make lint-dockerfiles
 

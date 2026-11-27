@@ -37,9 +37,10 @@
   - "scripts/lint-i18n-docs"
 
 .dockerfile-patterns: &dockerfile-patterns
-  - "*Dockerfile*"
-  - "*dockerfile*"
+  - "**/*Dockerfile*"
+  - "**/*dockerfile*"
   - "Makefile*" # the Dockerfile linting target is defined here
+  - ".gitlab/ci/qa.gitlab-ci.yml" # the dockerfile:lint job is defined here
 
 .go-version-consistency-patterns: &go-version-consistency-patterns
   - ".gitlab/ci/_common.gitlab-ci.yml"
