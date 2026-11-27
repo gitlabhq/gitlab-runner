@@ -15,10 +15,11 @@ COPY "$BASE_PATH/entrypoint.sh" /entrypoint
 RUN chmod +x /entrypoint
 
 COPY "$BASE_PATH/scripts" /usr/bin/
+# binary_dir is a docker buildx bake named context, not a stage
+# hadolint ignore=DL3022
 COPY --from=binary_dir gitlab-runner-helper.linux-amd64 /usr/bin/gitlab-runner-helper
-RUN chmod +x /usr/bin/gitlab-runner-helper /usr/bin/gitlab-runner-build
-
-RUN echo 'hosts: files dns' >> /etc/nsswitch.conf
+RUN chmod +x /usr/bin/gitlab-runner-helper /usr/bin/gitlab-runner-build \
+    && echo 'hosts: files dns' >> /etc/nsswitch.conf
 
 ENTRYPOINT ["/usr/bin/dumb-init", "/entrypoint"]
 CMD ["sh"]

@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/powershell
+FROM mcr.microsoft.com/powershell:7.4-ubuntu-22.04
 
 COPY powershell-entrypoint/entrypoint.pre-post-trap.ps1 /entrypoint.ps1
 
