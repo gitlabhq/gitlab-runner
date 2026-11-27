@@ -14,7 +14,6 @@ const (
 	UseFastzip                           string = "FF_USE_FASTZIP"
 	DisableUmaskForDockerExecutor        string = "FF_DISABLE_UMASK_FOR_DOCKER_EXECUTOR"
 	EnableBashExitCodeCheck              string = "FF_ENABLE_BASH_EXIT_CODE_CHECK"
-	UseWindowsLegacyProcessStrategy      string = "FF_USE_WINDOWS_LEGACY_PROCESS_STRATEGY"
 	UseLegacyBashEval                    string = "FF_USE_LEGACY_BASH_EVAL"
 	UsePowershellPathResolver            string = "FF_USE_POWERSHELL_PATH_RESOLVER"
 	UseDynamicTraceForceSendInterval     string = "FF_USE_DYNAMIC_TRACE_FORCE_SEND_INTERVAL"
@@ -154,19 +153,6 @@ var flags = []FeatureFlag{
 		ToBeRemovedWith: "",
 		Description: "If enabled, bash scripts don't rely solely on `set -e`, but check for a non-zero exit code " +
 			"after each script command is executed.",
-	},
-	{
-		Name:            UseWindowsLegacyProcessStrategy,
-		DefaultValue:    false,
-		Deprecated:      true,
-		ToBeRemovedWith: "19.8",
-		Description: "In GitLab Runner 16.10 and later, the default is `false`. In GitLab Runner 16.9 and earlier, the default is `true`. " +
-			"When disabled, processes that Runner creates on Windows (shell and custom executor) will be " +
-			"created with additional setup that should improve process termination. When set to `true`, legacy " +
-			"process setup is used. To successfully and gracefully drain a Windows Runner, this feature flag should " +
-			"be set to `false`. " +
-			"Deprecated: The legacy process setup and this flag are removed in GitLab Runner 19.8, " +
-			"after which the current process setup is always used.",
 	},
 	{
 		Name:            UseLegacyBashEval,

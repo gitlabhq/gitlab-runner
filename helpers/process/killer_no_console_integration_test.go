@@ -7,7 +7,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"syscall"
 	"testing"
@@ -28,63 +27,47 @@ type terminationResult struct {
 // TestKillerWithoutConsole covers a runner that holds no console, which is the
 // state the Service Control Manager starts it in. GenerateConsoleCtrlEvent
 // needs a console, and AttachConsole cannot reach a parent that has none, so
-// this is where terminating a job used to fall back to killing it.
+// in this state the Ctrl-Break event must go through the console of the job
+// process.
 //
 // The test cannot install a service, so it reaches the same console state with
 // the DETACHED_PROCESS creation flag.
 func TestKillerWithoutConsole(t *testing.T) {
-	tests := map[string]struct {
-		legacy bool
-		// The default strategy reaches the process through its own console
-		// only after the direct call fails, and it says so. Requiring that
-		// warning proves the test met the state it is here to cover.
-		expectedWarning string
-	}{
-		"default process strategy": {
-			legacy:          false,
-			expectedWarning: "Failed to send Ctrl-Break event, retrying through the console of the process:",
-		},
-		"legacy process strategy": {legacy: true},
-	}
+	dir := t.TempDir()
+	resultPath := filepath.Join(dir, "result.json")
 
-	for name, tt := range tests {
-		t.Run(name, func(t *testing.T) {
-			dir := t.TempDir()
-			resultPath := filepath.Join(dir, "result.json")
+	terminator := buildTestBinary(t, "detached_terminator")
 
-			terminator := buildTestBinary(t, "detached_terminator")
+	cmd := exec.Command(
+		terminator,
+		"-stage", "outer",
+		"-sleep-binary", buildTestBinary(t, "sleep"),
+		"-result", resultPath,
+	)
+	// The test process holds a console, so detach the outer stage to keep it
+	// from being inherited.
+	cmd.SysProcAttr = &syscall.SysProcAttr{CreationFlags: detachedProcess}
 
-			cmd := exec.Command(
-				terminator,
-				"-stage", "outer",
-				"-sleep-binary", buildTestBinary(t, "sleep"),
-				"-result", resultPath,
-				"-legacy="+strconv.FormatBool(tt.legacy),
-			)
-			// The test process holds a console, so detach the outer stage to
-			// keep it from being inherited.
-			cmd.SysProcAttr = &syscall.SysProcAttr{CreationFlags: detachedProcess}
+	require.NoError(t, cmd.Start())
+	t.Cleanup(func() { _ = cmd.Process.Kill() })
 
-			require.NoError(t, cmd.Start())
-			t.Cleanup(func() { _ = cmd.Process.Kill() })
+	result := readResult(t, resultPath)
 
-			result := readResult(t, resultPath)
+	// Without this the test proves nothing: a process that kept a console
+	// takes the path that already worked.
+	require.False(t, result.HadConsole,
+		"the detached process holds a console, so it cannot cover this case")
 
-			// Without this the test proves nothing: a process that kept a
-			// console takes the path that already worked.
-			require.False(t, result.HadConsole,
-				"the detached process holds a console, so it cannot cover this case")
+	// The sleep binary exits with 3 when it is asked to stop. Any other outcome
+	// means it was killed instead of asked.
+	assert.Equal(t, "exit status 3", result.WaitError,
+		"process was killed rather than terminated, warnings: %v", result.Warnings)
 
-			// The sleep binary exits with 3 when it is asked to stop. Any other
-			// outcome means it was killed instead of asked.
-			assert.Equal(t, "exit status 3", result.WaitError,
-				"process was killed rather than terminated, warnings: %v", result.Warnings)
-
-			if tt.expectedWarning != "" {
-				assert.Contains(t, strings.Join(result.Warnings, "\n"), tt.expectedWarning)
-			}
-		})
-	}
+	// The process is reached through its own console only after the direct
+	// call fails, and that is logged. Requiring the warning proves the test met
+	// the state it is here to cover.
+	assert.Contains(t, strings.Join(result.Warnings, "\n"),
+		"Failed to send Ctrl-Break event, retrying through the console of the process:")
 }
 
 func readResult(t *testing.T, path string) terminationResult {

@@ -23,7 +23,7 @@ type osCmd struct {
 }
 
 func (c *osCmd) Start() error {
-	setProcessGroup(c.internal, c.options.UseWindowsLegacyProcessStrategy)
+	setProcessGroup(c.internal)
 
 	if c.options.UseWindowsJobObject {
 		jobObj, err := CreateJobObject()
@@ -73,11 +73,7 @@ func (c *osCmd) closeJobObject() {
 	})
 }
 
-func setProcessGroup(c *exec.Cmd, useLegacyStrategy bool) {
-	if useLegacyStrategy {
-		return
-	}
-
+func setProcessGroup(c *exec.Cmd) {
 	c.SysProcAttr = &syscall.SysProcAttr{
 		CreationFlags: syscall.CREATE_NEW_PROCESS_GROUP,
 	}

@@ -6,7 +6,6 @@ import (
 	"os/exec"
 	"strconv"
 	"sync"
-	"unsafe"
 
 	"github.com/hashicorp/go-multierror"
 	"golang.org/x/sys/windows"
@@ -34,7 +33,7 @@ func (pk *windowsKiller) Terminate() {
 		return
 	}
 
-	if err := taskTerminate(pk.logger, pk.cmd.Process().Pid, pk.cmd.options.UseWindowsLegacyProcessStrategy); err != nil {
+	if err := taskTerminate(pk.logger, pk.cmd.Process().Pid); err != nil {
 		pk.logger.Warn("Failed to terminate process:", err)
 
 		// try to kill right-after
@@ -64,7 +63,6 @@ type consoleFunc func(description string, args ...uintptr) error
 type consoleAPI struct {
 	freeConsole              consoleFunc
 	attachConsole            consoleFunc
-	setConsoleCtrlHandler    consoleFunc
 	generateConsoleCtrlEvent consoleFunc
 	// getConsoleWindow reports an error exactly when the runner holds no
 	// console, because GetConsoleWindow returns a null handle in that case.
@@ -89,22 +87,21 @@ func newKernel32ConsoleAPI() (consoleAPI, error) {
 	return consoleAPI{
 		freeConsole:              kernel32Function("FreeConsole"),
 		attachConsole:            kernel32Function("AttachConsole"),
-		setConsoleCtrlHandler:    kernel32Function("SetConsoleCtrlHandler"),
 		generateConsoleCtrlEvent: kernel32Function("GenerateConsoleCtrlEvent"),
 		getConsoleWindow:         kernel32Function("GetConsoleWindow"),
 	}, nil
 }
 
-// Send a CTRL_C_EVENT signal (like SIGTERM in unix) to a console process via
-// kernel32 APIs.
+// Send a CTRL_BREAK_EVENT signal (like SIGTERM in unix) to the process group of
+// a console process via kernel32 APIs.
 // See https://learn.microsoft.com/en-us/windows/console/console-functions
-func taskTerminate(logger Logger, pid int, useWindowsLegacyProcessStrategy bool) error {
+func taskTerminate(logger Logger, pid int) error {
 	api, err := newKernel32ConsoleAPI()
 	if err != nil {
 		return err
 	}
 
-	return terminateViaConsole(logger, api, pid, useWindowsLegacyProcessStrategy)
+	return terminateViaConsole(logger, api, pid)
 }
 
 // consoleMu serializes the console swaps below. FreeConsole and AttachConsole
@@ -113,76 +110,33 @@ func taskTerminate(logger Logger, pid int, useWindowsLegacyProcessStrategy bool)
 var consoleMu sync.Mutex
 
 // terminateViaConsole reports an error only when the control event could not be
-// delivered. Restoring the runner's own console state runs after delivery, or
-// after a takeover that failed partway, so a failure there says nothing about
-// whether the target process was signaled. The caller force-kills on error, so
-// folding the restore failures into the return value would kill a process that
-// is already shutting down gracefully.
-func terminateViaConsole(logger Logger, api consoleAPI, pid int, useWindowsLegacyProcessStrategy bool) error {
-	if !useWindowsLegacyProcessStrategy {
-		runnerHasConsole, err := sendCtrlBreak(api, pid)
-		if err == nil {
-			return nil
-		}
-
-		// A runner that holds a console keeps it. The event failed for another
-		// reason, such as the target process group not being attached to that
-		// console, and borrowing the console of the target would trade a
-		// working console for a restore that cannot be relied on: the restore
-		// reattaches to the parent, which may have exited.
-		if runnerHasConsole {
-			return err
-		}
-
-		// GenerateConsoleCtrlEvent needs the caller to hold a console. A runner
-		// that runs as a Windows service holds none, so the call above cannot
-		// work there. The job process is a console application and gets a
-		// console of its own, so borrow that console to reach its process
-		// group.
-		logger.Warn("Failed to send Ctrl-Break event, retrying through the console of the process:", err)
-
-		return terminateViaTargetConsole(logger, api, pid)
+// delivered. Restoring the runner's own console state runs after the event is
+// attempted, so a failure there says nothing about whether the target process
+// was signaled. The caller force-kills on error, so folding the restore
+// failures into the return value would kill a process that is already shutting
+// down gracefully.
+func terminateViaConsole(logger Logger, api consoleAPI, pid int) error {
+	runnerHasConsole, err := sendCtrlBreak(api, pid)
+	if err == nil {
+		return nil
 	}
 
-	consoleMu.Lock()
-	defer consoleMu.Unlock()
-
-	if err := api.freeConsole("detach the runner process from its console"); err != nil {
+	// A runner that holds a console keeps it. The event failed for another
+	// reason, such as the target process group not being attached to that
+	// console, and borrowing the console of the target would trade a working
+	// console for a restore that cannot be relied on: the restore reattaches
+	// to the parent, which may have exited.
+	if runnerHasConsole {
 		return err
 	}
 
-	// The runner has left its console. Put it back on every way out from here,
-	// undoing only the steps that succeeded. This defer is registered after the
-	// Unlock above, so it runs first and the restore holds consoleMu.
-	var onTargetConsole, ctrlHandlerDisabled bool
-	defer func() {
-		var errs []error
-		if onTargetConsole {
-			errs = append(errs, api.freeConsole("detach the runner process from the console of the terminated process"))
-		}
-		errs = append(errs, api.attachConsole(
-			"attach the runner process to the console of its parent process", uintptr(math.MaxUint32)))
-		if ctrlHandlerDisabled {
-			errs = append(errs, api.setConsoleCtrlHandler(
-				"restore Ctrl-C event handler for runner process", uintptr(unsafe.Pointer(nil)), uintptr(0)))
-		}
-		warnRestoreFailures(logger, errs...)
-	}()
+	// GenerateConsoleCtrlEvent needs the caller to hold a console. A runner
+	// that runs as a Windows service holds none, so the call above cannot work
+	// there. The job process is a console application and gets a console of
+	// its own, so borrow that console to reach its process group.
+	logger.Warn("Failed to send Ctrl-Break event, retrying through the console of the process:", err)
 
-	if err := api.attachConsole(
-		"attach to the console of the process being terminated", uintptr(pid)); err != nil {
-		return err
-	}
-	onTargetConsole = true
-
-	if err := api.setConsoleCtrlHandler(
-		"disable Ctrl-C event handler for runner process", uintptr(unsafe.Pointer(nil)), uintptr(1)); err != nil {
-		return err
-	}
-	ctrlHandlerDisabled = true
-
-	return api.generateConsoleCtrlEvent(
-		"send Ctrl-C event to process being terminated", uintptr(windows.CTRL_C_EVENT), uintptr(pid))
+	return terminateViaTargetConsole(logger, api, pid)
 }
 
 // sendCtrlBreak raises the event through whatever console the runner holds, and
@@ -208,8 +162,8 @@ func sendCtrlBreak(api consoleAPI, pid int) (bool, error) {
 }
 
 // warnRestoreFailures reports every failed restore call in one warning. A
-// failure here is never returned: the control event has already been delivered,
-// so it says nothing about the process being terminated.
+// failure here is never returned: the restore runs after the control event is
+// attempted, so it says nothing about whether the process was signaled.
 func warnRestoreFailures(logger Logger, errs ...error) {
 	if err := multierror.Append(nil, errs...).ErrorOrNil(); err != nil {
 		logger.Warn("Failed to restore the console of the runner process:", err)
